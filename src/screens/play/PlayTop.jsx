@@ -28,7 +28,7 @@ export function PlayHeader({ round, idx, solo, onLive, onMenu, noBar = false }) 
       <button className="header-close" onClick={() => nav.pop()} aria-label="Leave round (it stays saved)"><Icon name="caret-down" /></button>
       <div className="play-title">
         <h1 className="play-course">{round.course.name}</h1>
-        <div className="play-progress">{round.trip?.format === 'big' && !ownMoney(round) ? round.trip.name : gameLabel(round)} · Hole {idx + 1} of {round.holes.length} {round.shared && <button className="pill-link" onClick={() => onLive()}><LivePill round={round} /></button>}</div>
+        <div className="play-progress">{round.trip?.format === 'big' && !ownMoney(round) ? round.trip.name : gameLabel(round)} · {round.holes.length} holes {round.shared && <button className="pill-link" onClick={() => onLive()}><LivePill round={round} /></button>}</div>
       </div>
       <button className="header-close" onClick={() => onMenu()} aria-label="Round menu"><Icon name="dots-three" /></button>
     </div>

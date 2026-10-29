@@ -255,7 +255,7 @@ async function playThrough(page, nav, step, context, problems) {
   await page.getByRole('group', { name: 'Any side bets this round?' }).getByRole('button', { name: 'Not this round' }).click();
   let par = 0;
   for (let h = 0; h < 18; h++) {
-    await page.getByText(`Skins · Hole ${h + 1} of 18`).waitFor();
+    await page.locator('.hole-head .hh-title', { hasText: new RegExp(`^Hole ${h + 1}$`) }).waitFor();
     const holePar = Number((await page.locator('.hole-head .hh-meta').textContent()).match(/Par\s*(\d)/i)[1]);
     par += holePar;
     for (let p = 0; p < 4; p++) {
