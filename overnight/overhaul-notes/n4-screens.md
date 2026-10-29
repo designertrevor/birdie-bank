@@ -133,3 +133,13 @@ overnight/n4-shots/screens/after/<area>/ (untracked), shot with scripts/audit-sh
 - more-28 (shared): kept. A toast over a list row covers whatever is there; it now has the page halo (play-9) so it reads as on top.
 - more-29: kept. No See Pro button while nothing is gated (Trevor: no gating until launch, memory birdie-bank-no-gating-until-launch).
 - onboarding-3, more-2, more-3: see above (teal checks, sheet secondary buttons and scrim, gold outline tags).
+
+## For the other fixers
+
+- Art: onboarding's scenes now show whole with their border, so the ground's own shape (a flat mint slab) is what reads; it needs a clean, sticker-like edge (art-1). Hall of fame's badge drawings sit in a 40px box now (ART_USES updated); their discs and handles are yours. About's closing tee ball is a few points off centre in its own box (more-13).
+- Round: className-only edits in play/RoundSheets.jsx (Who left), play/HolePanels.jsx (Step 1 of 2) and components/AddPlayer.jsx (three labels, and the stepper comment), plus newround/overview.css's footer and top fades (setup-1, setup-24). The stepper (.sc-btn) is now one even style everywhere (play-44), including the pad.
+- Trips: Trips.jsx is untouched. The Up next trip card's chevron is hidden from upnext.css when its X shows (home-7); the Tab's tools card opens TripSheet itself for its Start a trip row (tab-5). trips-34 (one countdown) is done in UpNextPlans.jsx and countdown.js.
+
+## Checks
+
+npm test (2694 pass), npm run lint, npm run build all pass. Shots: overnight/n4-shots/screens/before/<area>/ (the audit's) and after/<area>/, light and dark, via scripts/audit-shots.mjs --base http://127.0.0.1:5224/ --out overnight/n4-shots/screens/after.
