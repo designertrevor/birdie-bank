@@ -3903,6 +3903,10 @@ a.header-btn.rm-open { text-decoration: none; }
 .wn-hero .rm-meta { margin-top: 8px; }
 .rm-list.compact { background: var(--card); border-radius: 20px; overflow: hidden; margin-left: 16px; margin-right: 16px; padding: 0; }
 .rm-list.compact .rm-card { background: none; border-radius: 0; margin: 0; padding: 14px 16px; box-shadow: none; }
+/* One card of rows in the new look too: its corners beat the look's own card radius, so rows don't notch,
+   and the list carries the hairline (more-8) */
+:root[data-look] .rm-list.compact .rm-card { border-radius: 0; box-shadow: none; }
+.rm-list.compact { box-shadow: var(--hair); border-radius: var(--r-card); }
 .rm-list.compact .rm-area { margin-bottom: 2px; }
 .rm-list.compact .rm-meta { margin-top: 6px; }
 .rm-list.compact .rm-card + .rm-card { border-top: 1px solid var(--line); }

@@ -172,14 +172,14 @@ export function wrappedCardModel(state, y, { showAmounts = false, link = null } 
   const me = state?.players?.[state?.me]?.name;
   const partnerName = y.partner && !keepsMoneyPrivate(state, y.partner.id) ? first(nameOf(state, y.partner.id)) : null;
   const rec = y.record;
+  // The round count is the headline, so the first tile is the game you played most, not the count again (history-9)
   const tiles = [
-    { value: String(y.rounds), label: y.rounds === 1 ? 'Round' : 'Rounds' },
+    { value: y.favoriteGame ? y.favoriteGame.name : '–', label: 'Favorite game' },
     { value: String(y.courses.count), label: y.courses.count === 1 ? 'Course' : 'Courses' },
     { value: y.low ? String(y.low.strokes) : '–', label: y.low ? `Low ${y.low.holes}` : 'Low round' },
     { value: `${rec.won}–${rec.lost}${rec.even ? `–${rec.even}` : ''}`, label: rec.even ? 'Won, lost, even' : 'Won, lost' },
   ];
   if (y.birdies || y.eagles) tiles.push({ value: String(y.birdies), label: y.birdies === 1 ? 'Birdie' : 'Birdies' });
-  if (y.favoriteGame) tiles.push({ value: y.favoriteGame.name, label: 'Favorite game' });
   const lines = [];
   if (y.partner) lines.push(partnerName ? `${partnerName}, ${plural(y.partner.rounds, 'round')} together` : `Your most-played partner, ${plural(y.partner.rounds, 'round')} together`);
   if (y.courses.top && y.courses.count > 1) lines.push(`${y.courses.top.name}, ${plural(y.courses.top.rounds, 'round')}`);
