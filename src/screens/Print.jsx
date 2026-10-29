@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Empty, Header, Icon, Screen, Segmented, useUI } from '../components/ui.jsx';
 import { TimePicker } from '../components/DatePicker.jsx';
+import { ArtNote } from '../components/ArtNote.jsx';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { APP_NAME } from '../lib/app-name.js';
@@ -50,6 +51,9 @@ export default function Print({ kind, id }) {
     try { window.print(); } catch { showToast('This browser can’t print. Try Safari or Chrome'); }
   };
   const what = SHEETS.find(s => s.value === sheet).label.toLowerCase();
+  // Nothing on the sheet yet: the empty state in place of a blank page, and no button to print it (trips-11)
+  const blank = pages.every(p => p.key === 'none');
+  const planTrip = blank && kind === 'trip' && sheet !== 'results';
   return (
     <Screen className="print-screen">
       <Header title="Print" small onBack={nav.pop} />
@@ -57,16 +61,26 @@ export default function Print({ kind, id }) {
         <div className="tab-view">
           <Segmented label="Sheet" className="press-mode-row" btn="pm-btn" value={sheet} onChange={setSheet} options={SHEETS} />
         </div>
-        <p className="field-help pad">{sheet === 'pairings' ? 'Every group, when and where it starts, with handicaps and the bets, to tape up by the first tee.'
+        {!blank && <p className="field-help pad">{sheet === 'pairings' ? 'Every group, when and where it starts, with handicaps and the bets, to tape up by the first tee.'
           : sheet === 'carts' ? 'One page a cart, two names to a cart, big enough to read from a few feet.'
-          : 'Standings, the podium, the money by game and who pays who: the same numbers as the app.'}</p>
+          : 'Standings, the podium, the money by game and who pays who: the same numbers as the app.'}</p>}
         {sheet !== 'results' && needsStarts(base) && <StartPick starts={starts} onChange={setStarts} />}
-        <div className="print-preview" role="region" aria-label={`Preview, ${count} page${count === 1 ? '' : 's'}`}>{doc}</div>
+        {blank ? (
+          <ArtNote spot="tees" className="print-empty">
+            {planTrip ? 'No groups yet. Plan the trip’s rounds or set its flights, and the pairings and cart signs print from them.' : pages[0].text}
+          </ArtNote>
+        ) : (
+          <div className="print-preview" role="region" aria-label={`Preview, ${count} page${count === 1 ? '' : 's'}`}>{doc}</div>
+        )}
       </div>
-      <div className="cta-wrap">
-        <button className="full-btn" onClick={print} disabled={!count}><Icon name="printer" /> Print the {what}{count > 1 ? `, ${count} pages` : ''}</button>
-        <p className="field-help print-how">On an iPhone, Print opens the print options. To save a PDF instead, tap Share there.</p>
-      </div>
+      {(planTrip || !blank) && (
+        <div className="cta-wrap">
+          {planTrip ? <button className="full-btn" onClick={() => nav.push('newRound', { ahead: true, trip: id })}><Icon name="calendar-plus" /> Plan the trip’s rounds</button> : <>
+            <button className="full-btn" onClick={print} disabled={!count}><Icon name="printer" /> Print the {what}{count > 1 ? `, ${count} pages` : ''}</button>
+            <p className="field-help print-how">On an iPhone, Print opens the print options. To save a PDF instead, tap Share there.</p>
+          </>}
+        </div>
+      )}
       {createPortal(<div className="print-doc">{doc}</div>, document.body)}
     </Screen>
   );
@@ -118,7 +132,8 @@ function Page({ event, sheet, at, of, big, children }) {
 function pairingSheet(event) {
   const pages = pairingPages(event);
   if (!pages.length) {
-    return [{ key: 'none', big: true, body: <p className="pg-empty">{event.kind === 'trip' ? 'No groups yet. Plan the trip’s rounds or set its flights, and the pairings print from them.' : 'No groups yet.'}</p> }];
+    const text = event.kind === 'trip' ? 'No groups yet. Plan the trip’s rounds or set its flights, and the pairings print from them.' : 'No groups yet.';
+    return [{ key: 'none', big: true, text, body: <p className="pg-empty">{text}</p> }];
   }
   return pages.map((p, i) => ({
     key: p.key, big: i === 0,
@@ -159,7 +174,7 @@ function GroupCard({ g }) {
 
 function cartPages(event) {
   const signs = cartSigns(event);
-  if (!signs.length) return [{ key: 'none', big: false, body: <p className="pg-empty">No groups yet, so no carts to sign.</p> }];
+  if (!signs.length) return [{ key: 'none', big: false, text: 'No groups yet, so no carts to sign.', body: <p className="pg-empty">No groups yet, so no carts to sign.</p> }];
   return signs.map(s => ({
     key: s.key, big: false,
     body: (
@@ -185,7 +200,7 @@ function cartPages(event) {
 // --------------------------- results ---------------------------
 
 function resultPages(event) {
-  if (!event.results) return [{ key: 'none', big: true, body: <p className="pg-empty">The results print once the round is finished.</p> }];
+  if (!event.results) return [{ key: 'none', big: true, text: 'The results print once the round is finished.', body: <p className="pg-empty">The results print once the round is finished.</p> }];
   return paginate(resultBlocks(event.results)).map((blocks, i) => ({
     key: `r${i}`, big: i === 0,
     body: blocks.map((b, j) => <ResultBlock key={`${b.kind}-${j}`} b={b} />),

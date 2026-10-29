@@ -18,7 +18,7 @@ import { endWhenStartMoves } from '../lib/date-pick.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { BIG_FORMAT } from '../lib/big-game.js';
 import { BigCard, BigRoundNote } from './BigGame.jsx';
-import { TRIP_FORMATS, myTripAllIn, myTripNet, startsLine, tripChips, tripDates, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, myTripAllIn, myTripNet, startsLine, tripChips, tripDates, tripStatus, tripWeekdays, upDown } from '../lib/trips.js';
 import { countsMoney, onTab, playForOf } from '../lib/play-for.js';
 import { editTrip, hideTrip, makeScheduledRounds, makeTrip } from '../lib/trip-store.js';
 import { CUP_FORMAT, balanceTeams, cleanCup, cupHeadline } from '../lib/cup.js';
@@ -197,14 +197,14 @@ function TripUpNextCard({ status: st, renderPlan }) {
       <div className="trip-card-wrap">
         <button className="trip-card" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${title}. See the trip`}>
           <div className="row-main">
-            <div className="eyebrow trip-card-eb"><span className="tce-name">{st.trip.name}</span><span className="tce-when">{/* the row's gap is the space before the dot */}{st.day ? `· Day ${st.day} of ${st.days}` : `· ${tripDates(st.trip)}`}</span> <Updated st={st} /></div>
+            <div className="eyebrow trip-card-eb"><span className="tce-name">{st.trip.name}</span><span className="tce-when">{/* the row's gap is the space before the dot */}{st.day ? `· Day ${st.day} of ${st.days}` : st.phase === 'soon' ? `· ${tripWeekdays(st.trip)}` : `· ${tripDates(st.trip)}`}</span> <Updated st={st} /></div>
             <div className="trip-name d">{title}</div>
             {cupOn && <div className="trip-sub"><CupLine cup={st.cup} />{st.phase === 'on' && line ? ` · ${line}` : ''}</div>}
             <TripDays status={st} />
             {next && <div className="trip-sub">Next: {dayLabel(next.date)}{next.teeTime ? ` ${timeLabel(next.teeTime)}` : ''} · {next.course?.name || 'Course to be set'}</div>}
             {st.phase === 'ready' && <div className="trip-sub strong">Settle the trip <Icon name="arrow-right" /></div>}
           </div>
-          <span className="chevron"><Icon name="caret-right" /></span>
+          {/* No caret beside the hide x: two small controls side by side, and the whole card opens the trip (trips-33) */}
         </button>
         <HideX st={st} />
       </div>
@@ -469,7 +469,8 @@ function TripForm({ trip, onDone }) {
         <>
           {!trip && (
             <section className="trip-sec">
-              <div className="field-label">Start from a template</div>
+              {/* Ryder Cup said once, here, and each template by its size (trips-35) */}
+              <div className="field-label">Start from a Ryder Cup weekend</div>
               <TemplatePick value={template} onPick={pickTemplate} />
             </section>
           )}
@@ -500,11 +501,12 @@ function TripForm({ trip, onDone }) {
                 options={[{ value: 'money', label: 'Money' }, { value: CUP_FORMAT, label: 'Team points' }]} />
             </section>
           )}
+          {/* One short line; the rest of how it works is on the trip's page, in How this trip works (trips-10) */}
           <p className="field-help trip-sec-help">{template
-            ? `A Ryder Cup weekend for ${template}: two teams of ${template / 2}, ${sched.days.length} days of four-ball, foursomes and singles, 1 point a match. You pick the teams next, then change the schedule if you like, and every round is planned with its matches. Each round keeps its own bets too.`
+            ? `Two teams of ${template / 2}, ${sched.days.length} days of four-ball, foursomes and singles. You pick the teams next.`
             : isCup
-              ? `${TRIP_FORMATS[CUP_FORMAT].name}: two teams play matches in every round, 1 point a win and ½ a halved match, with a team score and a leaderboard. Each round keeps its own games and bets, and it’s all settled once, right after the last round.`
-              : `${TRIP_FORMATS.money.name}: each round keeps its own games and bets, everyone on the trip sees the standings, and it’s settled once, in the fewest payments, right after the last round.`} Rounds started in these dates ask to count for it.</p>
+              ? 'Two teams play matches every round for a team score, settled once after the last round.'
+              : 'Each round keeps its own bets, settled once after the last round.'}</p>
           <div className="trip-form-cta">
             <button className="full-btn" disabled={!ok} onClick={() => setStep(1)}>Next: {who.toLowerCase()} <Icon name="arrow-right" /></button>
           </div>
@@ -512,12 +514,9 @@ function TripForm({ trip, onDone }) {
       )}
       {at === 1 && (
         <>
-          {template && (
-            <p className={`hint-card tm-count ${pool.length === template ? 'ok' : ''}`} role="status">
-              <Icon name={pool.length === template ? 'check-circle' : 'users-three'} fill /> {pool.length === template ? `All ${template} picked, you included.` : `The template is for ${template}: you and ${template - 1} friends. You have ${pool.length} so far.`}{pool.length !== template && pool.length >= 2 ? ' Any even number works: the schedule fits the teams you pick.' : ''}
-            </p>
-          )}
-          <WhoGoing picked={people} onChange={setPeople} byIndex={isCup || flightsOn} canSkip={!trip && !isCup} />
+          {/* One lead line, not a status card over another line (trips-42); the count is by the list */}
+          <WhoGoing picked={people} onChange={setPeople} byIndex={isCup || flightsOn} canSkip={!trip && !isCup}
+            lede={template ? (pool.length === template ? `All ${template} picked, you included.` : `For ${template}: you and ${template - 1} friends. Any even number works.`) : null} />
           <section className="trip-sec">
             <div className="trip-count tm-flights">
               <div className="row-main">
@@ -570,7 +569,7 @@ function TripForm({ trip, onDone }) {
  * someone new by name. Optional: anyone who plays a trip round is on it anyway. Someone picked from
  * a round or a usual is saved to your players, so the teams and flights can use them.
  */
-function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
+function WhoGoing({ picked, onChange, byIndex = false, canSkip = false, lede = null }) {
   const state = useStore();
   const [query, setQuery] = useState('');
   const all = tripInvitees(state, { picked });
@@ -609,7 +608,7 @@ function WhoGoing({ picked, onChange, byIndex = false, canSkip = false }) {
   const count = all.filter(p => on.has(p.id)).length;
   return (
     <div className="trip-who-step">
-      <p className="field-help trip-lede">Pick who’s coming, or skip it: anyone who plays a trip round joins.</p>
+      <p className="field-help trip-lede">{lede || (canSkip ? 'Pick who’s coming, or skip it: anyone who plays a trip round joins.' : 'Pick who’s coming.')}</p>
       <form className="tm-add trip-find" role="search" onSubmit={submit}>
         <label className="sr-only" htmlFor="trip-find">{long ? 'Find or add someone' : 'Add someone'}</label>
         <span className="trip-find-ic" aria-hidden="true"><Icon name={long ? 'magnifying-glass' : 'user-plus'} /></span>

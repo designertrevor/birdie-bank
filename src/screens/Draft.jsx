@@ -62,11 +62,15 @@ function DraftBody({ tripId }) {
   if (!def) {
     // The organizer on a phone without the draft yet (it was started on another of theirs, say)
     if (trip && isOrganizer(state, trip) && cup?.draft?.live && cup.captains[0] && cup.captains[1] && status === 'ok') {
+      // A question over the button, so the two don't say the same words, and the button pinned at the
+      // foot like the app's other single actions (trips-57)
       return (
-        <div className="scroll">
-          <Empty illo="clipboard" title="Start the draft" text={`${first(state.players[cup.captains[0]]?.name)} and ${first(state.players[cup.captains[1]]?.name)} pick on their own phones, on their turns.`}
-            action={<button className="full-btn" onClick={() => startDraft(tripId, cup.draft)}>Start the draft</button>} />
-        </div>
+        <>
+          <div className="scroll">
+            <Empty illo="clipboard" title="Ready to draft?" text={`${first(state.players[cup.captains[0]]?.name)} and ${first(state.players[cup.captains[1]]?.name)} pick on their own phones, on their turns.`} />
+          </div>
+          <div className="cta-wrap"><button className="full-btn" onClick={() => startDraft(tripId, cup.draft)}>Start the draft</button></div>
+        </>
       );
     }
     const off = status === 'off';

@@ -141,7 +141,8 @@
 :root[data-look="new"] .trip-card .trip-day.now { background: none; color: var(--ink); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 /* The expenses line joins the foot of the trip card instead of floating under it as a pill */
 :root[data-look="new"] .trip-card-wrap:has(+ .trip-line) > .trip-card { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-:root[data-look="new"] .trip-card-wrap + .trip-line { width: calc(100% - 32px); margin: 0 16px 10px; border-radius: 0 0 var(--r-card) var(--r-card); background: var(--card); box-shadow: var(--hair); }
+/* No hairline of its own on top: the card's bottom edge is the one line between the two rows, not a doubled band (trips-33) */
+:root[data-look="new"] .trip-card-wrap + .trip-line { width: calc(100% - 32px); margin: 0 16px 10px; border-radius: 0 0 var(--r-card) var(--r-card); background: var(--card); box-shadow: inset 1px 0 0 var(--line), inset -1px 0 0 var(--line), inset 0 -1px 0 var(--line); }
 :root[data-look="new"] .trip-card-wrap + .trip-line i:first-child { color: var(--icon); }
 
 /* A Heads up card (a reminder, an update): its buttons start under its words, not back at the

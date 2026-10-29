@@ -84,7 +84,7 @@ export function TripExpensesView({ st, me, adding = false, onAdded }) {
       {st.expenses.map(x => <ExpenseRow key={x.id} x={x} me={me} short={short} onOpen={() => setOpenId(x.id)} />)}
       {st.expenses.length > 0 && <AllIn st={st} me={me} short={short} />}
       {offNote && <p className="hint-card"><Icon name="cloud-slash" /> Expenses you add stay on your phone and your account for now, so friends don’t see them on theirs yet. They still count here and on your Tab.</p>}
-      {st.expenses.length > 0 && <p className="field-help pad trip-note">Anyone on the trip can add one. Only the person who added an expense changes or deletes it. Settle the trip squares the expenses and the rounds together, in the fewest payments.</p>}
+      {/* Who can change an expense is said in its own sheet, and how it settles in How this trip works (trips-10) */}
       <ExpenseSheet open={!!editing} expense={editing === 'new' ? null : editing} st={st} me={me} full={full} short={short} onClose={close} />
     </>
   );
@@ -101,7 +101,8 @@ function ExpenseRow({ x, me, short, onOpen }) {
       <div className="exp-ic"><Icon name={iconFor(x.what)} /></div>
       <div className="lr-info">
         <div className="exp-name">{x.what}</div>
-        <div className="lr-status">{payer === 'You' ? 'You paid' : `${payer} paid`} · {splitLine(x, short)} · <span className="nowrap">{dayOf(x.at)}</span></div>
+        {/* A non-breaking space before each dot, so a wrap carries the dot with the words before it (trips-9) */}
+        <div className="lr-status">{payer === 'You' ? 'You paid' : `${payer} paid`}{'\u00a0· '}{splitLine(x, short)}{'\u00a0· '}<span className="nowrap">{dayOf(x.at)}</span></div>
         {line && <div className={`exp-mine ${owed > 0 ? 'pos' : 'neg'}`}>{line}</div>}
       </div>
       <div className="exp-amt">{money(x.amount)}</div>
@@ -138,7 +139,7 @@ function AllIn({ st, me, short }) {
           </tbody>
         </table>
       </div>
-      <p className="field-help pad trip-note">{golf ? `The rounds on this phone${st.cup?.stakeOn ? ', the cup stake' : ''} and every expense. ` : ''}Plus is what the trip owes them, minus what they owe. It all adds up to $0.</p>
+      <p className="field-help pad trip-note">Plus is what the trip owes them. It all adds up to $0.</p>
     </>
   );
 }
@@ -168,7 +169,7 @@ function ExpenseView({ x, me, short, full, onClose }) {
         <div className="exp-ic"><Icon name={iconFor(x.what)} /></div>
         <div className="row-main">
           <div className="d exp-big sm">{money(x.amount)}</div>
-          <div className="exp-sum-sub">{short(x.payer) === 'You' ? 'You paid' : `${full(x.payer)} paid`} · {splitLine(x, short)} · <span className="nowrap">{dayOf(x.at)}</span></div>
+          <div className="exp-sum-sub">{short(x.payer) === 'You' ? 'You paid' : `${full(x.payer)} paid`}{'\u00a0· '}{splitLine(x, short)}{'\u00a0· '}<span className="nowrap">{dayOf(x.at)}</span></div>
         </div>
       </div>
       <ul className="exp-people">
@@ -293,7 +294,15 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
         {pool.map(id => <PickChip key={id} small on={payer === id} onClick={() => setPayer(id)}>{short(id)}</PickChip>)}
       </div>
 
-      <div className="field-label" id="exp-split">Split it</div>
+      {/* Tick or untick everyone sits by the label, next to the list it changes (trips-44) */}
+      <div className="exp-label-row">
+        <div className="field-label" id="exp-split">Split it</div>
+        {split === 'equal' && pool.length > 2 && (
+          <button type="button" className="link-btn exp-all" onClick={() => setInSplit(new Set(people.length === pool.length ? [] : pool))}>
+            {people.length === pool.length ? 'Untick everyone' : 'Tick everyone'}
+          </button>
+        )}
+      </div>
       <Segmented label="Split it" className="press-mode-row" btn="pm-btn" value={split} onChange={changeSplit}
         options={Object.entries(SPLITS).map(([value, label]) => ({ value, label }))} />
       <ul className="exp-people" aria-labelledby="exp-split">
@@ -334,15 +343,8 @@ function ExpenseForm({ expense, st, me, full, short, onDone }) {
           );
         })}
       </ul>
-      {/* How it splits on the left, and ticking everyone on the right, on one line */}
-      <div className="exp-foot-row">
-        {status ? <p className={`exp-status ${split === 'amounts' ? (left ? 'off' : 'ok') : ''}`} role="status">{split === 'amounts' && !left ? <Icon name="check-circle" fill /> : null} {status}</p> : <span />}
-        {split === 'equal' && pool.length > 2 && (
-          <button type="button" className="link-btn exp-all" onClick={() => setInSplit(new Set(people.length === pool.length ? [] : pool))}>
-            {people.length === pool.length ? 'Untick everyone' : 'Tick everyone'}
-          </button>
-        )}
-      </div>
+      {/* How it splits, under the list */}
+      {status && <p className={`exp-status ${split === 'amounts' ? (left ? 'off' : 'ok') : ''}`} role="status">{split === 'amounts' && !left ? <Icon name="check-circle" fill /> : null} {status}</p>}
 
       {others.length > 0 && (more ? (
         <>

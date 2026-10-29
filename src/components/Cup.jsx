@@ -62,7 +62,8 @@ export function CupScore({ cup }) {
         {cup.score.done} match{cup.score.done === 1 ? '' : 'es'} played{live ? ` · ${live} in play` : ''}
         {toWin && ` · ${cupPoints(toWin)} wins it`}
         {stake > 0 && ` · ${money(stake)} a person on the cup`}
-        {cup.myTeam != null && ` · You’re on ${cup.names[cup.myTeam]}`}
+        {/* Kept together, so a wrap never leaves the team's name alone on the line (trips-54) */}
+        {cup.myTeam != null && ` · You’re\u00a0on\u00a0${cup.names[cup.myTeam]}`}
       </div>
     </div>
   );
@@ -73,7 +74,8 @@ export function CupMatches({ cup }) {
   const state = useStore();
   const [editing, setEditing] = useState(null);
   const entries = [...cup.entries].reverse().filter(e => e.matches.length || e.mixed);
-  if (!entries.length) return <ArtNote spot="pennant">No matches yet. Each round counted for the trip pairs off its players by team: four-ball for two against two, or singles. An Alternate shot round is foursomes, partners taking turns on one ball.</ArtNote>;
+  // One sentence under the flag; how the matches pair off is in the notes under the trip (trips-10)
+  if (!entries.length) return <ArtNote spot="pennant">No matches yet. Each round counted for the trip adds its matches here.</ArtNote>;
   const nameIn = (e, id) => first(e.players.find(p => p.id === id)?.name);
   return (
     <>
@@ -93,7 +95,8 @@ export function CupMatches({ cup }) {
                 <span className="cup-round-sub">{[...new Set(e.matches.map(m => CUP_KINDS[m.kind].name))].join(' and ')}{e.status === 'active' ? ' · being played' : ''}{!e.local ? ' · another group' : ''}</span>
               </span>
               {scored && <span className="cup-round-pts" role="img" aria-label={`${cup.names[0]} ${cupPoints(pts[0])}, ${cup.names[1]} ${cupPoints(pts[1])}`}><b className="t0">{cupPoints(pts[0])}</b>–<b className="t1">{cupPoints(pts[1])}</b></span>}
-              {canChange && <button className="pill-btn sm" onClick={() => setEditing(round.id)} aria-label="Change the matches"><Icon name="pencil-simple" /></button>}
+              {/* The header's outline style, a 44px tap (trips-20) */}
+              {canChange && <button className="icon-btn sm cup-edit" onClick={() => setEditing(round.id)} aria-label="Change the matches"><Icon name="pencil-simple" /></button>}
             </div>
             {e.matches.map((m, i) => <MatchRow key={i} names={cup.names} m={m} left={m.sides[0].map(id => nameIn(e, id))} right={m.sides[1].map(id => nameIn(e, id))} />)}
             {e.mixed && <p className="field-help">{mixedNote(cup)}</p>}
@@ -135,10 +138,12 @@ export function CupBoard({ cup }) {
     <div className="trip-table cup-table">
       {rows.map((p, i) => {
         const rank = rows.findIndex(x => x.points === p.points) + 1;
+        // A shared place says so (T1), so five 1s in a row don't read as a numbering slip (trips-55)
+        const tied = rows.filter(x => x.points === p.points).length > 1;
         const name = p.id ? (p.id === me ? 'You' : nameOf(state, p.id)) : p.name;
         return (
           <div key={p.key} className={`trip-row ${p.id === me ? 'me' : ''}`} style={{ '--i': i }}>
-            <span className="tr-rank">{rank}</span>
+            <span className="tr-rank">{tied ? `T${rank}` : rank}</span>
             <Avatar id={p.id} name={p.id ? nameOf(state, p.id) : p.name} />
             <span className="tr-main">
               <span className="tr-name">{name}</span>
@@ -223,9 +228,9 @@ export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
       </div>
 
       <div className="field-label">Pick the teams</div>
-      <Segmented label="How the teams are picked" className="press-mode-row" btn="pm-btn" value={mode}
+      <Segmented label="How the teams are picked" className="press-mode-row cup-pick-how" btn="pm-btn" value={mode}
         onChange={v => (v === 'draft' ? toDraft() : v === 'flights' ? byFlights() : balance())}
-        options={[{ value: 'draft', label: 'Captains’ draft' }, { value: 'balance', label: 'By handicap' }, { value: 'flights', label: 'By flights' }]} />
+        options={[{ value: 'draft', label: 'Draft' }, { value: 'balance', label: 'By handicap' }, { value: 'flights', label: 'By flights' }]} />
       {drafting && (
         <div className="tm-draft-opts">
           {liveOk && (
@@ -249,7 +254,7 @@ export function TeamsPicker({ people, value, onChange, live: liveOk = true }) {
       <div className="cup-cols">
         {[0, 1].map(i => (
           <div key={i} className={`cup-col t${i} ${drafting && free.length && turn === i && !(live && captainsSet) ? 'turn' : ''}`}>
-            <div className="cup-col-head"><TeamDot team={i} /> {cup.names[i]}<span className="cup-col-hc">{cup.teams[i].length ? `${cup.teams[i].length} · hcp ${hcs[i]}` : ''}</span></div>
+            <div className="cup-col-head"><TeamDot team={i} /> {cup.names[i]}<span className="cup-col-hc">{cup.teams[i].length ? `${cup.teams[i].length} · HCP ${Math.round((hcs[i] / cup.teams[i].length) * 10) / 10} avg` : ''}</span></div>
             {cup.teams[i].map(p => (
               <button key={p.id} type="button" className="cup-chip" onClick={() => flip(p, i)} aria-label={live ? `${p.name}, captain of ${cup.names[i]}. Pick someone else` : `${p.name}${cup.captains[i] === p.id ? ', captain' : ''}, on ${cup.names[i]}. Move to ${cup.names[1 - i]}`}>
                 <Avatar id={p.id} name={p.name} size="sm" />
@@ -455,34 +460,43 @@ export function StakeLines({ st }) {
     <>
       <div className="sec-label">The cup</div>
       <p className="field-help pad">{winners} won the cup, so each player on {cup.names[1 - cup.winner]} pays {money(cup.def.stake)} and {winners} splits it.{onTab ? ' It’s in the payments above and on the Tab, with the rest of the trip.' : ''}{open.length ? ` ${open.length === 1 ? 'One payment is' : `${open.length} payments are`} between two people who haven’t played a round together on the trip, so ${open.length === 1 ? 'it’s' : 'they’re'} marked paid here.` : ''}</p>
-      {mine.map(l => {
-        const iPay = l.fromId === me;
-        const otherId = iPay ? l.toId : l.fromId;
-        const otherName = iPay ? l.toName : l.fromName;
-        return (
-          <div key={l.key} className="pay-card cup-pay">
-            <div className="pay-who">
-              <Avatar id={otherId} name={otherId ? nameOf(state, otherId) : otherName} />
-              <span className="trip-pay-name">{iPay ? `You pay ${label(otherId, otherName)}` : `${label(otherId, otherName)} pays you`}</span>
-              <span className="pm">{money(l.open / 100)}</span>
-            </div>
-            <div className="pay-acts wrap">
-              {iPay && otherId && <PayButton info={payInfoFor(state, otherId)} amount={l.open / 100} note={`${st.trip.name} cup`} />}
-              <button className="pay-btn got" onClick={() => mark(l)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
-            </div>
-          </div>
-        );
-      })}
-      {others.map(l => (
-        <div key={l.key} className="ledger-row static trip-other">
-          <div className="lr-info">
-            <div className="lr-name" style={{ fontSize: 16 }}>{label(l.fromId, l.fromName)} pays {label(l.toId, l.toName)}</div>
-            <div className="lr-status">Cup stake</div>
-          </div>
-          <div className="lr-amt" style={{ marginRight: 8 }}>{money(l.open / 100)}</div>
-          <button className="pill-btn sm" onClick={() => mark(l)}>Mark paid</button>
+      {/* The same one card of rows as the trip's own payments above it (trips-2, trips-22) */}
+      {mine.length > 0 && (
+        <div className="settle-list">
+          {mine.map(l => {
+            const iPay = l.fromId === me;
+            const otherId = iPay ? l.toId : l.fromId;
+            const otherName = iPay ? l.toName : l.fromName;
+            return (
+              <div key={l.key} className="settle-pay trip-settle-pay cup-pay">
+                <div className="pay-who">
+                  <Avatar id={otherId} name={otherId ? nameOf(state, otherId) : otherName} size="sm" />
+                  <span className="trip-pay-name">{iPay ? `You pay ${label(otherId, otherName)}` : `${label(otherId, otherName)} pays you`}</span>
+                  <span className="pm">{money(l.open / 100)}</span>
+                </div>
+                <div className="pay-acts pay-more">
+                  {iPay && otherId && <PayButton info={payInfoFor(state, otherId)} amount={l.open / 100} note={`${st.trip.name} cup`} />}
+                  <button className="pay-btn mark" onClick={() => mark(l)}><Icon name="circle" /> {iPay ? 'I paid' : 'I got it'}</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      ))}
+      )}
+      {others.length > 0 && (
+        <div className="settle-list">
+          {others.map(l => (
+            <div key={l.key} className="settle-pay trip-other">
+              <div className="lr-info">
+                <div className="lr-name">{label(l.fromId, l.fromName)} pays {label(l.toId, l.toName)}</div>
+                <div className="lr-status">Cup stake</div>
+              </div>
+              <div className="lr-amt">{money(l.open / 100)}</div>
+              <button className="pay-btn mark sm" onClick={() => mark(l)}>Mark paid</button>
+            </div>
+          ))}
+        </div>
+      )}
       {!open.length && !onTab && <p className="field-help pad">The cup stake is all paid.</p>}
       {cup.marks.length > 0 && <StakePaid st={st} label={label} me={me} />}
     </>

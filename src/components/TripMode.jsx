@@ -8,6 +8,8 @@ import { Avatar } from './Pay.jsx';
 import { TeamDot } from './Cup.jsx';
 import { Spot } from './Spot.jsx';
 import '../art-places.css';
+// The trip's folds and notes (How the formats work)
+import '../screens/trip.css';
 import { useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
 import { nameOf } from '../lib/ledger.js';
@@ -33,6 +35,7 @@ const plus = (iso, n) => {
 const shortDay = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 // Handicap allowances a session can play at
 const HC_PCTS = [100, 95, 90, 85, 80, 75, 70, 60, 50];
+const HC_TOP = [100, 90, 85, 80];
 const pointsLine = p => `${cupPoints(p.total)} point${p.total === 1 ? '' : 's'} · ${cupPoints(p.toWin)} wins the cup`;
 
 // --------------------------- in the trip sheet ---------------------------
@@ -52,8 +55,8 @@ export function TemplatePick({ value, onPick }) {
           <button key={size} type="button" role="radio" aria-checked={on} className={`tm-template ${on ? 'on' : ''}`} onClick={() => onPick(size)}>
             <span className="tm-t-size d">{size}</span>
             <span className="tm-t-main">
-              <span className="tm-t-name">Ryder Cup weekend</span>
-              <span className="tm-t-sub">{size / 2} a side · {t.days.length} days · {cupPoints(p.total)} points</span>
+              <span className="tm-t-name">{size} players, {t.days.length} days</span>
+              <span className="tm-t-sub">{size / 2} a side · {cupPoints(p.total)} points</span>
             </span>
             <PickMark on={on} add={false} />
           </button>
@@ -110,19 +113,32 @@ export function ScheduleEditor({ schedule, onChange, perTeam, start }) {
                   ))}
                 </div>
                 <div className="tm-opt" id={`tm-pct-${di}-${si}`}>Handicaps at</div>
-                <div className="chip-row flush" role="radiogroup" aria-labelledby={`tm-pct-${di}-${si}`}>
-                  {HC_PCTS.map(p => (
-                    <PickChip key={p} radio small on={s.pct === p} onClick={() => onChange(setSession(schedule, di, si, { pct: p }))}>{p}%</PickChip>
-                  ))}
-                </div>
+                <PctChips id={`tm-pct-${di}-${si}`} value={s.pct} onPick={pct => onChange(setSession(schedule, di, si, { pct }))} />
               </div>
             </div>
           ))}
           {d.sessions.length < MAX_SESSIONS && <button type="button" className="link-btn" onClick={() => onChange(addSession(schedule, di))}><Icon name="plus" /> Add an afternoon session</button>}
         </div>
       ))}
-      {schedule.days.length < MAX_DAYS && <button type="button" className="add-row" onClick={() => onChange(addDay(schedule))}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a day</span></button>}
-      <p className="field-help">Four-ball is best ball of two against two, played as Best ball. Foursomes is partners taking turns on one ball, played as Alternate shot. Singles is one against one, two matches a group, with Skins for the group. Handicaps start at the WHS allowance: 90% for four-ball, full for singles. Partners and opponents change every session.</p>
+      {schedule.days.length < MAX_DAYS && <button type="button" className="add-row tm-add-day" onClick={() => onChange(addDay(schedule))}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a day</span></button>}
+      {/* One line, the formats in a fold under it (trips-10) */}
+      <p className="field-help">Partners and opponents change every session.</p>
+      <details className="how fold"><summary>How the formats work <Icon name="caret-down" /></summary><p>Four-ball is best ball of two against two, played as Best ball. Foursomes is partners taking turns on one ball, played as Alternate shot. Singles is one against one, two matches a group, with Skins for the group. Handicaps start at the WHS allowance: 90% for four-ball, full for singles.</p></details>
+    </div>
+  );
+}
+
+/**
+ * A session's handicap allowance: the four most groups play at, and Other for the rest, so a setting
+ * most leave alone isn't nine chips (trips-41). A value from the rest stays shown while it's picked.
+ */
+function PctChips({ id, value, onPick }) {
+  const [more, setMore] = useState(false);
+  const shown = more ? HC_PCTS : HC_PCTS.filter(p => HC_TOP.includes(p) || p === value);
+  return (
+    <div className="chip-row flush" role="radiogroup" aria-labelledby={id}>
+      {shown.map(p => <PickChip key={p} radio small on={value === p} onClick={() => onPick(p)}>{p}%</PickChip>)}
+      {!more && <button type="button" className="pill-btn sm" onClick={() => setMore(true)} aria-label="Other allowances">Other <Icon name="caret-down" /></button>}
     </div>
   );
 }

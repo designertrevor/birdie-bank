@@ -82,12 +82,14 @@ export function BigCard({ status: st, onTab = false }) {
 
 /** One chip a group: waiting, how far they are, or done. */
 export function BigDots({ bs }) {
+  // Nothing to count until a group has a hole in: the groups' rows already say Not teed off (trips-19)
+  if (!bs.field.groups.some(g => g.status === 'done' || g.thru > 0)) return null;
   return (
-    // Counts, not buttons: hairline chips, the live ones edged in ink (trips-17)
+    // Counts, not buttons: hairline chips, said in words ("Group 1 · thru 7"), not G1 · 7 (trips-17, trips-19)
     <div className="trip-days big-dots" aria-hidden="true">
       {bs.field.groups.map(g => (
         <span key={g.id} className={`trip-day ${g.status === 'done' ? 'done' : g.status === 'live' ? 'now' : ''}`}>
-          {g.name.replace(/^Group /, 'G')}{g.status === 'live' ? ` · ${g.thru}` : g.status === 'waiting' ? ' · –' : ''}
+          {g.name}{g.status === 'done' ? ' · done' : g.status === 'live' ? ` · thru ${g.thru}` : ''}
         </span>
       ))}
     </div>
@@ -163,6 +165,8 @@ export function PotTable({ bs, isMe, name }) {
   const { big, results } = bs;
   const stableford = big.pot.kind === 'stableford';
   const won = bs.final ? results.money.pot.won : null;
+  // Before anyone has a hole in, one line, not a board of dashes (trips-52)
+  if (!bs.final && !results.pot.some(r => r.thru)) return <p className="hint-card"><Icon name="ranking" /> The board fills in as each group plays its first hole.</p>;
   return (
     <div className="trip-table big-table">
       {results.pot.map(r => {
@@ -230,7 +234,8 @@ export function SkinsList({ bs, name, isMe = () => false }) {
       )}
       <div className="sec-label">Hole by hole</div>
       {/* Only the holes that are decided: before any is, one line instead of 18 "Still out" rows (trips-4) */}
-      {!decided.length && <p className="hint-card"><Icon name="coins" fill /> No skins yet. Holes fill in here as every group plays them.</p>}
+      {/* Before any hole is decided, one note with the pot and the rules, not a second line saying nothing's happened (trips-53) */}
+      {!decided.length && <p className="hint-card"><Icon name="coins" fill /> No skins yet, from a {cash(now.pool)} pot. Holes fill in here as every group plays them.{rules ? ` House rules: ${rules}.` : ''}</p>}
       {decided.length > 0 && <div className="trip-table big-table">
         {decided.map(h => (
           <div key={h.no} className="trip-row">
@@ -245,14 +250,15 @@ export function SkinsList({ bs, name, isMe = () => false }) {
         ))}
       </div>}
       {decided.length > 0 && decided.length < results.skins.length && <p className="field-help pad">{results.skins.length - decided.length} hole{results.skins.length - decided.length === 1 ? '' : 's'} still out, until every group has played {results.skins.length - decided.length === 1 ? 'it' : 'them'}.</p>}
-      <p className="field-help pad">
+      {decided.length > 0 && <p className="field-help pad">
         {count} skin{count === 1 ? '' : 's'} so far across every group, from a {cash(now.pool)} pot.{' '}
         {big.skins.carry
           ? `Each hole is worth ${cash(now.perHole)}, and a skin takes every hole carried into it.${now.riding > 0 && !bs.final ? ` ${cash(now.riding)} is riding on the next hole.` : ''}`
           : count ? `Each skin is worth ${cash(now.perSkin)} now, less as more are won.` : 'The pot is split by skins won, so each skin is worth the same.'}
         {rules ? ` House rules: ${rules}.` : ''}
         {bs.final && !count && now.pool ? ' No skins won, so everyone gets theirs back.' : ''}
-      </p>
+      </p>}
+      {!decided.length && bs.final && now.pool > 0 && <p className="field-help pad">No skins won, so everyone gets theirs back.</p>}
     </>
   );
 }
@@ -280,8 +286,10 @@ export function TeamsTable({ bs, isMe, name }) {
 }
 
 /** The side bets between players, as they stand. */
-export function BetsList({ bs, name, onEdit = null }) {
+export function BetsList({ bs, name, onEdit = null, quiet = false }) {
   const { results } = bs;
+  // `quiet`: nothing while there are none, where the line under the add tile says it (setup's Bets step)
+  if (!results.bets.length && quiet) return null;
   if (!results.bets.length) return <p className="field-help pad">No side bets yet. Any two players can have one, in the same group or not: a match or per hole, with strokes between the two of them.</p>;
   return (
     <div className="trip-table big-table">

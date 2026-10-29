@@ -5,6 +5,8 @@
 // group, each with its own link. Set up for another day, it waits on Up next until then.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header, Icon, Numpad, PickChip, PickMark, PickRow, Screen, Segmented, Sheet, Steps, Toggle, useUI } from '../components/ui.jsx';
+import { Avatar } from '../components/Pay.jsx';
+import './big-game-setup.css';
 import { CourseStep, QuickAddPlayer } from './NewRound.jsx';
 import { BigBetSheet, BetsList } from '../components/BigGame.jsx';
 import { useStore } from '../lib/store.js';
@@ -137,15 +139,19 @@ export default function BigGameSetup({ id = null, from = null }) {
   };
 
   return (
-    <Screen>
-      <Header title={was ? 'Edit the Big Game' : 'The Big Game'} onBack={back} onClose={close} />
+    // `setup`: round setup's look for picked rows, ink checks and the soft scroll edges (overview.css),
+    // so the two setups read as one app (trips-14, trips-18)
+    <Screen className="setup big-setup">
+      {/* The game's own name once it has one; "New Big Game" before, so it never reads "The Big Game" here and "Big Game" on its page (trips-48) */}
+      <Header title={was ? `Edit ${was.name || BIG_NAME}` : `New ${BIG_NAME}`} onBack={back} onClose={close} />
       <Steps steps={STEPS} current={step} canGo={canGo} onGo={setStep} />
       <h2 className="step-q d">{QUESTIONS[step]}</h2>
       {step === 0 && (
         <>
           <div className="scroll">
             <div className="block">
-              <label className="field-label" htmlFor="big-name">Name</label>
+              {/* An eyebrow like Day and Holes under it, so the cards' labels read one way (trips-47) */}
+              <label className="eyebrow big-name-lbl" htmlFor="big-name">Name</label>
               <input id="big-name" className="text-input" value={name} onChange={e => setName(e.target.value)} maxLength={32} placeholder={`${new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' })} ${BIG_NAME}`} />
               <p className="field-help">Several groups, one game: one pot and one leaderboard across every group, settled once when they’re all in.</p>
             </div>
@@ -240,6 +246,8 @@ function Players({ picked, setPicked, course, holesCount, tees, setTees, hcOverr
   const crews = Object.values(state.crews || {});
   const [adding, setAdding] = useState(false);
   const [hcFor, setHcFor] = useState(null);
+  const [teeFor, setTeeFor] = useState(null);
+  const teeOf = pid => course.tees?.find(t => t.name === tees[pid]) || firstTee(course);
   const toggle = pid => setPicked(p => {
     if (p.includes(pid)) return p.filter(x => x !== pid);
     if (p.length >= BIG_MAX_PLAYERS) { showToast(`A Big Game takes up to ${BIG_MAX_PLAYERS} players`); return p; }
@@ -269,6 +277,8 @@ function Players({ picked, setPicked, course, holesCount, tees, setTees, hcOverr
             return (
               <div key={p.id} className={`list-item pick player-pick ${on ? 'on' : ''}`}>
                 <button className="pick-main" onClick={() => toggle(p.id)} aria-pressed={on}>
+                  {/* Each person leads with their Ball buddy, as in round setup, the board and the draft (trips-16) */}
+                  <Avatar id={p.id} name={p.name} />
                   <div className="row-main">
                     <div className="li-name">{playerLabel(p, state.me)}</div>
                     <div className="li-sub">{p.index == null ? 'No HCP' : `HCP ${formatIndex(p.index)}`}</div>
@@ -277,13 +287,11 @@ function Players({ picked, setPicked, course, holesCount, tees, setTees, hcOverr
                 </button>
                 {on && (
                   <div className="pick-extra">
-                    {course.tees?.length > 0 && (
-                      <div className="tee-chips" role="radiogroup" aria-label={`${p.name}’s tee`}>
-                        {course.tees.map(t => {
-                          const active = (tees[p.id] || firstTee(course).name) === t.name;
-                          return <button key={t.name} role="radio" aria-checked={active} className={`tee-chip ${active ? 'active' : ''}`} onClick={() => setTees({ ...tees, [p.id]: t.name })}><span className="tee-dot" style={teeDotStyle(t)} />{t.name}</button>;
-                        })}
-                      </div>
+                    {/* One tee chip that opens the tees, as in round setup, not every tee as a chip (trips-15) */}
+                    {course.tees?.length > 1 && (
+                      <button className="hc-chip tee-select" onClick={() => setTeeFor(p.id)} aria-haspopup="dialog" aria-label={`${p.name}’s tees: ${teeOf(p.id).name}. Change them`}>
+                        <span className="tee-dot" style={teeDotStyle(teeOf(p.id))} />{teeOf(p.id).name} tees <Icon name="caret-down" />
+                      </button>
                     )}
                     {hc && <button className={`hc-chip ${hc.source === 'none' ? 'missing' : ''}`} onClick={() => setHcFor(p.id)}>
                       {holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hc.value < 0 ? `+${-hc.value}` : hc.value}</strong>{hc.source === 'none' ? ' · none, plays as 0' : hc.source === 'set' ? ' · edited' : ''} <Icon name="pencil-simple" />
@@ -301,6 +309,24 @@ function Players({ picked, setPicked, course, holesCount, tees, setTees, hcOverr
         <button className="full-btn" disabled={n < BIG_MIN_PLAYERS} onClick={onNext}>{n < BIG_MIN_PLAYERS ? `Add ${BIG_MIN_PLAYERS - n} more player${BIG_MIN_PLAYERS - n === 1 ? '' : 's'}` : <>Next: Groups <Icon name="arrow-right" /></>}</button>
       </div>
       <QuickAddPlayer open={adding} onClose={() => setAdding(false)} onAdded={pid => { setAdding(false); if (picked.length < BIG_MAX_PLAYERS) setPicked([...picked, pid]); }} />
+      {/* The tees as a sheet, the same one round setup opens */}
+      <Sheet open={!!teeFor} onClose={() => setTeeFor(null)} title={teeFor === state.me ? 'Your tees' : `${state.players[teeFor]?.name}’s tees`}>
+        <div className="tee-sheet" role="radiogroup" aria-label={`${state.players[teeFor]?.name}’s tees`}>
+          {teeFor && course.tees.map(t => {
+            const on = teeOf(teeFor).name === t.name;
+            return (
+              <button key={t.name} className={`list-item pick ${on ? 'on' : ''}`} role="radio" aria-checked={on} onClick={() => { setTees({ ...tees, [teeFor]: t.name }); setTeeFor(null); }}>
+                <span className="tee-dot" style={teeDotStyle(t)} />
+                <div className="row-main">
+                  <div className="li-name">{t.name}</div>
+                  <div className="li-sub">{t.slope ? [t.rating != null ? `Rating ${t.rating}` : null, `Slope ${t.slope}`].filter(Boolean).join(' · ') : 'No rating or slope on file'}</div>
+                </div>
+                <PickMark on={on} add={false} />
+              </button>
+            );
+          })}
+        </div>
+      </Sheet>
       <Numpad open={!!hcFor} title={`${state.players[hcFor]?.name}’s ${holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={hcFor ? courseHc(hcFor).value : ''} allowNegative min={-10} max={60}
         onClose={() => setHcFor(null)} onDone={v => { setHcOverride({ ...hcOverride, [hcFor]: v }); setHcFor(null); }} />
     </>
@@ -321,7 +347,8 @@ function Groups({ groups, byHand, count, pool, nameOf, people, onBalance, onMove
             <button type="button" className="icon-btn" aria-label="One group fewer" disabled={count <= min} onClick={() => onBalance(count - 1)}><Icon name="minus" /></button>
             <span className="big-strokes-txt">{count} groups</span>
             <button type="button" className="icon-btn" aria-label="One group more" disabled={count >= max} onClick={() => onBalance(count + 1)}><Icon name="plus" /></button>
-            <button type="button" className={`pill-btn sm ${byHand ? '' : 'on'}`} onClick={() => onBalance(count)}>Balance by handicap</button>
+            {/* A button that deals them out again, an outline with its icon, never the look of a chip that's on (trips-49) */}
+            <button type="button" className="pill-btn sm big-rebalance" onClick={() => onBalance(count)}><Icon name="arrows-clockwise" /> Balance by handicap</button>
           </div>
           <p className="field-help">{byHand ? 'Moved by hand. Balance by handicap deals them out again.' : 'Dealt out best to worst like a draft, so each group gets a low, a high and two in between.'} Tap a player to move them.</p>
         </div>
@@ -409,7 +436,7 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
           <div className="block">
             <Segmented label="Net or gross skins" className="press-mode-row" btn="pm-btn" value={skins.kind} onChange={kind => setSkins(s => ({ ...s, kind }))}
               options={[{ value: 'net', label: 'Net', disabled: !useHc }, { value: 'gross', label: 'Gross' }]} />
-            <div className="field-label">Each player in puts in</div>
+            <div className="field-label">Each player in skins puts in</div>
             <button type="button" className="amt-btn" onClick={() => setPad('skins')}>{money(skins.stake)}</button>
             <div className="toggle-row ap-game">
               <div><div className="toggle-lbl">Ties carry</div><div className="toggle-sub">{skins.carry ? 'Each hole is worth the same part of the pot, and a tie carries it on to the next hole' : 'The pot is split by skins won, so every skin is worth the same. A tied hole is nobody’s'}</div></div>
@@ -442,7 +469,8 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
               <Toggle on={!!skins.birdieDouble} onChange={birdieDouble => setSkins(s => ({ ...s, birdieDouble }))} label="Birdies win two skins" />
             </div>
             <div className="field-label">Who’s in · {skinsIn} of {n}</div>
-            <div className="chip-row flush">
+            {/* Several can be in, so the light picked chip (an ink edge and check), not a block of solid ink (trips-50) */}
+            <div className="chip-row flush big-who">
               {pool.map(p => {
                 const on = !skins.out.includes(p.id);
                 return <PickChip key={p.id} small on={on} onClick={() => setSkins(s => ({ ...s, out: on ? [...s.out, p.id] : s.out.filter(x => x !== p.id) }))}>{nameOf(p.id)}</PickChip>;
@@ -470,7 +498,7 @@ function Games({ pot, setPot, skins, setSkins, teams, setTeams, pool, groups = n
                 </div>
               </div>
             ))}
-            <button type="button" className="pill-btn sm" onClick={() => teamSize(teams.best === 2 ? 4 : 2)}>Balance by handicap</button>
+            <button type="button" className="pill-btn sm big-rebalance" onClick={() => teamSize(teams.best === 2 ? 4 : 2)}><Icon name="arrows-clockwise" /> Balance by handicap</button>
             <p className="field-help">Balanced pairs the best player with the worst, the second best with the second worst, and so on. Winning team takes the pot, ties split it.</p>
           </div>
         )}
@@ -509,9 +537,10 @@ function Bets({ big, setBets, nameOf, today, was, busy, problem, onFinish }) {
   return (
     <>
       <div className="scroll">
-        <BetsList bs={bs} name={nameOf} onEdit={setEditing} />
+        <BetsList bs={bs} name={nameOf} onEdit={setEditing} quiet />
         <button className="add-row" onClick={() => setEditing('new')}><div className="add-ci"><Icon name="plus" /></div><span className="add-lbl">Add a side bet</span></button>
-        <p className="field-help pad">Optional. You can add more once the groups are out, from the game’s page.</p>
+        {/* One short line under the tile, not a paragraph above it and another below (trips-51) */}
+        <p className="field-help pad">Optional. Any two players, a match or per hole. Add more later from the game’s page.</p>
         {problem && <p className="hint-card warn"><Icon name="warning" fill /> {problem}</p>}
       </div>
       <div className="cta-wrap">
