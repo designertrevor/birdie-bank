@@ -84,7 +84,7 @@ export function PlayForSheet({ round, onClose }) {
         </div>
       )}
       <div className="cta-wrap">
-        <button className="full-btn" disabled={same} onClick={apply}>{same ? 'No change yet' : <>Save for the whole round <Icon name="check" /></>}</button>
+        <button className="full-btn" disabled={same} onClick={apply}>{same ? 'No changes yet' : <>Save for the whole round <Icon name="check" /></>}</button>
       </div>
     </Sheet>
   );

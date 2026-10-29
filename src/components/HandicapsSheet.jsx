@@ -11,6 +11,7 @@ import { changeHandicaps, isJustPlaying, sideGamesOf } from '../lib/round.js';
 import { STROKE_SIDE_GAMES } from '../lib/allowances.js';
 import { moneyLine, playsLine } from '../lib/hole-fix.js';
 import { buzz } from '../lib/delight.js';
+import './handicaps-sheet.css';
 
 const hcText = v => (v < 0 ? `+${-v}` : String(v));
 
@@ -35,6 +36,12 @@ export function HandicapsSheet({ round, onClose }) {
   // Someone just playing gets no strokes, so they have no handicap to set here
   const missing = useHc ? after.players.filter(p => !isJustPlaying(round, p.id) && p.index == null && p.courseHcOverride == null) : [];
   const padPlayer = after.players.find(p => p.id === padFor);
+  // The tees: one pick for the group, and a player's own only when it's opened for them
+  const [teeOpen, setTeeOpen] = useState(null);
+  const playing = after.players.filter(p => !isJustPlaying(round, p.id));
+  const manyTees = course?.tees?.length > 1;
+  const groupTee = playing.length && playing.every(p => p.tee === playing[0].tee) ? playing[0].tee : null;
+  const setAllTees = name => setEdits(e => Object.fromEntries([...Object.entries(e), ...playing.map(p => [p.id, { ...e[p.id], tee: name }])]));
 
   const apply = () => {
     update(s => {
@@ -61,31 +68,51 @@ export function HandicapsSheet({ round, onClose }) {
         </div>
         {useHc && (
           <>
+            {/* The tees once for the group (most play the same), then a row a player: name, strokes,
+                their handicap to edit, and their tees as one chip that opens the choice for them alone */}
+            {manyTees && (
+              <>
+                <div className="sec-label">Tees</div>
+                <div className="tee-chips hc-tees" role="radiogroup" aria-label="Everyone’s tees">
+                  {course.tees.map(t => (
+                    <button key={t.name} role="radio" aria-checked={groupTee === t.name} className={`tee-chip ${groupTee === t.name ? 'active' : ''}`} onClick={() => setAllTees(t.name)}>
+                      <span className="tee-dot" style={teeDotStyle(t)} />{t.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="field-help pad">{groupTee ? 'Everyone plays these. Tap a player’s tees below to change one.' : 'Not everyone plays the same tees. Tap one to put everyone on it.'}</p>
+              </>
+            )}
             <div className="sec-label">Players</div>
-            <div style={{ padding: '0 16px' }}>
-              {after.players.filter(p => !isJustPlaying(round, p.id)).map(p => {
+            <div className="hc-list">
+              {playing.map(p => {
                 const none = p.index == null && p.courseHcOverride == null;
+                const tee = course?.tees?.find(t => t.name === p.tee);
                 return (
-                  <div key={p.id} className="list-item player-pick on hc-row">
-                    <div className="row-main">
-                      <div className="li-name">{p.name}</div>
-                      <div className="li-sub">{p.plays ? `Gets ${p.plays} stroke${p.plays === 1 ? '' : 's'}` : 'No strokes'}</div>
-                    </div>
-                    <div className="pick-extra">
-                      {course?.tees?.length > 1 && (
-                        <div className="tee-chips" role="radiogroup" aria-label={`${p.name}’s tee`}>
-                          {course.tees.map(t => (
-                            <button key={t.name} role="radio" aria-checked={p.tee === t.name} className={`tee-chip ${p.tee === t.name ? 'active' : ''}`} onClick={() => edit(p.id, { tee: t.name })}>
-                              <span className="tee-dot" style={teeDotStyle(t)} />{t.name}
-                            </button>
-                          ))}
-                        </div>
+                  <div key={p.id} className="hc-line">
+                    <div className="hc-top">
+                      <div className="li-name hc-name">{p.name}</div>
+                      <div className="li-sub hc-sub">{p.plays ? `Gets ${p.plays} stroke${p.plays === 1 ? '' : 's'}` : 'No strokes'}</div>
+                      {manyTees && (
+                        <button className={`hc-chip tee-select ${teeOpen === p.id ? 'open' : ''}`} onClick={() => setTeeOpen(o => (o === p.id ? null : p.id))} aria-expanded={teeOpen === p.id}
+                          aria-label={`${p.name}’s tees: ${p.tee || 'none'}. Change them`}>
+                          {tee && <span className="tee-dot" style={teeDotStyle(tee)} />}{p.tee || 'Tees'}
+                        </button>
                       )}
-                      <button className={`hc-chip ${none ? 'missing' : ''}`} onClick={() => setPadFor(p.id)}
+                      <button className={`hc-chip hc-num ${none ? 'missing' : ''} ${manyTees ? '' : 'alone'}`} onClick={() => setPadFor(p.id)}
                         aria-label={`${p.name}’s ${round.holesCount === 9 ? '9-hole handicap' : 'course handicap'}: ${hcText(p.courseHc ?? 0)}${none ? ', none, plays as 0' : p.courseHcOverride != null ? ', edited' : ''}. Change it`}>
-                        {round.holesCount === 9 ? '9-hole handicap' : 'Course handicap'} <strong>{hcText(p.courseHc ?? 0)}</strong>{none ? ' · none, plays as 0' : p.courseHcOverride != null ? ' · edited' : ''} <Icon name="pencil-simple" />
+                        <span className="hc-l">{round.holesCount === 9 ? '9-hole' : 'Handicap'}</span> <strong>{hcText(p.courseHc ?? 0)}</strong>{none ? ' · none' : p.courseHcOverride != null ? ' · edited' : ''} <Icon name="pencil-simple" />
                       </button>
                     </div>
+                    {manyTees && teeOpen === p.id && (
+                      <div className="tee-chips hc-own-tees" role="radiogroup" aria-label={`${p.name}’s tees`}>
+                        {course.tees.map(t => (
+                          <button key={t.name} role="radio" aria-checked={p.tee === t.name} className={`tee-chip ${p.tee === t.name ? 'active' : ''}`} onClick={() => { edit(p.id, { tee: t.name }); setTeeOpen(null); }}>
+                            <span className="tee-dot" style={teeDotStyle(t)} />{t.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -112,7 +139,7 @@ export function HandicapsSheet({ round, onClose }) {
           </div>
         )}
         <div className="cta-wrap">
-          <button className="full-btn" disabled={same} onClick={apply}>{same ? 'No change yet' : <>Save for the whole round <Icon name="check" /></>}</button>
+          <button className="full-btn" disabled={same} onClick={apply}>{same ? 'No changes yet' : <>Save for the whole round <Icon name="check" /></>}</button>
         </div>
       </Sheet>
       <Numpad open={!!padFor} title={`${padPlayer?.name}’s ${round.holesCount === 9 ? '9-hole ' : ''}course handicap`} initial={padPlayer ? padPlayer.courseHc ?? '' : ''}

@@ -74,9 +74,10 @@ export function FirstTeeSheet({ round, open, mode = 'view', canEdit = false, me 
         </div>
         <div className="ft-sec">
           <div className="ft-h">House rules</div>
+          {/* "None. Straight up." only when there's nothing at all: presses are a rule too */}
           {rules.length
             ? <ul className="ft-list">{rules.map(x => <li key={x.id}>{oneGame ? x.text : <><strong>{x.label}:</strong> {x.text}</>}</li>)}</ul>
-            : <div className="ft-line">None. Straight up.</div>}
+            : !presses && <div className="ft-line">None. Straight up.</div>}
           {presses && <div className="ft-row"><span className="ft-k">Presses</span><span className="ft-v">{presses.text}</span></div>}
         </div>
         <div className="ft-sec">

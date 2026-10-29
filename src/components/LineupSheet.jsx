@@ -152,7 +152,7 @@ export function LineupSheet({ round, onClose }) {
       )}
       <div className="cta-wrap">
         <button className="full-btn" disabled={same} onClick={apply}>
-          {same ? 'No change yet' : fromNext && orderChanged ? <>Save from hole {nextNo} <Icon name="check" /></> : <>Save for the whole round <Icon name="check" /></>}
+          {same ? 'No changes yet' : fromNext && orderChanged ? <>Save from hole {nextNo} <Icon name="check" /></> : <>Save for the whole round <Icon name="check" /></>}
         </button>
       </div>
     </Sheet>

@@ -128,7 +128,8 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
                 <button className="sc-btn" aria-label="Lower handicap" onClick={() => setHc(v => Math.max(-10, v - 1))}><Icon name="minus" /></button>
                 <span className="sc-num" aria-live="polite">{hc}</span>
                 <button className="sc-btn" aria-label="Higher handicap" onClick={() => setHc(v => Math.min(54, v + 1))}><Icon name="plus" /></button>
-                <span style={{ fontWeight: 700 }}>{added ? strokesLabel(added.plays) : '–'}</span>
+                {/* Their strokes once there's a name to work them out for; nothing before, not a lone dash */}
+                {added && <span style={{ fontWeight: 700 }}>{strokesLabel(added.plays)}</span>}
               </div>
               {started && <p className="field-help">Nobody else’s strokes change.</p>}
             </div>

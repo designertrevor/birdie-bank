@@ -118,7 +118,8 @@ export function useHoleSave({ round, hole, isLast, nextIdx, units, game, editabl
         ...(played ? [{ label: 'Finish and count holes played', value: 'finish' }] : []),
         // Not teed off yet on a round you set up: keep the setup as a plan for another day
         ...(!played && !round.localMe && !solo && round.shared?.host !== false ? [{ label: 'Schedule for later instead', value: 'later' }] : []),
-        { label: 'Delete round', value: 'discard', danger: true },
+        // Quiet, after Keep playing: it has its own confirm, and it's never the big target in the middle
+        { label: 'Delete round', value: 'discard', danger: true, quiet: true },
       ],
       cancelLabel: 'Keep playing',
     });

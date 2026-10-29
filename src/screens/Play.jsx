@@ -257,7 +257,8 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
         <Scorecard round={round} current={hole.no} onHole={no => { setCard(false); if (watching) setWatch('hole'); goHole(round.holes.findIndex(h => h.no === no)); }} />
         {editable && (
           <button className="quiet-row fix-link" onClick={() => { setCard(false); setFixSheet('hole'); }}>
-            <Icon name="wrench" /> <span><u>Wrong par or HCP?</u> Fix hole {hole.no}</span>
+            {/* The action is the underlined part; the question is quiet */}
+            <Icon name="wrench" /> <span>Wrong par or HCP? <u>Fix hole {hole.no}</u></span>
           </button>
         )}
       </Sheet>

@@ -58,7 +58,7 @@ export function GamesSheet({ round, onClose }) {
       {/* A pot added partway: its holes already played count once the winner is tapped */}
       {potCatchUpNotes(round, list).map(t => <p key={t} className="field-help pad">{t}</p>)}
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes'}</button>
+        <button className="full-btn" disabled={!changed || bad} onClick={save}>{changed ? 'Save games' : 'No changes yet'}</button>
       </div>
     </Sheet>
   );

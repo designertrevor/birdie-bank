@@ -1,0 +1,19 @@
+/* Handicaps mid-round (HandicapsSheet.jsx): the group's tees once, then one card of player rows with
+   hairlines, each with its handicap to edit and its tees as one chip that opens that player's choice */
+.hc-tees { padding: 0 16px; }
+.hc-list { margin: 0 16px; border-radius: var(--r-card, 20px); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
+.hc-line { padding: 12px 14px; }
+.hc-line + .hc-line { border-top: 1px solid var(--line-soft); }
+/* Name over strokes on the left; the tees chip beside the name and the handicap beside the strokes */
+.hc-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name tee" "sub num"; align-items: center; column-gap: 10px; row-gap: 6px; }
+.hc-name { grid-area: name; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-sub { grid-area: sub; }
+.hc-top .tee-select { grid-area: tee; }
+.hc-top .hc-num { grid-area: num; }
+.hc-top .hc-num.alone { grid-area: tee; grid-row: 1 / span 2; }
+.hc-top .hc-chip { justify-self: end; min-height: 36px; }
+/* A hairline edge like the other chips (not the pink one a picked player's chips wear in setup) */
+.hc-list .hc-chip:not(.missing) { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); color: var(--body); }
+.hc-list .hc-chip.tee-select.open { box-shadow: inset 0 0 0 1.5px var(--ink); color: var(--ink); }
+.hc-list .hc-chip .hc-l { color: var(--body); }
+.hc-own-tees { margin-top: 10px; }

@@ -33,8 +33,9 @@ export function MatchPanel({ round, hole, readOnly = false }) {
   const byes = round.game === 'nassau' || round.game === 'match' ? byeBets(winners, nassauAmounts(round), LEGS, round.settings[round.game]?.bye || 'off') : [];
   const bets = nassauBets(winners, [...round.presses, ...byes], nassauAmounts(round), LEGS);
   const names = sideNames(round);
-  // One match fills the row, so it says the leader's name; Nassau's three tiles use a letter
-  const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : round.game === 'match' ? n.split(' ')[0] : ([...n][0] || '').toUpperCase()));
+  // The leader by first name ("Trevor 1 up"), a team by its letter; an initial was ambiguous when two
+  // share one. Nassau's three tiles set the name a size down (.ms-val.named) so it fits a third of the row
+  const short = names.map((n, i) => (round.teams ? ['A', 'B'][i] : n.split(' ')[0]));
   // Pop a tile when its score moved since this phone last showed it (the hole screen remounts on every save)
   const vals = legs.map(leg => { const s = bets.find(x => x.key === leg).status; return `${s.leader}:${s.by}`; });
   const [popped] = useState(() => { const was = TILE_SEEN.get(round.id); return was ? legs.filter((leg, i) => was[i] !== vals[i]) : []; });
@@ -52,7 +53,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
     const s = b.status;
     const notStarted = pos < b.start && s.played === 0;
     const val = notStarted ? '–' : s.leader === null ? 'All square' : `${short[s.leader]} ${s.by} up`;
-    const sub = notStarted ? `Starts H${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? `Won ${s.by}&${s.left}` : s.dormie ? 'Dormie · can’t lose' : `${s.left} left`;
+    const sub = notStarted ? `From hole ${holeAtPos(round, b.start)}` : s.left === 0 ? 'Final' : s.closed ? `Won ${s.by}&${s.left}` : s.dormie ? 'Dormie · can’t lose' : `${s.left} left`;
     // Dormie: up by as many holes as are left, so the leader can't lose (a tie at worst)
     const spoken = notStarted ? 'not started' : s.leader === null ? 'all square' : `${names[s.leader]} ${s.by} up`;
     const said = s.dormie && !s.closed && s.left > 0
@@ -60,7 +61,7 @@ export function MatchPanel({ round, hole, readOnly = false }) {
       : `${LEGS[leg].label}: ${spoken}, ${sub}`;
     return (
       <div key={leg} role="group" aria-label={said} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''} ${legs.length === 1 ? 'solo' : ''}`}>
-        <span className="ms-lbl">{LEGS[leg].label}</span><span key={popped.includes(leg) ? val : 'same'} className={`ms-val ${val === 'All square' ? 'sq' : ''} ${popped.includes(leg) ? 'moved' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
+        <span className="ms-lbl">{LEGS[leg].label}</span><span key={popped.includes(leg) ? val : 'same'} className={`ms-val ${val === 'All square' ? 'sq' : ''} ${s.leader !== null && !round.teams && legs.length > 1 ? 'named' : ''} ${popped.includes(leg) ? 'moved' : ''}`}>{val}</span><span className="ms-sub">{sub}</span>
       </div>
     );
   };
@@ -139,7 +140,7 @@ export function TeamPanel({ round, hole }) {
     const par = part.reduce((a, r) => a + r.hole.par * t.count, 0);
     const notStarted = pos < l.start && !s.played;
     const val = notStarted ? '–' : s.leader === null ? (s.played ? 'Level' : '–') : `${s.leader ? 'B' : 'A'} by ${s.by}`;
-    const sub = notStarted ? `Starts H${holeAtPos(round, l.start)}` : s.played ? `A ${fmt(s.totals[0] - par)} · B ${fmt(s.totals[1] - par)}${s.left === 0 ? ' · Final' : ''}` : 'No holes yet';
+    const sub = notStarted ? `From hole ${holeAtPos(round, l.start)}` : s.played ? `A ${fmt(s.totals[0] - par)} · B ${fmt(s.totals[1] - par)}${s.left === 0 ? ' · Final' : ''}` : 'No holes yet';
     const said = `${l.label}: ${notStarted ? 'not started' : s.leader === null ? 'level' : `${names[s.leader]} ahead by ${s.by}`}. ${sub}`;
     return (
       <div key={l.key} role="group" aria-label={said} className={`ms-tile ${s.leader === 0 ? 'ahead' : s.leader === 1 ? 'behind' : ''} ${t.lines.length === 1 ? 'solo' : ''}`}>
@@ -163,8 +164,10 @@ export function VegasPanel({ round, hole, draft, touched }) {
   const teams = round.teams || [];
   const point = round.settings.vegas.point;
   const total = rows.filter(r => r.played).reduce((a, r) => a + r.diff, 0);
+  // Every box starts at par and saves as shown, so the hole's numbers read live from the first look:
+  // "so far" until each score's been tapped
   const ready = teams.every(t => t.players.every(pid => touched[pid]));
-  const pv = ready ? vegasPreview(round, hole, draft) : null;
+  const pv = vegasPreview(round, hole, draft);
   return (
     <div className="vegas-panel">
       <div className="vegas-teams">
@@ -172,7 +175,7 @@ export function VegasPanel({ round, hole, draft, touched }) {
           <div key={t.id} className={`vegas-team ${(i === 0 ? total : -total) > 0 ? 'ahead' : (i === 0 ? total : -total) < 0 ? 'behind' : ''}`}>
             <span className="ms-lbl"><span className={`side-tag ${i === 0 ? 'a' : 'b'}`}>{['A', 'B'][i]}</span> {t.name}</span>
             <span className="ms-val">{pv ? pv.numbers[i] : '–'}</span>
-            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv?.high?.[i] ? 'No par: high number first' : pv ? 'This hole' : 'Enter scores'}</span>
+            <span className="ms-sub">{pv?.flipped[i] ? 'Flipped by a birdie' : pv?.high?.[i] ? 'No par: high number first' : pv ? (ready ? 'This hole' : 'So far') : 'Enter scores'}</span>
           </div>
         ))}
       </div>
@@ -234,9 +237,10 @@ export function PanelArt({ game }) {
 
 export function ChipsPanel({ icon, game = null, label, items, color = 'var(--lav)' }) {
   return (
-    <div className="banker-bar" style={{ background: color }}>
+    <div className="banker-bar" style={{ '--panel-c': color }}>
       <div><div className="bl">{label}</div><div className="bn">{game ? <PanelArt game={game} /> : <Icon name={icon} fill />} {items[0]?.lead || 'Even'}</div></div>
-      <div className="skin-counts">{items.map(it => <span key={it.id} className="press-chip">{it.name} {it.value}</span>)}</div>
+      {/* Plain text standings, not chips: nothing here is tapped */}
+      <div className="skin-counts cp-items">{items.map(it => <span key={it.id} className="cp-item">{it.name} <b>{it.value}</b></span>)}</div>
     </div>
   );
 }
@@ -309,7 +313,7 @@ export function RabbitPanel({ round, hole }) {
   const holder = leg?.holder;
   const won = t.legs.filter(l => l.done && l.pays);
   return (
-    <div className="banker-bar" style={{ background: 'var(--lav)' }}>
+    <div className="banker-bar" style={{ '--panel-c': 'var(--lav)' }}>
       <div>
         <div className="bl">{leg?.seg.label} · ends H{holeAtPos(round, leg?.seg.end)}</div>
         <div className="bn"><PanelArt game="rabbit" /> {holder ? `${nameOf(round, holder)} has the rabbit` : 'The rabbit is loose'}</div>
@@ -331,7 +335,7 @@ export function SnakePanel({ round, hole, marks }) {
   const leg = t.legs.find(l => pos >= l.seg.start && pos <= l.seg.end) || t.legs[0];
   const done = t.legs.filter(l => l.done && l !== leg && l.holder);
   return (
-    <div className="banker-bar" style={{ background: 'var(--lav)' }}>
+    <div className="banker-bar" style={{ '--panel-c': 'var(--lav)' }}>
       <div>
         <div className="bl">{t.legs.length > 1 ? `${leg.seg.label} · ` : ''}{leg.count ? `${leg.count} three-putt${leg.count === 1 ? '' : 's'} · worth ${money(leg.value)}` : 'No three-putts yet'}</div>
         <div className="bn"><PanelArt game="snake" /> {leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
@@ -418,8 +422,8 @@ export function HammerPanel({ round, hole, marks, setMarks, readOnly = false }) 
       {status && <p className="bl" style={{ margin: '0 0 8px', fontWeight: 500 }} aria-live="polite">{status}</p>}
       {!readOnly && <div className="chip-row" style={{ padding: 0 }}>
         {[0, 1].map(i => can[i] && (
-          <button key={i} className="pill-btn" style={{ minHeight: 44 }} onClick={() => put({ hammers: [...mark.hammers, i], conceded: null })}>
-            <Icon name="hammer" fill /> {short[i]} hammer{plural(i) ? '' : 's'} · {money(value * 2)}
+          <button key={i} className="pill-btn hm-btn" style={{ minHeight: 44 }} onClick={() => put({ hammers: [...mark.hammers, i], conceded: null })}>
+            <Icon name="hammer" fill /> <span className="hm-t">{short[i]} hammer{plural(i) ? '' : 's'}<span className="hm-v">{money(value * 2)}</span></span>
           </button>
         ))}
         {pending != null && (

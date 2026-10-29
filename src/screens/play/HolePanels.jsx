@@ -1,6 +1,7 @@
 // The main game's panel over the score rows (Play.jsx): the banker's bets, what a skin is worth, the
 // wolf's pick, and the shared panels from GamePanels.jsx for the other games. Plus the banker's two
 // sheets: who's banker on this hole, and one player's bet on the keypad.
+import { useState } from 'react';
 import { Icon, Numpad, PickChip, PickRow, Sheet } from '../../components/ui.jsx';
 import {
   HammerPanel, MatchPanel, MoneyPanel, PointsPanel, RabbitPanel, ScramblePanel, SixesPanel, SnakePanel, TeamPanel, TotalsPanel, VegasPanel,
@@ -199,7 +200,27 @@ function WolfPanel({ round, hole, wolf, setWolf }) {
   const pick = (partner, isBlind = false) => {
     const { blind: _was, ...rest } = wolf;
     setWolf(isBlind ? { ...rest, partner: null, blind: true } : { ...rest, partner });
+    setOpen(false);
   };
+  // Once the wolf has picked, the panel folds to one line of who's with whom (Change opens it again),
+  // so the four score rows get the screen back. It opens while nothing's picked
+  const [open, setOpen] = useState(false);
+  const first = p => (p?.name || '').split(' ')[0];
+  if (setWolf && wolf.partner !== undefined && !open) {
+    const partner = others.find(p => p.id === wolf.partner);
+    const rest = others.filter(p => p.id !== wolf.partner).map(first).join(', ');
+    const side = partner ? `${first(w)} + ${first(partner)}` : `${first(w)} ${blind ? `blind wolf, ${blindMult}×` : `alone, ${mult}×`}`;
+    return (
+      <div className="wolf-panel folded">
+        <div className="wp-line">
+          <Icon name="paw-print" fill />
+          <span className="wp-sides"><strong>{side}</strong> <span className="wp-v">v</span> {rest}</span>
+          <button type="button" className="change-btn" onClick={() => setOpen(true)} aria-label="Change the wolf’s pick">Change</button>
+        </div>
+        {carried > 0 && <p className="wolf-note">{carried === 1 ? 'A tied hole is' : `${carried} tied holes are`} riding on this one: it pays {carried + 1}×.</p>}
+      </div>
+    );
+  }
   return (
     <div className="wolf-panel">
       <div className="bl" style={{ marginBottom: setWolf ? 8 : 0 }}><Icon name="paw-print" fill /> <strong>{w?.name}</strong> is the wolf.{' '}
