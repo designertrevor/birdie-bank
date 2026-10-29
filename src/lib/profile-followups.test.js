@@ -84,8 +84,8 @@ test('critters: an app that doesn’t know one yet shows initials on its backdro
   assert.deepEqual(avatarModel({ kind: 'buddy', id: 'pterodactyl', bg: 'teal' }, { name: 'Sam' }), { kind: 'initials', text: 'S', bg: 'teal' });
   assert.equal(avatarLabel({ kind: 'buddy', id: 'pterodactyl' }), 'A character');
   const two = noTwins([avatarModel(buddyAvatar('goose')), avatarModel(buddyAvatar('goose'))]);
-  assert.equal(two[0].bg, 'lav');
-  assert.notEqual(two[1].bg, 'lav', 'the second goose moves to another backdrop');
+  assert.equal(two[0].bg, 'mint');
+  assert.notEqual(two[1].bg, 'mint', 'the second goose moves to another backdrop');
 });
 
 // ------------------------------- privacy: Everyone ---------------------------

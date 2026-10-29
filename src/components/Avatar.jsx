@@ -25,9 +25,7 @@ export function AvatarArt({ model, size = '', base = 'avatar', className = '' })
     return <span className={`${cls} av-photo`} aria-hidden="true"><img src={model.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBrokenUrl(model.url)} /></span>;
   }
   if (model.kind === 'buddy') {
-    // The teal backdrop is the one dark one: it gets a cream ring on a dark card (styles.css .av-teal), or the circle is lost
-    const dark = backdropOf(model.bg).ink === '#ffffff';
-    return <span className={`${cls} av-buddy${dark ? ' av-teal' : ''}`} style={{ background: backdropOf(model.bg).hex }} aria-hidden="true"><Suspense fallback={null}><BuddyArt id={model.buddy} bg={model.bg} /></Suspense></span>;
+    return <span className={`${cls} av-buddy`} style={{ background: backdropOf(model.bg).hex }} aria-hidden="true"><Suspense fallback={null}><BuddyArt id={model.buddy} bg={model.bg} /></Suspense></span>;
   }
   // Initials (also a photo that won't load: a link that's gone, or no signal before it was cached)
   const b = backdropOf(model.bg);

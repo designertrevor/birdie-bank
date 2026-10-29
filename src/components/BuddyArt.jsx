@@ -377,8 +377,6 @@ export function BuddyArt({ id, bg, px = 28, className = '' }) {
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
       {/* The ink line round the head, the glasses and the hat is in the file, so it holds on every backdrop and on the white page */}
       {art}
-      {/* The teal backdrop is as dark as a dark card: a cream rim keeps the circle there (styles.css .bd-rim; an avatar draws its own) */}
-      {backdropOf(bg).ink === '#ffffff' && <circle className="bd-rim" cx="32" cy="32" r="31.2" fill="none" stroke={BALL} strokeOpacity=".6" strokeWidth="1.6" />}
     </svg>
   );
 }

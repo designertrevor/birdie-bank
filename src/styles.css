@@ -2070,18 +2070,11 @@ button.trip-card:active { transform: scale(.97); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --av-ring: rgba(255,255,255,.14); } }
 .avatar.av-buddy, .avatar.av-photo, .join-avatar.av-buddy, .join-avatar.av-photo { overflow: hidden; padding: 0; }
 .avatar.av-buddy, .avatar.av-photo { box-shadow: 0 0 0 1.5px var(--av-ring); background: var(--surface); }
-/* In the dark theme a buddy's colour circle needs no grey ring (it read as a muddy halo), except on the
-   teal backdrop, which is as dark as the card: there a cream ring keeps the circle */
-.bd-rim { display: none; }
-:root[data-theme="dark"] .bd-rim { display: inline; }
-:root[data-theme="dark"] .av-buddy .bd-rim { display: none; }
+/* In the dark theme a buddy's colour circle needs no grey ring (it read as a muddy halo). Every
+   backdrop, the sea teal too, reads on a dark card on its own (2026-10-29) */
 :root[data-theme="dark"] .avatar.av-buddy { box-shadow: none; }
-:root[data-theme="dark"] .avatar.av-buddy.av-teal { box-shadow: 0 0 0 1.5px rgba(251,247,236,.6); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .bd-rim { display: inline; }
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .av-buddy .bd-rim { display: none; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy { box-shadow: none; }
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy.av-teal { box-shadow: 0 0 0 1.5px rgba(251,247,236,.6); }
 }
 /* Initials get the same ring, so the teal colour still has an edge on dark cards */
 .avatar.av-initials:not(.av-in-btn) { box-shadow: 0 0 0 1.5px var(--av-ring); }
