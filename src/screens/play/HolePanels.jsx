@@ -22,9 +22,9 @@ import { skinsWorth } from './hole-info.js';
  * The main game's panel for the hole on screen. `main` is the main game's own round (no one who's
  * only in the side games); `onBankerPick`, `onBet` and `onSkinsBet` open the sheets that change them.
  */
-export function HolePanels({ main, game, hole, editable, banker, setBanker, phase, setPhase, wolf, setWolf, draft, touched, marks, setMarks, results, onBankerPick, onBet, onSkinsBet, bankerPart = null, noSkins = false }) {
-  // `bankerPart` ('bar' or 'bets') splits the banker's panel for a trial top that holds its bar in a card
-  // and its bets list under it (./top/); `noSkins` drops the skins strip for a top that says it itself
+export function HolePanels({ main, game, hole, editable, banker, setBanker, phase, setPhase, wolf, setWolf, draft, touched, marks, setMarks, results, onBankerPick, onBet, onSkinsBet, bankerPart = null }) {
+  // `bankerPart` ('bar' or 'bets') splits the banker's panel: the bar sits in the top of the hole and
+  // the bets list under it (Play.jsx); with none, the whole panel
   return (
     <>
       {game === 'banker' && (
@@ -33,7 +33,7 @@ export function HolePanels({ main, game, hole, editable, banker, setBanker, phas
       )}
       {matchScored(main) && <MatchPanel round={main} hole={hole} readOnly={!editable} />}
       {isTeamGame(game) && !matchScored(main) && <TeamPanel round={main} hole={hole} />}
-      {game === 'skins' && !noSkins && <SkinsPanel round={main} hole={hole} onChange={editable ? onSkinsBet : null} />}
+      {game === 'skins' && <SkinsPanel round={main} hole={hole} onChange={editable ? onSkinsBet : null} />}
       {game === 'wolf' && <WolfPanel round={main} hole={hole} wolf={wolf} setWolf={editable ? setWolf : null} />}
       {game === 'vegas' && <VegasPanel round={main} hole={hole} draft={draft} touched={touched} />}
       {game === 'sixes' && <SixesPanel round={main} hole={hole} />}

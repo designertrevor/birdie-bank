@@ -7,9 +7,8 @@
 // Flags: --look classic|new (localStorage bb-look), --theme light|dark|both (default both),
 // --only upnext,tab (shot ids), --type <name> (opens ?type=<name>), --seed <file>,
 // --build-seed (rebuilds overnight/review-shots/seed-state.json with this server's code, then stops),
-// --top a|b|c|d|e (localStorage bb-top, the scoring screen's top to try; see src/main.jsx),
-// --top-set (the scoring screen's top, every variant x game x theme, plain and scrolled, into
-// overnight/review-shots/top/<variant>-<game>-<theme>[-scrolled].png; narrow it with --variants a,b and --games skins,wolf).
+// --top-set (the scoring screen's top, every game x theme, plain and scrolled, into
+// overnight/review-shots/top-final/<game>-<theme>[-scrolled].png; narrow it with --games skins,wolf, move it with --out).
 // Every page runs on a fixed clock (Mon 26 Oct 2026, 5:40 pm in Utah), so both copies show the same days.
 // See overnight/review-shots/README.md.
 import { spawn } from 'node:child_process';
@@ -32,7 +31,6 @@ const NOW = Date.parse('2026-10-26T17:40:00-06:00');
 const TZ = 'America/Denver';
 const PORT = 9300 + Math.floor(Math.random() * 90);
 const isNew = LABEL !== 'current';
-const TOP = flag('top');
 
 const seedSrc = fs.readFileSync(new URL('./review-seed.js', import.meta.url), 'utf8').replace(/^export /gm, '');
 
@@ -136,7 +134,7 @@ function send(method, params = {}, sessionId) {
   return new Promise((res, rej) => pending.set(id, { res, rej }));
 }
 
-async function openPage({ theme, state, look, url = BASE, clock = true, storage = null, top = TOP }) {
+async function openPage({ theme, state, look, url = BASE, clock = true, storage = null }) {
   const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
   const s = (m, p) => send(m, p, sessionId);
@@ -148,7 +146,7 @@ async function openPage({ theme, state, look, url = BASE, clock = true, storage 
   await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }, { name: 'prefers-reduced-motion', value: 'reduce' }] });
   let seedJs = state ? `localStorage.setItem('birdie-bank-v1', ${JSON.stringify(JSON.stringify(state))});` : '';
   for (const [k, v] of Object.entries(storage || {})) seedJs += `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(JSON.stringify(v))});`;
-  await s('Page.addScriptToEvaluateOnNewDocument', { source: `${clock ? CLOCK : ''} try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); ${seedJs} localStorage.setItem('bb-look', '${look}'); ${top && top !== 'current' ? `localStorage.setItem('bb-top', '${top}');` : ''} sessionStorage.setItem('seeded', '1'); } } catch (e) {}` });
+  await s('Page.addScriptToEvaluateOnNewDocument', { source: `${clock ? CLOCK : ''} try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); ${seedJs} localStorage.setItem('bb-look', '${look}'); sessionStorage.setItem('seeded', '1'); } } catch (e) {}` });
   await s('Page.navigate', { url });
   return { s, close: () => send('Target.closeTarget', { targetId }) };
 }
@@ -190,23 +188,22 @@ try {
     console.log('wrote', path.relative(ROOT, SEED));
     await pg.close();
   } else if (flag('top-set')) {
-    // The scoring screen's top, five ways and today's: each game's round on screen, then scrolled down a bit
+    // The scoring screen's top: each game's round on screen, then scrolled down a bit
     const seed = JSON.parse(fs.readFileSync(SEED, 'utf8'));
-    const pg = await openPage({ theme: 'light', state: null, look: LOOK, top: null });
+    const pg = await openPage({ theme: 'light', state: null, look: LOOK });
     await ready(pg.s);
     const games = await evaluate(pg.s, `${seedSrc}\n return await topRounds(${JSON.stringify(seed)}, ${NOW});`);
     await pg.close();
     games.skins = seed;
-    const VARIANTS = String(flag('variants', 'current,a,b,c,d,e')).split(',');
     const GAMES = String(flag('games', 'skins,nassau,wolf,banker,vegas')).split(',');
-    const out = path.resolve(ROOT, flag('out', 'overnight/review-shots/top'));
+    const out = path.resolve(ROOT, flag('out', 'overnight/review-shots/top-final'));
     fs.mkdirSync(out, { recursive: true });
-    for (const v of VARIANTS) for (const g of GAMES) for (const theme of THEMES) {
+    for (const g of GAMES) for (const theme of THEMES) {
       const state = structuredClone(games[g]);
       state.settings.theme = theme;
-      const pg = await openPage({ theme, state, look: LOOK, top: v });
+      const pg = await openPage({ theme, state, look: LOOK });
       await ready(pg.s);
-      const name = `${v}-${g}-${theme}`;
+      const name = `${g}-${theme}`;
       try {
         await evaluate(pg.s, `${HELPERS} ${JOURNEYS.new} await toRound(); await w(1400); await settle(); return 1;`);
       } catch (e) { console.log(name, 'FAILED', e.message); }

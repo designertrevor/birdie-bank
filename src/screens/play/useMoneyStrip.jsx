@@ -1,5 +1,4 @@
-// The money strip's numbers and the sheet a tap on it opens (MoneyBar.jsx, and the trial tops of the
-// scoring screen in ./top/).
+// The money line's numbers and the sheet a tap on it opens (MoneyBar.jsx).
 import { useState } from 'react';
 import { Sheet } from '../../components/ui.jsx';
 import { ByGameTable } from '../../components/SideGames.jsx';
@@ -11,9 +10,9 @@ import { countsMoney, unitFmt, wholeDelta } from '../../lib/play-for.js';
 import { nassauOpenNote } from '../../lib/side-games.js';
 
 /**
- * The money strip's numbers and its sheet, for MoneyBar and for the trial tops of the scoring screen
- * (src/screens/play/top/): each player's total, who leads, which amounts just moved, the words a
- * screen reader hears, and the sheet a tap opens. `sheet` is rendered wherever the strip is.
+ * The money line's numbers and its sheet (MoneyLine): each player's total, who leads, which amounts
+ * just moved, the words a screen reader hears, and the sheet a tap opens. `sheet` is rendered wherever
+ * the line is.
  */
 export function useMoneyStrip({ round: full, hole, preview }) {
   // The bar is the betting players' money: anyone just playing is named under it, with no amount

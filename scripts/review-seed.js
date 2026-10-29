@@ -144,7 +144,7 @@ export async function newOnlyPlans(state, NOW) {
 }
 
 /**
- * The top of the scoring screen, five ways (n5/top): one round going on per game, on top of the seed
+ * The top of the scoring screen (n5/top, n6/top): one round going on per game, on top of the seed
  * without touching its rounds. Each is the active round in its own state, so the shots can open it:
  * Nassau 2 v 2 on the 7th with a press and two side games (the busiest top there is), Wolf on the 5th
  * before the wolf picks, Banker on the 4th (the bets step) and Vegas on the 4th. Skins is the seed's own.

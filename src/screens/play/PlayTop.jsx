@@ -1,6 +1,6 @@
-// The top of the round in progress (Play.jsx): the header and progress line, the money bar, the
-// banners (who has the card, asking for it, fixing scores, someone wanting in, a finished round) and
-// the hole tile that opens the scorecard.
+// The top of the round in progress (Play.jsx): the header and progress line, the banners (who has the
+// card, asking for it, fixing scores, someone wanting in, a finished round) and the hole's headline
+// with its scorecard link. The money line under the headline is in MoneyBar.jsx.
 import { Icon } from '../../components/ui.jsx';
 import { LivePill } from '../../components/Live.jsx';
 import { GalleryBar } from '../../components/Gallery.jsx';
@@ -13,11 +13,14 @@ import { onTab } from '../../lib/play-for.js';
 import { bigBoardOnly, ownMoney } from '../../lib/play-screen.js';
 import { ASK_MS, clockText } from '../../lib/keeper.js';
 import { useNav } from '../../lib/nav.js';
-import { CardBar, MoneyBar } from './MoneyBar.jsx';
+import { CardBar } from './MoneyBar.jsx';
 import { strokesHere } from './hole-info.js';
 
-/** The header, the line that shows how far through the round, and the money strip (or the Big Game's board, or the card). */
-export function PlayHeader({ round, idx, hole, solo, theme, preview, onLive, onMenu, noMoney = false }) {
+/**
+ * The header and the line that shows how far through the round, with the card (everyone just playing)
+ * or the Big Game's board under it. The money sits lower, under the hole's headline (MoneyLine).
+ */
+export function PlayHeader({ round, idx, solo, onLive, onMenu, noBar = false }) {
   const nav = useNav();
   return (
     <>
@@ -31,9 +34,9 @@ export function PlayHeader({ round, idx, hole, solo, theme, preview, onLive, onM
     </div>
     {/* How far through the round, as a line under the header (the words above say it for screen readers) */}
     <div className="play-track" aria-hidden="true"><span style={{ transform: `scaleX(${(idx + 1) / round.holes.length})` }} /></div>
-    {/* A Big Game's group round with no money of its own shows the game across every group instead */}
-    {/* The live money view (a phone watching the round) has the race instead, so no strip over it */}
-    {noMoney ? null : solo ? <CardBar round={round} /> : bigBoardOnly(round) ? <BigBar round={round} /> : <MoneyBar round={round} hole={hole} preview={preview} themed={!!theme} />}
+    {/* A Big Game's group round with no money of its own shows the game across every group. The live
+        money view (a phone watching the round) has the race instead, so nothing over it */}
+    {noBar ? null : solo ? <CardBar round={round} /> : bigBoardOnly(round) ? <BigBar round={round} /> : null}
     {round.trip?.format === BIG_FORMAT && ownMoney(round) && (
       <button className="big-link" onClick={() => nav.push('bigGame', { id: round.trip.id })}><Icon name="users-four" fill /> {round.trip.name}: the board across every group <Icon name="caret-right" /></button>
     )}
@@ -102,22 +105,26 @@ export function PlayBanners({ round, card, editable, dirty, requests, doneEditin
 }
 
 /**
- * Hole, par and HCP on one line (Layout Lab A), with who gets a stroke here under it, as one button
- * that opens the scorecard. The hole number is big; the rest is one quiet line.
+ * The hole as the top's headline ("Hole 3"), the scorecard a quiet link on its line, and par, HCP and
+ * who gets a stroke here on one line under it. No box: type and space do the grouping.
  */
-export function HoleMeta({ round, hole, units, solo, holeFixed, onOpen }) {
+export function HoleHead({ round, hole, units, solo, holeFixed, onOpen }) {
   const getting = strokesHere(round, hole, units, solo);
   return (
-    <button type="button" className="hole-line" onClick={onOpen} aria-label={holeFixed ? `Open scorecard. Hole ${hole.no}’s par or HCP was fixed for this round` : 'Open scorecard'}>
-      <span className="hl-no" aria-hidden="true">{hole.no}</span>
-      <span className="hl-main">
-        <span className="hl-meta">Par {hole.par} · HCP {hole.hdcp ?? '–'}{holeFixed && <span className="fixed-tag">Fixed</span>}</span>
+    <div className="hole-head">
+      <div className="hh-row">
+        <h2 className="hh-title">Hole {hole.no}</h2>
+        <button type="button" className="hh-card" onClick={onOpen} aria-label={holeFixed ? `Open scorecard. Hole ${hole.no}’s par or HCP was fixed for this round` : 'Open scorecard'}>
+          <Icon name="table" /> <span>Scorecard</span>
+        </button>
+      </div>
+      <p className="hh-meta">
+        Par {hole.par} · HCP {hole.hdcp ?? '–'}{holeFixed && <span className="fixed-tag">Fixed</span>}
         {/* The dot means a stroke, so it shows only on a hole where someone gets one */}
         {getting && (getting.length
-          ? <span className="hl-strokes"><span className="stroke-dots" aria-hidden="true">●</span>Strokes: {getting.length > 2 ? `${getting.length} players` : getting.join(', ')}</span>
-          : <span className="hl-strokes none">No strokes here</span>)}
-      </span>
-      <span className="hl-card"><Icon name="table" /> Card</span>
-    </button>
+          ? <span className="hh-strokes"> · <span className="stroke-dots" aria-hidden="true">●</span> Strokes: {getting.length > 2 ? `${getting.length} players` : getting.join(', ')}</span>
+          : <span className="hh-strokes"> · No strokes here</span>)}
+      </p>
+    </div>
   );
 }

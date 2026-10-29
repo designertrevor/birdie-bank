@@ -1,4 +1,5 @@
-// The money strip under the round's header, or the card bar when everyone is just playing (Play.jsx).
+// The money line under the hole's headline, or the card bar under the header when everyone is just
+// playing (Play.jsx).
 import { Icon } from '../../components/ui.jsx';
 import './play.css';
 import { holeComplete } from '../../lib/round.js';
@@ -34,29 +35,26 @@ export function CardBar({ round }) {
 }
 
 /**
- * Everyone's money, pinned under the header from the first hole, updating as scores go in: one thin
- * strip of names and amounts (Layout Lab A), so the score rows get the room. A tap opens the whole
+ * Everyone's money, under the hole's headline from the first hole and updating as scores go in: names
+ * over big amounts straight on the page, ruled above and below. It sticks to the top once the hole
+ * scrolls away, so the rows get the screen and the money never leaves it. A tap opens the whole
  * picture in a sheet: thru which hole, what this hole moves, each game's money, the side bets for
  * money in a reward round, and who's just playing.
  */
-export function MoneyBar({ round, hole, preview, themed = false }) {
+export function MoneyLine({ round, hole, preview }) {
   const m = useMoneyStrip({ round, hole, preview });
   return (
     <>
-    <button type="button" className={`money-strip ${themed ? 'themed' : ''}`} aria-haspopup="dialog" onClick={m.show} aria-label={m.label}>
-      {/* The round's theme is the strip's colour alone: the game's art was too small here to add anything */}
-      <span className="ms-items">
-        {m.rows.map(r => (
-          <span key={r.id} className={`ms-item ${r.lead ? 'lead' : ''}`}>
-            <span className="ms-p">{r.name}</span>
-            <span key={r.changed ? r.v : 'same'} className={`ms-a ${r.tone} ${r.changed ? 'bump' : ''}`}>{m.fmt(r.v, { sign: true })}</span>
-          </span>
-        ))}
-      </span>
-      <Icon name="caret-down" className="ms-more" />
+    <button type="button" className="money-line" aria-haspopup="dialog" onClick={m.show} aria-label={m.label}>
+      {m.rows.map(r => (
+        <span key={r.id} className={`ml-item ${r.lead ? 'lead' : ''}`}>
+          <span className="ml-p">{r.name}</span>
+          <span key={r.changed ? r.v : 'same'} className={`ml-a ${r.tone} ${r.changed ? 'bump' : ''}`}>{m.fmt(r.v, { sign: true })}</span>
+        </span>
+      ))}
+      <Icon name="caret-down" className="ml-more" />
     </button>
     {m.sheet}
     </>
   );
 }
-
