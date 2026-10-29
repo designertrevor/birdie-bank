@@ -257,8 +257,9 @@ function Lines({ lines, label, place = false }) {
         const amt = lineAmount(l, FMT);
         return (
           <FoldRow key={l.key} icon={place ? 'map-pin' : 'golf'} lead={!place && GAMES[l.key] ? <GameArt game={l.key} size={40} /> : null} tone={amt.tone} value={amt.text}
-            title={<>{l.name}{place && l.place ? <span className="sl-place"> · {l.place}</span> : null}</>}
-            sub={`${l.rounds} round${l.rounds === 1 ? '' : 's'} · ${lineRecord(l)}`}>
+            // A course's town goes on the second line with the count, so neither is cut off (history-9)
+            title={l.name}
+            sub={`${place && l.place ? `${l.place} · ` : ''}${l.rounds} round${l.rounds === 1 ? '' : 's'} · ${lineRecord(l)}`}>
             <p className="fold-text">{lineDetail(l, FMT)}</p>
           </FoldRow>
         );

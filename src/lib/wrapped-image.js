@@ -37,10 +37,7 @@ function draw(ctx, m) {
   const footerY = H - 110;
   ctx.fillStyle = C.bg;
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = C.pink;
-  ctx.beginPath(); ctx.arc(W - 40, 70, 250, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = C.ochre;
-  ctx.beginPath(); ctx.arc(W - 250, 250, 56, 0, Math.PI * 2); ctx.fill();
+  // No pink corner or gold dot behind the face: the buddy is the colour (history-17)
   ctx.fillStyle = 'rgba(164,212,197,.10)';
   ctx.beginPath(); ctx.arc(-60, H - 260, 260, 0, Math.PI * 2); ctx.fill();
   ctx.textBaseline = 'alphabetic';
@@ -78,10 +75,12 @@ function draw(ctx, m) {
   // The tiles, two to a row
   const gap = 24, half = (inner - gap) / 2;
   let col = 0;
-  for (const t of m.tiles) {
+  m.tiles.forEach((t, i) => {
+    // An odd last tile runs the full width, so the grid is never a half row (Birdies alone, history-17)
+    if (col === 0 && i === m.tiles.length - 1) { drawTile(ctx, t, PAD, y, inner, tileH); col = 1; return; }
     drawTile(ctx, t, PAD + col * (half + gap), y, half, tileH);
     if (col === 1) { col = 0; y += tileH + gap; } else col = 1;
-  }
+  });
   if (col) y += tileH + gap;
 
   // The sections: a label and a line or two each, as far as there's room
@@ -107,7 +106,7 @@ function draw(ctx, m) {
   ctx.fillText(clip(ctx, m.footer, inner), PAD, footerY);
 }
 
-/** Your Ball buddy (or photo), big, in the pink corner: the card is yours at a glance. */
+/** Your Ball buddy (or photo), big, in the top corner: the card is yours at a glance. */
 function drawFace(ctx, img) {
   const r = 150, cx = IMAGE_W - 230, cy = 250;
   ctx.save();

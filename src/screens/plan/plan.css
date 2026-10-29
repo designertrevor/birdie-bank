@@ -79,7 +79,8 @@ button.pd-seat:active { background: var(--surface); }
 /* A friend's answer and the organizer's nudge */
 .pd-answer { margin: 8px 0 0; }
 .pd-answer .rsvp-row { padding-top: 6px; }
-.pd-q { margin: 14px 20px 2px; font-family: var(--display); font-weight: var(--display-weight); font-size: 22px; color: var(--ink); }
+/* A question on the plan page is a section heading in the body face, like its labels, not a second display title (plan-10) */
+.pd-q { margin: 20px 20px 2px; font-family: var(--body-font); font-weight: 700; font-size: 17px; color: var(--ink); }
 .pd-answer .pd-days { margin-left: 16px; margin-right: 16px; }
 .pd-answer .pd-help { margin: 2px 20px 8px; }
 .pd-answer-btns { display: flex; flex-direction: column; gap: 10px; margin: 16px 16px 4px; }
@@ -159,6 +160,8 @@ button.pd-seat:active { background: var(--surface); }
 
 /* The pinned buttons sit under a hairline, so it's clear the page scrolls beneath them */
 .plan-page ~ .cta-wrap { box-shadow: 0 -1px 0 var(--line); }
+/* That hairline is the plan footer's edge, so no fade over In / Maybe / Out above it (plan-7) */
+.plan-page ~ .cta-wrap::before { content: none; }
 
 /* A row that can't be tapped keeps its chevron's room, so the tags line up down the column */
 .pd-go.hidden { visibility: hidden; }
@@ -170,7 +173,14 @@ button.pd-seat:active { background: var(--surface); }
 /* Beats the pastel card's dark sub text in both looks */
 :root .roll-call .block.summary-card .li-sub { color: var(--mute); }
 .roll-call .step-q { margin-top: 32px; }
-.roll-call .list-item.pick.on { background: var(--card); box-shadow: var(--hair); }
+/* Who showed up: one white card of rows with hairlines between, each with the person's face (plan-9) */
+.roll-call .rc-people { margin: 0 16px; padding: 0; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
+.roll-call .rc-people .list-item.pick { width: 100%; margin: 0; border-radius: 0; background: transparent; box-shadow: none; gap: 12px; }
+.roll-call .rc-people .list-item.pick + .list-item.pick { border-top: 1px solid var(--line); }
+.roll-call .rc-people .avatar { margin: 0; }
+/* The summary keeps its hairline in dark too, no gold top edge that light doesn't have */
+:root .roll-call .block.summary-card { box-shadow: var(--hair); }
+.roll-call .add-row { margin-top: 10px; }
 .roll-call .li-check.on { background: var(--state-set-bg); border-color: var(--state-set-bg); color: var(--ink); }
 .roll-call .add-ci { background: var(--surface); }
 

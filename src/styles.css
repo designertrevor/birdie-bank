@@ -1450,7 +1450,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .rsvp-tag.maybe { background: var(--ochre); color: var(--on-pastel); }
 .rsvp-tag.out { background: var(--loss-bg); color: var(--loss); }
 .when-block { margin-top: 2px; }
-.day-strip { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
+.day-strip { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; scroll-padding-inline: 16px; }
 .day-strip::-webkit-scrollbar { display: none; }
 .day-chip {
   flex-shrink: 0; min-width: 58px; min-height: 58px; border: none; border-radius: 16px; background: var(--surface); color: var(--ink);
@@ -1705,6 +1705,9 @@ button.who-status { cursor: pointer; min-height: 36px; }
 /* A loss is a solid muted red, not a pink outline round a pale fill (maroon in dark) (tab-12) */
 .sb-track.left i { right: 0; background: color-mix(in srgb, var(--loss) 60%, transparent); }
 .sb-track.right i { left: 0; background: var(--win); }
+/* In dark, a losing bar at 60% on the card read as a dull brick beside bright mint: the coral of the -$ amounts, stronger (tab-7) */
+:root[data-theme="dark"] .sb-track.left i { background: color-mix(in srgb, var(--loss) 80%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sb-track.left i { background: color-mix(in srgb, var(--loss) 80%, transparent); } }
 .sb-amt { padding-left: 8px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
 .kv-block { display: flex; flex-direction: column; }
 .kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
@@ -1734,6 +1737,9 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .lately-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 16px; border: none; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .lately-row.static { cursor: default; }
 button.lately-row:active { background: var(--surface); }
+/* A row's face or game sticker sits where the icon disc does, the same 32px (history-15) */
+.lately-row .avatar.lately-face { width: 32px; height: 32px; margin: 0; font-size: 14px; flex-shrink: 0; }
+.lately-row .lately-art { width: 32px; height: 32px; flex-shrink: 0; }
 .lately-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; flex-shrink: 0; color: var(--on-pastel); }
 /* One quiet chip for every kind of line (Trevor's note on Up next's colours: a column of coloured
    dots was the same noise as the cards). The tint classes stay for anything that wants them back */
@@ -1843,7 +1849,7 @@ button.lately-row:active { background: var(--surface); }
 .nemesis-card:active { transform: scale(.97); }
 .nemesis-card .row-main { min-width: 0; }
 .nm-eyebrow { display: flex; align-items: center; gap: 5px; color: var(--loss); margin-bottom: 2px; }
-.nm-line { margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--body); }
+.nm-line { margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--body); text-wrap: balance; } /* never "is Marcus." alone (classic-2) */
 
 /* ROUND MOMENTS (overnight 5): the banner's colors for skins, wolf, Vegas, the money lead and the
    last hole. A skin that ends a long carry gets a gold card, a bigger icon and a second bounce. */
@@ -2534,7 +2540,8 @@ button.ch-main:active { transform: scale(.98); }
 /* ---------- Deeper stats (o7 stats): Your stats screen, the profile's More stats, the links to it ---------- */
 .stats-tiles .pf-tile { grid-column: span 3; }
 .stats-tiles .pf-tile:nth-child(3) .pf-v { font-size: 22px; line-height: normal; white-space: nowrap; }
-.stats-all { display: block; margin: -2px 16px 10px; text-align: center; }
+/* A caption, not a title: muted, left on the page edge, clear of the switch above (history-8) */
+.range-label.stats-all { display: block; margin: 16px 20px 10px; text-align: left; font-family: var(--body-font); font-size: 14px; font-weight: 600; color: var(--mute); }
 .stats-lines { list-style: none; padding: 4px 16px; }
 .stats-line { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .stats-line:last-child { border-bottom: 0; }
@@ -2822,7 +2829,8 @@ button.ch-main:active { transform: scale(.98); }
 .tee-block .tb-label + .day-strip { margin-top: 0; }
 /* The reminder days and Schedule for later's days run to the card's edge and fade there, so the cut
    reads as more to scroll (plan-21, setup-28) */
-.tee-block .day-strip, .when-block .day-strip { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+/* Both edges fade, so a day scrolled half out on the left reads as more that way too (plan-11) */
+.tee-block .day-strip, .when-block .day-strip { -webkit-mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 28px), transparent); }
 .tb-link-row { display: flex; gap: 8px; align-items: center; }
 .tb-link-row .text-input { flex: 1; min-width: 0; }
 .tb-link-row .rc-btn { flex-shrink: 0; }
@@ -3610,7 +3618,7 @@ a.header-btn.rm-open { text-decoration: none; }
 /* Settle the trip: the lede on the 16px gutter with room between its lines */
 .settle-lede { padding: 4px 16px 16px; }
 /* Close the books: on the section labels' 20px edge, so the intro and "Final net" line up (tab-13) */
-.settle-lede.books-lede { padding-left: 20px; padding-right: 20px; }
+.settle-lede.books-lede { padding-left: 20px; padding-right: 20px; padding-top: 24px; } /* the same air under the header as other pushed screens (tab-10) */
 .settle-lede p { line-height: 1.45; }
 /* "I paid" and "I got it" are the quiet second button next to the pay app's, so a page of them
    doesn't stack up black bars */
@@ -4236,6 +4244,11 @@ svg.spot, svg.game-art { overflow: visible; }
 .bt-top { display: flex; flex-direction: column-reverse; align-items: stretch; gap: 6px; width: 100%; }
 .bt-top .bt-art { align-self: flex-end; }
 .bt-top .bt-k { min-height: 2.5em; line-height: 1.25; }
+/* The four records line up across each row of tiles: eyebrow, who, the number, the note, each on a
+   shared row (subgrid), every drawing in one 40px box (history-10) */
+.badge-grid .badge-tile { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 2px; align-content: start; }
+.badge-grid .bt-top .bt-k { min-height: 0; }
+.badge-grid .bt-art { width: 40px; height: 40px; margin: 0; }
 .bt-ic { width: 28px; height: 28px; margin: 0; font-size: 15px; }
 .bt-k { font-size: 12px; font-weight: 600; letter-spacing: .08em; }
 .bt-who { font-size: 14px; font-weight: 700; color: var(--ink); }

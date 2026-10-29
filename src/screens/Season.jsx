@@ -116,7 +116,7 @@ function RealSeason({ state, preview = false, sub = null }) {
       <div className="stat-grid">
         <StatTile label="Rounds" value={String(b.rounds)} sub={`Since ${shortDay(b.since)}`} />
         <StatTile label={b.rival ? `You vs ${b.rival.name.split(' ')[0]}` : 'You vs a friend'} value={b.rival ? signed(b.rival.net) : DASH} tone={b.rival ? sign(b.rival.net) : ''}
-          state={b.rival ? recordText(b.rival) : null} sub={b.rival ? `${b.rival.rounds} round${b.rival.rounds === 1 ? '' : 's'} together` : 'Most rounds together'} />
+          state={b.rival ? recordText(b.rival) : null} sub={b.rival ? `${b.rival.rounds}\u00a0round${b.rival.rounds === 1 ? '' : 's'}` : 'Most rounds together'} />
         <StatTile label="Biggest day" value={b.biggestDay ? signed(b.biggestDay.amount) : DASH} tone={b.biggestDay ? 'pos' : ''} sub={b.biggestDay ? (b.biggestDay.course || shortDay(b.biggestDay.at)) : 'A day you came out ahead'} />
         {/* The game's name is the big word, what it paid under it (a dollar figure in the small state line above read backwards) */}
         <StatTile label="Best game" long value={b.bestGame ? b.bestGame.name : DASH} sub={b.bestGame ? `${signed(b.bestGame.net)} over ${b.bestGame.rounds} round${b.bestGame.rounds === 1 ? '' : 's'}` : 'The game that pays you best'} />

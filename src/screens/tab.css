@@ -65,3 +65,12 @@
 .tab-tools .stats-link { align-items: flex-start; }
 .tab-tools .stats-link > i:first-child { margin-top: 2px; }
 .tab-tools .stats-link > i:last-child { align-self: center; }
+
+/* The tools card's icons at 20px, one size with the rows they lead (tab-5) */
+.tab-tools .stats-link > i:first-child { font-size: 20px; }
+/* An older payment's Undo: still there, without the circle, so a long list isn't a column of buttons (tab-6) */
+.te-list .icon-btn.sm.quiet-undo { box-shadow: none; background: transparent; color: var(--mute); }
+/* With nothing owed, the trip link sits 24px under Start a round as part of the empty state, not
+   adrift below the empty state's bottom padding (tab-8) */
+.empty-state:has(+ .tab-tools.solo) { padding-bottom: 0; flex: 0 0 auto; }
+.empty-state + .tab-tools.solo { margin-top: 24px; }

@@ -149,7 +149,8 @@ export function WhenSheet({ open, value, onDone, onClose }) {
   // A fresh copy each time it opens
   const [was, setWas] = useState(open);
   if (open !== was) { setWas(open); if (open) setV(value); }
-  const soon = soonDays(new Date());
+  // Seven weekend days, so Pick a day completes the second row of four instead of sitting alone on a third (plan-4)
+  const soon = soonDays(new Date(), 7);
   const extra = [...(v.days || []), v.date].filter(d => d && !soon.includes(d));
   const days = [...new Set([...soon, ...extra])].sort();
   const toggle = iso => setV(x => {

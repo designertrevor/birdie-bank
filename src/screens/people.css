@@ -12,13 +12,13 @@
 .pl-me:active { transform: scale(.98); }
 
 /* Played with most: one row, never more */
-.pl-regulars { display: flex; justify-content: flex-start; gap: 6px; margin: 0 12px; }
+.pl-regulars { display: flex; justify-content: flex-start; gap: 16px; margin: 0 16px; }
 .pl-reg {
-  flex: 0 1 20%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 2px 6px;
+  flex: 0 1 calc((100% - 48px) / 4); min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 2px 6px;
   border: none; background: none; color: var(--ink); font: inherit; cursor: pointer; transition: transform .2s var(--spring);
 }
 .pl-reg:active { transform: scale(.94); }
-.avatar.pl-reg-av { width: 60px; height: 60px; margin: 0; font-size: 24px; }
+.avatar.pl-reg-av { width: 56px; height: 56px; margin: 0; font-size: 22px; }
 .pl-reg-name { max-width: 100%; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* The list's head, with Add beside it */
@@ -104,3 +104,8 @@
 .pe-hc-btn.empty > span { font-family: var(--body-font); font-size: 16px; font-weight: 500; color: var(--mute); }
 .pe-hc-btn > i { font-size: 18px; color: var(--ink); flex-shrink: 0; }
 .pe-hc-clear { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 44px; height: 44px; border: none; border-radius: 50%; background: none; color: var(--mute); display: grid; place-items: center; font-size: 18px; cursor: pointer; }
+
+/* The merge sheet's people: one card with hairlines between rows (players-7) */
+.pe-merge-list { margin: 0 16px 8px; border-radius: var(--r-card); background: var(--canvas); box-shadow: var(--hair); overflow: hidden; }
+.pe-merge-list .list-item { width: 100%; margin: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.pe-merge-list .list-item + .list-item { border-top: 1px solid var(--line); }

@@ -77,3 +77,29 @@ overnight/n4-shots/screens/after/<area>/ (untracked), shot with scripts/audit-sh
 - more-5: fixed. A public roadmap title cut at a word ends in an ellipsis (still 60 characters at most, the test's cap).
 - more-6: fixed. Every tee swatch has an ink ring at 25% (black reads on a dark card), and Silver is a swatch.
 - more-12, plan-11 (add rows): the plus is ink in a quiet circle in the new look, not a gold disc. The dashed tile stays. Course name vs City sizes: kept (the name field is the big name input everywhere, Edit player too).
+
+## Polish (auditor-5, the rest)
+
+- plan-4: fixed. The When sheet shows seven weekend days, so Pick a day completes the second row of four.
+- plan-7: fixed. The plan page's footer already has a hairline edge, so it has no fade over In / Maybe / Out.
+- plan-9: fixed. Roll call's people are one hairline card of rows, each with its 32px face; the summary keeps its hairline in dark, no gold top edge.
+- plan-10: fixed. Which days work? is a body-face heading (17px, 700), not a second display title.
+- plan-11: fixed. The day strip fades at both edges with 16px scroll padding; the add row's plus is ink (with more-12).
+- tab-5: fixed. The tools card has a More label, 20px icons, and Start a trip is a row like Season and Close the books (bold title, line, chevron). Alone on an empty Tab it stays the quiet link.
+- tab-6: changed, not removed. Every payment keeps its Undo (older ones have no other place to undo), but only the last day's is the round button; older ones are a quiet icon with no circle.
+- tab-7: fixed. In dark, losing bars are the -$ coral at 80%, not a brick at 60%.
+- tab-8: fixed. With nothing owed, the trip link sits 24px under Start a round.
+- tab-10: fixed. Close the books has 24px of air under its header.
+- history-8: fixed. "Every round you've played" is a muted 14px caption, left on the page edge, 16px under the switch.
+- history-9: fixed. A course's town moves to the second line with its count, so neither is cut.
+- history-10: fixed (layout half). The record tiles share rows across the grid (subgrid: eyebrow, who, number, note line up), every drawing sits in one 40px box, and the eyebrows are Win streak and Most skins. The badge drawings themselves are the art fixer's.
+- history-15: fixed. Lately leads each row about a person with their face (a plan's answers with the face the plan carries), a finished round with its game sticker; the rest keep their icon. Titles already wrap pretty.
+- history-16: fixed. The rival tile says "10 rounds" (the record before it says together).
+- history-17: partly. The year in review image drops the pink corner and gold dot behind the face, and an odd last tile runs full width (no half row). Its type is the share images' shared face (shareImage.js, Bricolage Grotesque, the results image too); moving every share image to the serif is a call for Trevor, left.
+- players-6: fixed. Played with most shows four faces (56px) with 16px between, not five edge to edge.
+- players-7: fixed. The merge sheet's people are one hairline card of rows.
+- players-8: fixed. Names on Friends are in the Players name face.
+- players-9, players-10: fixed (with players-3): the shelf with your pick shows a small ink check, not a pink dot; Save on every tab ("Use this photo" once a photo is picked).
+- classic-1: the date half is fixed (home-8); the title wrap beside the chip is the classic look's longer font, left.
+- classic-2: fixed. The nemesis line is balanced.
+- classic-3: kept. Last night's call was to wrap a moment rather than cut it; the hole stays at the row's end.

@@ -834,11 +834,12 @@ export function RollCall({ id }) {
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>
-        <div className="pick-list">
+        {/* One hairline card of people with their faces, like every other people list (plan-9) */}
+        <div className="pick-list rc-people">
           {people.map(p => {
             const on = present.includes(p.who);
             return (
-              <PickRow key={p.who} on={on} onClick={() => toggle(p.who)}
+              <PickRow key={p.who} on={on} onClick={() => toggle(p.who)} lead={<PlanAvatar plan={plan} who={p.who} name={p.name} size="sm" />}
                 title={p.who === plan.hostWho ? `${first(p.name)} (you)` : p.name}
                 sub={p.who.startsWith('w_') ? 'Walked up' : <>{p.status ? `Said ${RSVP_LABEL[p.status].toLowerCase()}` : 'Didn’t answer'}{!p.invited ? ' · from the link' : ''}</>} />
             );

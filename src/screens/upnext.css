@@ -165,3 +165,6 @@
 
 /* Short card copy breaks evenly, never leaving "a link." alone on its last line (home-12) */
 .un-start-sub { text-wrap: balance; }
+
+/* Friends: a person's name in the same face as on Players and their card (players-8) */
+.set-name.fr-person { font-family: var(--display); font-weight: var(--display-weight); font-size: 17px; letter-spacing: 0; }

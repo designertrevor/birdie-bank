@@ -30,7 +30,7 @@ const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
 
 // The row of big avatars on top: the people you've played with most, once the list is long
 // enough to need it, and only those you've played a couple of rounds with
-const REGULARS_MAX = 5;
+const REGULARS_MAX = 4; // four faces with air between them, not five edge to edge (players-6)
 const REGULARS_FROM = 6; // people in the list before the row shows
 const SEARCH_FROM = 8;
 
@@ -389,15 +389,18 @@ export function PlayerEdit({ id, onSaved }) {
       </div>
       <Sheet open={merging} onClose={() => setMerging(false)} title={`Who is ${existing?.name || 'this'}?`}>
         <p className="field-help" style={{ margin: '0 20px 8px' }}>Pick the player to keep. Everything with {existing?.name} adds up under them.</p>
-        {candidates.map(c => (
-          <button key={c.id} className="list-item" onClick={() => merge(c)}>
-            <Avatar id={c.id} name={c.name} />
-            <div className="row-main">
-              <div className="li-name">{c.name}</div>
-              <div className="li-sub">{c.rounds ? `${c.rounds} round${c.rounds === 1 ? '' : 's'} together` : 'No rounds together yet'}{c.pay ? ` · ${PAY_APPS[c.pay.app].name} ${handleText(c.pay)}` : ''}{c.saved ? '' : ' · from a round you joined'}</div>
-            </div>
-          </button>
-        ))}
+        {/* One white card of hairline rows, like every other people list (players-7) */}
+        <div className="pe-merge-list">
+          {candidates.map(c => (
+            <button key={c.id} className="list-item" onClick={() => merge(c)}>
+              <Avatar id={c.id} name={c.name} />
+              <div className="row-main">
+                <div className="li-name">{c.name}</div>
+                <div className="li-sub">{c.rounds ? `${c.rounds} round${c.rounds === 1 ? '' : 's'} together` : 'No rounds together yet'}{c.pay ? ` · ${PAY_APPS[c.pay.app].name} ${handleText(c.pay)}` : ''}{c.saved ? '' : ' · from a round you joined'}</div>
+              </div>
+            </button>
+          ))}
+        </div>
       </Sheet>
       <Numpad open={pad} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
         onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />
