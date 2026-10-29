@@ -49,7 +49,7 @@ export const ART_USES = {
   'spots/coinflip': { name: 'Who picks first', used: ['The draft’s head before the first pick, who picks first (76px)'] },
   'spots/pin': { name: 'The course', used: ['Course picker, no courses near you (84px)'] },
   'spots/clock': { name: 'Tee times', used: ['Trip, the schedule before its rounds are planned and get tee times (72px)', 'Plan, the Lock in the day sheet, where the tee time is set (64px)'] },
-  'spots/tees': { name: 'The rounds', used: ['Trip, the Rounds view with no rounds yet (96px)'] },
+  'spots/tees': { name: 'The rounds', used: ['Trip, the Rounds view with no rounds yet (96px)', 'Print, a sheet with nothing on it yet (96px)'] },
   'spots/tumbleweed': { name: 'Nothing here', used: ['Friends, the feed when nobody’s out playing (150px)'] },
   'spots/frame': { name: 'No photo yet', used: ['Your avatar, the Photo tab before there’s a photo (112px)'] },
   'spots/flagempty': { name: 'An empty green', used: ['Course picker, Can’t find it? when a search finds nothing (84px)'] },

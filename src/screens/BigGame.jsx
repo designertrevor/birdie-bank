@@ -7,6 +7,9 @@
 // big-money.js and big-sync.js for how it's all worked out.
 import { useState } from 'react';
 import '../components/tab-card.css';
+// Settle up's one card of payment rows, and the trip's rows in it
+import '../components/finale.css';
+import './trip.css';
 import { Empty, Header, Icon, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { BetsList, BigBetSheet, BigDots, GroupCard, MoneyTable, PotTable, SkinsList, TeamsTable } from '../components/BigGame.jsx';
@@ -88,7 +91,8 @@ export default function BigGame({ id, view: firstView = null }) {
   const eyebrow = [day, where, `${big.groups.length} groups`].filter(Boolean).join(' · ');
   const headline = !started ? (soon ? `Set for ${day.toLowerCase() === 'tomorrow' ? 'tomorrow' : day}` : 'Ready to start the groups')
     : bs.final ? (mine == null ? (bs.ended ? 'The game is closed' : 'Every group is in') : mine > 0 ? `You won ${money(mine)}` : mine < 0 ? `You’re down ${money(-mine)}` : 'You broke even')
-    : myPlaceLine(bs, isMe) || 'Under way';
+    // Not "Under way" while every group still says Not teed off (trips-52)
+    : myPlaceLine(bs, isMe) || (bs.field.groups.some(g => g.status === 'done' || g.thru > 0) ? 'Under way' : 'Waiting on the first hole');
   const hint = !started ? `Each group gets its own round and its own link, and one player in each keeps score. ${organizer ? 'Start the groups on the day, at the course.' : ''}`
     : bs.final ? (st.phase === 'square' ? 'Everyone’s square on the game.' : `${bs.ended ? 'The game is closed, every card as it stood.' : 'Every group is in.'} ${st.plan.length} payment${st.plan.length === 1 ? '' : 's'} square${st.plan.length === 1 ? 's' : ''} the whole game${st.money.some(r => r.bets?.length || r.sideGames?.length) ? ', the groups’ own bets included' : ''}, the same on every phone. It’s already in each person’s total on the Tab.`)
     : bs.waiting.length ? `Waiting on ${bs.waiting.map(g => g.name).join(', ')}: ${bs.waiting.length === 1 ? 'its' : 'their'} scores aren’t on this phone yet. Nothing’s paid until every group is in.`
@@ -303,39 +307,44 @@ function Money({ bs, st, id, state, me, isMe, name, off }) {
       <p className="field-help pad">Adds up to $0 across the game. The pot and skins pay what each person won less their buy-in.</p>
       <div className="sec-label">Settle the game</div>
       {!lines.length && <p className="hint-card"><Icon name="handshake" fill /> Everyone’s square on the game.</p>}
-      {mineLines.map((t, i) => {
-        const iPay = t.from === me;
-        const other = iPay ? t.to : t.from;
-        const app = payInfoFor(state, iPay ? other : state.me);
-        return (
-          <div key={t.from + t.to} className="pay-card" style={{ '--i': i }}>
-            <div className="pay-who">
-              <Avatar id={other} name={nameOf(state, other)} />
-              <span className="trip-pay-name">{iPay ? `You pay ${short(other)}` : `${short(other)} pays you`}</span>
-              <span className="pm">{money(t.amount)}</span>
-            </div>
-            {app && <div className="trip-pay-sub">To {iPay ? `${short(other)}’s` : 'your'} {PAY_APPS[app.app]?.name || 'pay app'}</div>}
-            <div className="pay-acts wrap pay-more settle-row-acts">
-              {iPay ? <PayButton info={payInfoFor(state, other)} amount={t.amount} note={st.trip.name} />
-                : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={st.trip.name} who={other} named />}
-              <button className="pay-btn got" onClick={() => mark(t)}><span className="pay-in"><Icon name="check-circle" fill /><span className="pay-lbl">{iPay ? 'I paid' : 'I got it'}</span></span></button>
-            </div>
-          </div>
-        );
-      })}
+      {/* One card of rows, as Settle up and Settle the trip have it (trips-2, trips-22) */}
+      {mineLines.length > 0 && (
+        <div className="settle-list">
+          {mineLines.map((t, i) => {
+            const iPay = t.from === me;
+            const other = iPay ? t.to : t.from;
+            return (
+              <div key={t.from + t.to} className="settle-pay trip-settle-pay" style={{ '--i': i }}>
+                <div className="pay-who">
+                  <Avatar id={other} name={nameOf(state, other)} size="sm" />
+                  <span className="trip-pay-name">{iPay ? `You pay ${short(other)}` : `${short(other)} pays you`}</span>
+                  <span className="pm">{money(t.amount)}</span>
+                </div>
+                <div className="pay-acts pay-more">
+                  {iPay ? <PayButton info={payInfoFor(state, other)} amount={t.amount} note={st.trip.name} />
+                    : <RequestButton payer={payInfoFor(state, other)} mine={myApp} amount={t.amount} note={st.trip.name} who={other} />}
+                  <button className="pay-btn mark" onClick={() => mark(t)}><Icon name="circle" /> {iPay ? 'I paid' : 'I got it'}</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {others.length > 0 && (
         <>
           <div className="sec-label">{mineLines.length ? 'Everyone else' : 'Who pays who'}</div>
-          {others.map(t => (
-            <div key={t.from + t.to} className="ledger-row static trip-other">
-              <div className="lr-info">
-                <div className="lr-name" style={{ fontSize: 16 }}>{short(t.from)} pays {short(t.to)}</div>
-                {PAY_APPS[payInfoFor(state, t.to)?.app] && <div className="lr-status">{short(t.to)} picked {PAY_APPS[payInfoFor(state, t.to).app].name}</div>}
+          <div className="settle-list">
+            {others.map(t => (
+              <div key={t.from + t.to} className="settle-pay trip-other">
+                <div className="lr-info">
+                  <div className="lr-name">{short(t.from)} pays {short(t.to)}</div>
+                  {PAY_APPS[payInfoFor(state, t.to)?.app] && <div className="lr-status">{short(t.to)} picked {PAY_APPS[payInfoFor(state, t.to).app].name}</div>}
+                </div>
+                <div className="lr-amt">{money(t.amount)}</div>
+                {canMarkLine(state, t) && <button className="pay-btn mark sm" onClick={() => mark(t)}>Mark paid</button>}
               </div>
-              <div className="lr-amt" style={{ marginRight: 8 }}>{money(t.amount)}</div>
-              {canMarkLine(state, t) && <button className="pill-btn sm" onClick={() => mark(t)}>Mark paid</button>}
-            </div>
-          ))}
+            ))}
+          </div>
           {others.some(t => t.theirs) && <p className="field-help pad">Some of these include a side bet in their own group, so they mark those paid on their own phones.</p>}
         </>
       )}

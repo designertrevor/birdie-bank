@@ -278,6 +278,8 @@ a.set-row { text-decoration: none; }
 .tee-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .tee-chip { font-size: 12px; font-weight: 600; padding: 6px 12px; cursor: pointer; background: var(--surface); color: var(--ink); border: none; border-radius: 999px; transition: transform .2s var(--spring); }
 .tee-chip.active { background: var(--ink); color: var(--on-ink); }
+/* On the ink chip a black tee's dot gets a ring in the chip's text colour, so it doesn't vanish (trips-45) */
+.tee-chip.active .tee-dot { box-shadow: 0 0 0 1.5px var(--on-ink); }
 .tee-chip:active { transform: scale(.9); }
 
 /* HOLE META: a quiet row of light tiles, so the hole's pot card below is the one coloured block */
@@ -1995,7 +1997,8 @@ button.trip-card:active { transform: scale(.97); }
 .trip-day.now { background: var(--pink-fill); color: #fff; }
 /* The Big Game's group counts (G1 · 4): hairline chips, the groups out there edged in ink (trips-17) */
 .big-dots .trip-day, .big-dots .trip-day.done, :root[data-look] .big-dots .trip-day.now { background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--body); font-weight: 600; }
-.big-dots .trip-day.now, :root[data-look] .big-dots .trip-day.now { box-shadow: inset 0 0 0 1.5px var(--ink); color: var(--ink); }
+/* A live group is a hairline like the rest, its words in ink: never the loudest thing on the screen (trips-19) */
+.big-dots .trip-day.now, :root[data-look] .big-dots .trip-day.now { box-shadow: inset 0 0 0 1px var(--line); color: var(--ink); }
 /* A field that opens a pad: the amount, a pencil, the field's own edge (Big Game's side bet, trips-21) */
 .field-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; text-align: left; cursor: pointer; font-weight: 600; box-shadow: var(--hair); }
 .field-btn > i { color: var(--ink); font-size: 18px; flex-shrink: 0; }
@@ -2597,8 +2600,10 @@ button.ch-main:active { transform: scale(.98); }
 /* Two team colors, deep enough for white text in light mode and bright enough on dark cards */
 :root { --cup-a: #2563b8; --cup-a-bg: #e1ecfb; --cup-b: #c2382c; --cup-b-bg: #fde3df; }
 /* Dark red leans rose, not brown, beside the navy (trips-7); the template badge splits brighter ones (trips-24) */
-:root[data-theme="dark"] { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #4d1f2a; --cup-a-lift: #2a4170; --cup-b-lift: #6a2a37; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #4d1f2a; --cup-a-lift: #2a4170; --cup-b-lift: #6a2a37; } }
+/* In the dark a team's ground is a low wash of its colour on the card, not a solid navy or maroon slab;
+   the team's dot and numbers carry the colour (trips-12) */
+:root[data-theme="dark"] { --cup-a: #7fb0ff; --cup-a-bg: color-mix(in srgb, #7fb0ff 14%, var(--card)); --cup-b: #ff8a7a; --cup-b-bg: color-mix(in srgb, #ff8a7a 14%, var(--card)); --cup-a-lift: #2a4170; --cup-b-lift: #6a2a37; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --cup-a: #7fb0ff; --cup-a-bg: color-mix(in srgb, #7fb0ff 14%, var(--card)); --cup-b: #ff8a7a; --cup-b-bg: color-mix(in srgb, #ff8a7a 14%, var(--card)); --cup-a-lift: #2a4170; --cup-b-lift: #6a2a37; } }
 .cup-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; vertical-align: 1px; }
 .cup-dot.t0 { background: var(--cup-a); }
 .cup-dot.t1 { background: var(--cup-b); }
@@ -2851,7 +2856,8 @@ button.ch-main:active { transform: scale(.98); }
 .tm-template:active { transform: scale(.98); }
 .tm-template.on { box-shadow: inset 0 0 0 2px var(--ink); background: var(--card); }
 .tm-template > i { margin-left: auto; font-size: 20px; color: var(--ink); flex-shrink: 0; }
-.tm-t-size { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: linear-gradient(135deg, var(--cup-a-lift, var(--cup-a-bg)) 50%, var(--cup-b-lift, var(--cup-b-bg)) 50%); font-weight: 800; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* The template's size as a plain number on a hairline tile, not a blue and pink split that goes muddy in the dark (trips-35) */
+.tm-t-size { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: none; box-shadow: inset 0 0 0 1px var(--line); font-weight: 800; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .tm-t-main { display: flex; flex-direction: column; min-width: 0; }
 .tm-t-name { font-weight: 700; font-size: 15px; }
 .tm-t-sub { font-size: 13px; color: var(--mute); overflow-wrap: anywhere; }
@@ -2897,7 +2903,8 @@ button.ch-main:active { transform: scale(.98); }
 .tm-sched-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .tm-sched-acts .full-btn { margin: 0; }
 .tm-sched-acts .pill-btn { background: var(--surface); min-height: 44px; }
-.tm-draft-card { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); border: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; box-shadow: inset 0 0 0 2px var(--ink); }
+/* The card's hairline like every other card, not an ink ring that reads as picked; the chevron carries the action (trips-56) */
+.tm-draft-card { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); border: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; box-shadow: var(--hair); }
 .tm-draft-card .row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .tm-draft-title { font-size: 19px; font-weight: 800; text-wrap: balance; }
 .tm-draft-sub { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--mute); }
@@ -2923,7 +2930,7 @@ button.ch-main:active { transform: scale(.98); }
 .tm-draft-pool .cup-chip:disabled:active { transform: none; }
 .tm-captain { gap: 8px; }
 .tm-captain .lr-name { display: flex; align-items: center; gap: 6px; }
-.tm-captain .pill-btn { flex-shrink: 0; background: var(--surface); min-height: 40px; }
+.tm-captain .pill-btn { flex-shrink: 0; background: var(--surface); min-height: 44px; }
 .tm-day-course { margin-top: 6px; background: var(--surface); }
 
 /* ---------- The Big Game: several groups, one game (o8 biggame) ---------- */
@@ -3310,7 +3317,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .trip-form-cta .field-help { margin: 2px 0 0; text-align: center; }
 /* Templates: picked like a game in setup */
 .tm-template { min-height: 64px; padding: 12px 14px; border-radius: 18px; background: var(--card); }
-.tm-template.on { background: var(--pick-tint); box-shadow: inset 0 0 0 2px var(--pink-fill); }
+/* Picked: an ink edge and an ink check like round setup's picks, so pink stays on the button to tap */
+.tm-template.on { background: var(--card); box-shadow: inset 0 0 0 2px var(--ink); }
+.tm-template .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
 .tm-template .li-check { margin-left: auto; }
 .tm-template.scratch { min-height: 56px; }
 /* Who's going: find or add, then everyone you could take */
@@ -3366,7 +3375,8 @@ a.header-btn.rm-open { text-decoration: none; }
 }
 .trip-act:active { transform: scale(.98); }
 .trip-act > i:last-child { color: var(--mute-soft); font-size: 18px; flex-shrink: 0; }
-.trip-act-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--trip-tag-bg); color: var(--pink-text); font-size: 19px; }
+/* A neutral disc with an ink icon, like the info line's suitcase: pink only on the thing to tap (trips-7) */
+.trip-act-ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: var(--surface); color: var(--ink); font-size: 19px; }
 .trip-act .row-main { display: flex; flex-direction: column; gap: 2px; }
 .trip-act-lbl { font-weight: 700; font-size: 16px; }
 .trip-act-sub { font-size: 13px; color: var(--mute); }
@@ -3396,6 +3406,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .exp-tick { gap: 10px; width: 100%; }
 .exp-tick .exp-pname { flex: 1; text-align: left; }
 .exp-tick .li-check { width: 32px; height: 32px; font-size: 16px; }
+/* A ticked split row takes the ink check, the same picked state as Who paid's chips, so the list isn't a column of pink (trips-8) */
+.exp-tick .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
 .exp-status { margin-top: 10px; }
 .trip-screen .exp-sum { margin-bottom: 12px; }
 .trip-screen .ledger-row.exp-row { margin-bottom: 8px; }
@@ -3630,8 +3642,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .share-card.square .wrapped-tiles { margin: 8px 0 0; }
 .pf-share { margin: 12px 16px 0; }
 
-/* O10 qa10: the Big Game's skins options line up with the rest of their card (no extra inset) */
-.big-games .block > .toggle-row.ap-game { padding-left: 0; padding-right: 0; }
+/* O10 qa10: the Big Game's skins options line up with the rest of their card: flush rows with a
+   hairline over each, like a side game's options, never a card inside the card with no inset (trips-1) */
+.big-games .block > .toggle-row.ap-game { margin: 12px 0 0; padding: 12px 0 0; background: none; border-radius: 0; box-shadow: none; border-top: 1px solid var(--line); }
 
 /* Invite the group: a miniature of what the group gets from the link */
 .invite-preview { background: var(--card); border-radius: 22px; padding: 14px 16px 16px; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); }

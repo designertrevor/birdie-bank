@@ -1,0 +1,23 @@
+/* The Big Game's setup (BigGameSetup.jsx). The screen also wears round setup's `setup` class
+   (newround/overview.css): picked rows with an ink edge and check, and soft edges where the steps scroll. */
+
+/* Six steps don't fit 390px: the bar scrolls, and its ends fade so a step is never sliced at the edge (trips-17) */
+.big-setup .step-bar.many {
+  scroll-padding-inline: 16px;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 20px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 20px), transparent);
+}
+
+/* The Name label is an eyebrow like Day and Holes under it (trips-47) */
+.big-setup .big-name-lbl { display: block; margin-bottom: 10px; }
+
+/* Balance by handicap deals them out again: an outline button with its icon, not an ink chip (trips-49) */
+.big-setup .pill-btn.big-rebalance { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+.big-setup .pill-btn.big-rebalance i { font-size: 15px; }
+
+/* Who's in for skins: several picked at once, so the light picked chip, an ink edge and an ink check (trips-50) */
+.big-setup .big-who .pill-btn.on { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.big-setup .big-who .pill-btn.on .pc-check { color: var(--ink); }
+
+/* A player's tee chip and course handicap sit on one row under their name (trips-15) */
+.big-setup .player-pick .pick-extra .hc-chip { white-space: nowrap; }

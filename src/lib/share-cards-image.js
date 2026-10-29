@@ -2,12 +2,16 @@
 // and layout (shareImage.js), so every card in the group thread looks like one set. They all draw
 // from one card model (share-cards.js): an eyebrow, a title and meta line, a big headline, an
 // optional pair of team scores, ranked rows and a few short sections. The drawing needs a DOM.
-import { BODY, C, DISPLAY, IMAGE_H, IMAGE_W, clip, fit, fontsReady, spaced } from './shareImage.js';
+import { C, IMAGE_H, IMAGE_W, cardFonts, clip, fit, fontsReady, spaced } from './shareImage.js';
 
 // The cup's team colours, as the app's cup dots show them on a dark background (styles.css --cup-a, --cup-b)
 const TEAM = ['#7fb0ff', '#ff8a7a'];
 
 function draw(ctx, m) {
+  // The look's faces, as the results image has them: Fraunces and Figtree in the new look, the
+  // grotesque in the classic one (trips-32)
+  const f = cardFonts();
+  const DISPLAY = f.display, BODY = f.body, DW = f.w;
   const W = IMAGE_W, H = IMAGE_H, PAD = 96, inner = W - PAD * 2;
   const footerY = H - 110;
   const room = (y, need) => y + need <= footerY - 60;
@@ -26,14 +30,15 @@ function draw(ctx, m) {
 
   // What and where
   ctx.fillStyle = C.mint;
-  ctx.font = `800 40px ${DISPLAY}`;
+  ctx.font = `800 40px ${f.brand}`;
   spaced(ctx, m.eyebrow.toUpperCase(), PAD, 170, 6);
   ctx.fillStyle = C.ink;
   fit(ctx, m.title, 700, BODY, 52, 34, inner - 260);
   ctx.fillText(clip(ctx, m.title, inner - 260), PAD, 262);
   ctx.fillStyle = C.soft;
   ctx.font = `600 38px ${BODY}`;
-  ctx.fillText(clip(ctx, m.meta, inner - 200), PAD, 318);
+  // As wide as the title, so a long place name stops short of the ochre dot (trips-31)
+  ctx.fillText(clip(ctx, m.meta, inner - 260), PAD, 318);
 
   let y = 440;
   // Two teams side by side, the leader's points in its colour
@@ -49,7 +54,7 @@ function draw(ctx, m) {
       ctx.font = `700 40px ${BODY}`;
       ctx.fillText(clip(ctx, t.name, half - 100), x + 80, y + 76);
       ctx.fillStyle = t.won || t.lead ? C.mint : C.ink;
-      fit(ctx, t.points, 800, DISPLAY, 130, 80, half - 64);
+      fit(ctx, t.points, DW, DISPLAY, 130, 80, half - 64);
       ctx.fillText(t.points, x + 32, y + 200);
     });
     y += 230 + 120;
@@ -59,12 +64,12 @@ function draw(ctx, m) {
 
   // The headline, and the amount under it when it's shown
   ctx.fillStyle = C.ink;
-  fit(ctx, m.headline, 800, DISPLAY, m.teams ? 96 : 170, m.teams ? 56 : 84, inner);
+  fit(ctx, m.headline, DW, DISPLAY, m.teams ? 96 : 170, m.teams ? 56 : 84, inner);
   ctx.fillText(clip(ctx, m.headline, inner), PAD - 6, y);
   if (m.sub) {
     y += m.big ? 150 : 84;
     ctx.fillStyle = m.big ? C.mint : C.soft;
-    if (m.big) fit(ctx, m.sub, 800, DISPLAY, 150, 72, inner);
+    if (m.big) fit(ctx, m.sub, DW, DISPLAY, 150, 72, inner);
     else ctx.font = `500 56px ${DISPLAY}`;
     ctx.fillText(clip(ctx, m.sub, inner), PAD - 4, y);
   }
@@ -108,7 +113,7 @@ function draw(ctx, m) {
     let valW = 0;
     if (p.value) {
       ctx.save();
-      ctx.font = `800 ${rows.length > 6 ? 44 : 50}px ${DISPLAY}`;
+      ctx.font = `${DW} ${rows.length > 6 ? 44 : 50}px ${DISPLAY}`;
       valW = ctx.measureText(p.value).width;
       ctx.fillStyle = p.sign > 0 ? C.mint : p.sign < 0 ? C.peach : C.ink;
       ctx.textAlign = 'right';
@@ -157,7 +162,8 @@ function draw(ctx, m) {
 
 /** Draw a card model (share-cards.js) and return it as a PNG blob. */
 export async function renderCard(model) {
-  await fontsReady();
+  const f = cardFonts();
+  await fontsReady([`${f.w} 100px ${f.display}`, `500 56px ${f.display}`, `600 40px ${f.body}`, `700 40px ${f.body}`, `800 40px ${f.brand}`]);
   const canvas = document.createElement('canvas');
   canvas.width = IMAGE_W;
   canvas.height = IMAGE_H;

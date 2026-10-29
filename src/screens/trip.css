@@ -30,3 +30,80 @@
 /* Start a trip: a longer, softer fade over the rows under the pinned button, so a row sliding under it
    reads as more to scroll, not as letters cut in half (trips-23, trips-26) */
 .sheet .trip-form-cta { padding-top: 32px; background: linear-gradient(rgba(0,0,0,0), var(--canvas) 30px); }
+
+/* Settle the trip: your payments are one card of rows with hairlines, as on the round's Settle up
+   (finale.css .settle-list); everyone else's are a second card of one-line rows (trips-2, trips-22) */
+.trip-settle-pay .pay-who .avatar { margin: 0; }
+.trip-settle-pay .trip-pay-name { font-size: 16px; }
+.trip-settle-pay .pay-btn.mark > i { font-size: 17px; }
+.settle-pay.trip-other { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
+.settle-pay.trip-other .lr-info { min-width: 0; }
+.settle-pay.trip-other .lr-name { font-size: 16px; }
+.settle-pay.trip-other .lr-amt { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pay-btn.mark.sm { flex: 0 0 auto; padding: 0 14px; }
+
+/* The trip's folds ("How this trip works") open on a caret like Up next's More, the whole row a
+   44px tap, with even room either side of the foot's hairline (trips-30) */
+.how.fold summary { display: flex; justify-content: space-between; width: 100%; min-height: 44px; }
+.how.fold summary::after, .how.fold[open] summary::after { content: none; }
+.how.fold summary > i { font-size: 16px; color: var(--mute); transition: transform var(--duration-fast) var(--ease-in); }
+.how.fold[open] summary > i { transform: rotate(180deg); transition-timing-function: var(--ease-smooth-out); }
+.trip-screen .trip-foot { margin-top: 14px; padding-top: 8px; gap: 4px; }
+.trip-screen .trip-foot .how { margin: 0; }
+.trip-screen .trip-foot .how p { margin-bottom: 8px; }
+
+/* Who's going, before the first round: faces and names two by two in one card (trips-4) */
+.trip-going { padding: 14px 16px 6px; }
+.trip-going-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; }
+.trip-going-list li { display: flex; align-items: center; gap: 10px; min-height: 48px; min-width: 0; }
+.trip-going-list .avatar { margin: 0; flex-shrink: 0; }
+.trip-going-list .tg-name { min-width: 0; font-weight: 700; font-size: 15px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-going-list li.me .tg-name { color: var(--pink-text); }
+
+/* The trip's notes wrap without a word left alone on the last line (trips-25) */
+.trip-note, .trip-screen .field-help.pad, .trip-screen .hint-card { text-wrap: pretty; }
+
+/* Add an expense: Tick everyone by the Split it label, and the status line under the list (trips-44) */
+.exp-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 8px; }
+.exp-form .exp-label-row .field-label { margin: 0; }
+.exp-label-row .link-btn.exp-all { display: inline-flex; align-items: center; margin: 0; min-height: 44px; flex-shrink: 0; }
+.exp-form > .exp-status { margin: 10px 4px 0; }
+
+/* Start a trip, the schedule: Add a day spans the Day cards' width, edge to edge with them (trips-40) */
+.tm-schedule > .add-row.tm-add-day { margin-left: 0; margin-right: 0; }
+.tm-schedule > .how.fold { margin: 2px 0 0; }
+
+/* Start a trip, Who's going: one card of rows with hairlines between, like the split list and the
+   standings, not a card a person (trips-43). A picked row keeps its ink check, not a pink card */
+.trip-who { gap: 0; padding: 0 14px; border-radius: var(--r-card, 20px); background: var(--card); box-shadow: var(--hair); }
+.trip-who .list-item.trip-pick { padding-left: 0; padding-right: 0; border-radius: 0; background: none; box-shadow: none; }
+.trip-who .list-item.trip-pick + .list-item { border-top: 1px solid var(--line-soft); }
+.trip-who .list-item.pick.on { background: none; box-shadow: none; }
+.trip-who .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.trip-who .add-row.trip-add-name { border: none; border-radius: 0; padding-left: 0; padding-right: 0; }
+.trip-who .list-item + .add-row.trip-add-name { border-top: 1px solid var(--line-soft); }
+.trip-who:empty { display: none; }
+
+/* The cup */
+/* A match's edit is the header's outline button, with the 44px tap every small control gets (trips-20) */
+.cup-round-head .icon-btn.cup-edit { flex-shrink: 0; background: transparent; box-shadow: var(--hair); color: var(--ink); }
+/* "You're on Blue" never wraps alone, and the line balances (trips-54) */
+.cup-sub { text-wrap: balance; }
+/* Shared places read T1, so the rank column fits two characters (trips-55) */
+.cup-table .tr-rank { width: 24px; }
+/* Draft, By handicap and By flights take equal thirds (trips-37) */
+.cup-pick-how .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 6px; }
+
+/* Money by game: the Trip column is the total, so it's the heavy one, in the table's own face (trips-26) */
+:root .trip-screen .trip-games td.tot, :root[data-look] .trip-screen .trip-games td.tot { font-family: inherit; font-weight: 800; }
+
+/* A view's first section label sits as close under the view switch as the other views' first card,
+   so the content doesn't jump when you switch (trips-28) */
+:root .trip-view-switch + .sec-label, :root[data-look] .trip-view-switch + .sec-label { padding-top: 2px; }
+
+/* A played round opens, so its row ends in the caret the planned rows and Heading home's rows have (trips-29) */
+.trip-played .hist-row::after {
+  content: ''; width: 18px; height: 18px; flex-shrink: 0; margin-left: -4px; background: var(--mute-soft);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}

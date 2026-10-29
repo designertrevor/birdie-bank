@@ -559,7 +559,7 @@ export const SHOTS = [
     run: async p => {
       await p.js(`tap('Start a trip'); await w(1200);`);
       await p.shoot('start-trip-sheet', 'Start a trip: templates, name, dates, money or team points');
-      await p.js(`tap('8 Ryder Cup weekend'); await w(900);`);
+      await p.js(`tap('8 players, 2 days'); await w(900);`);
       await p.shoot('start-trip-template', 'Start a trip with the 8-player Ryder Cup template picked');
       await p.js(` typeIn(document.querySelector('.sheet input.text-input'), 'Bandon Cup'); await w(300); tap('Next: players'); await w(1100);`);
       await p.shoot('start-trip-players', 'Start a trip: who’s going');

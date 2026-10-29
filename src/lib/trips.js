@@ -804,6 +804,16 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const parts = iso => String(iso || '').split('-').map(Number);
 
 /** "Oct 16 to 18", "Oct 30 to Nov 2" or "Oct 16" for a one-day trip. */
+/**
+ * The trip's days by weekday, "Thu to Sun" (or "Thu" for one day): over "Starts Thu, Nov 12" it says
+ * how long the trip runs without saying the date twice (trips-3).
+ */
+export function tripWeekdays(trip) {
+  const day = iso => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' }) : '');
+  const a = day(trip?.start), b = day(trip?.end);
+  return !b || trip.end === trip.start ? a : `${a} to ${b}`;
+}
+
 export function tripDates(trip) {
   const [y1, m1, d1] = parts(trip?.start), [y2, m2, d2] = parts(trip?.end);
   if (!y1 || !m1 || !d1) return '';
