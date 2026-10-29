@@ -161,6 +161,14 @@ h2.sec-label { margin: 0; }
    reads as more. Every pinned footer has it now, not only .fade ones (play-65: a hard cut sliced rows) */
 :is(.cta-wrap, .pin-btn) { position: relative; }
 :is(.cta-wrap, .pin-btn)::before { content: ''; position: absolute; left: 0; right: 0; top: -28px; height: 28px; background: linear-gradient(to bottom, transparent, var(--canvas)); pointer-events: none; }
+/* The fade is long enough to hide the cut, ends solid, and paints over what scrolls under it, so a row
+   meeting the footer fades out instead of being sliced (setup-1). The scroll above carries room for the
+   fade plus air, so its last row always scrolls fully clear of it. */
+:is(.cta-wrap, .pin-btn)::before { top: -40px; height: 40px; z-index: 2; background: linear-gradient(to bottom, transparent, var(--canvas) 70%); }
+.scroll:has(~ :is(.cta-wrap, .pin-btn)) { padding-bottom: 56px; }
+/* In a sheet the footer isn't pinned (the whole sheet scrolls), so a fade would only wash out the control
+   above it: the 18 holes segment, Fix hole's last line (play-30) */
+:is(.sheet, .numpad-sheet, .sc-sheet, .rules-sheet) :is(.cta-wrap, .pin-btn)::before { content: none; }
 /* A sheet open at the screen sits after the footer, so it doesn't count as last */
 .screen > div[style*="border-top"]:nth-last-child(1 of :not(.sheet-overlay, .numpad-overlay, [hidden])) { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
 
@@ -1322,7 +1330,7 @@ button:disabled { cursor: not-allowed; }
 .ic-stack { display: inline-flex; }
 .ic-stack .join-avatar + .join-avatar { margin-left: -8px; }
 .ic-note { margin-top: 10px; font-size: 14px; color: var(--body); }
-.join-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 19px; color: var(--on-pastel); flex-shrink: 0; box-shadow: 0 0 0 2px var(--card); }
+.join-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 19px; color: var(--on-pastel); flex-shrink: 0; box-shadow: var(--av-stack, 0 0 0 2px var(--card)); }
 .join-avatar.sm { width: 30px; height: 30px; font-size: 14px; }
 .join-avatar.lg { width: 84px; height: 84px; font-size: 38px; }
 .join-avatar.lav { background: var(--lav); } .join-avatar.peach { background: var(--peach); }
@@ -2069,22 +2077,31 @@ button.trip-card:active { transform: scale(.97); }
 :root[data-theme="dark"] { --av-ring: rgba(255,255,255,.14); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --av-ring: rgba(255,255,255,.14); } }
 .avatar.av-buddy, .avatar.av-photo, .join-avatar.av-buddy, .join-avatar.av-photo { overflow: hidden; padding: 0; }
-.avatar.av-buddy, .avatar.av-photo { box-shadow: 0 0 0 1.5px var(--av-ring); background: var(--surface); }
+.avatar.av-buddy, .avatar.av-photo { box-shadow: var(--av-stack, 0 0 0 1.5px var(--av-ring)); background: var(--surface); }
+/* Faces in a stack (round cards, the Tab, the Square band, the preview's pairs, the invite card) overlap
+   by about a quarter and each wears a 2px ring in the colour behind the stack, in both themes, so every
+   face keeps its own edge instead of the plates fusing into one shape (history-3, tab-1, play-34). A
+   stack on another surface sets --stack-ring. The rules below read --av-stack before their own ring. */
+:is(.rc-faces, .tab-faces, .ip-faces, .pv-pair, .ic-stack) {
+  --av-stack: 0 0 0 2px var(--stack-ring, var(--card));
+  /* The dark teal plate keeps its cream edge inside the ring, or it sinks into a dark card */
+  --av-stack-teal: 0 0 0 1.5px rgba(251,247,236,.6), 0 0 0 3.5px var(--stack-ring, var(--card));
+}
 /* In the dark theme a buddy's colour circle needs no grey ring (it read as a muddy halo), except on the
    teal backdrop, which is as dark as the card: there a cream ring keeps the circle */
 .bd-rim { display: none; }
 :root[data-theme="dark"] .bd-rim { display: inline; }
 :root[data-theme="dark"] .av-buddy .bd-rim { display: none; }
-:root[data-theme="dark"] .avatar.av-buddy { box-shadow: none; }
-:root[data-theme="dark"] .avatar.av-buddy.av-teal { box-shadow: 0 0 0 1.5px rgba(251,247,236,.6); }
+:root[data-theme="dark"] .avatar.av-buddy { box-shadow: var(--av-stack, none); }
+:root[data-theme="dark"] .avatar.av-buddy.av-teal { box-shadow: var(--av-stack-teal, 0 0 0 1.5px rgba(251,247,236,.6)); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) .bd-rim { display: inline; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .av-buddy .bd-rim { display: none; }
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy { box-shadow: none; }
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy.av-teal { box-shadow: 0 0 0 1.5px rgba(251,247,236,.6); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy { box-shadow: var(--av-stack, none); }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy.av-teal { box-shadow: var(--av-stack-teal, 0 0 0 1.5px rgba(251,247,236,.6)); }
 }
 /* Initials get the same ring, so the teal colour still has an edge on dark cards */
-.avatar.av-initials:not(.av-in-btn) { box-shadow: 0 0 0 1.5px var(--av-ring); }
+.avatar.av-initials:not(.av-in-btn) { box-shadow: var(--av-stack, 0 0 0 1.5px var(--av-ring)); }
 .av-buddy > svg, .av-photo > img { display: block; width: 100%; height: 100%; }
 .av-photo > img { object-fit: cover; }
 .avatar.sm { width: 30px; height: 30px; font-size: 14px; }
@@ -2321,7 +2338,7 @@ button.trip-card:active { transform: scale(.97); }
 .pv-recs .set-name { line-height: 1.35; font-weight: 600; }
 .pv-pair { display: flex; flex-shrink: 0; }
 .pv-pair .avatar { margin: 0; }
-.pv-pair .avatar + .avatar { margin-left: -12px; box-shadow: 0 0 0 2px var(--card); }
+.pv-pair .avatar + .avatar { margin-left: -10px; }
 
 /* ---------- Monday recap and callouts (overnight 7, recap): the day-after recap card and the group text lines on Up next ---------- */
 /* The recap: a card like the rest of Up next, its x in the corner outside the head's own button */
@@ -3639,7 +3656,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .ip-code { font-size: 12px; color: var(--mute); font-weight: 600; }
 .ip-title { font-size: 20px; font-weight: 800; line-height: 1.15; letter-spacing: -.01em; }
 .ip-faces { display: flex; align-items: center; min-width: 0; }
-.ip-faces .avatar { margin-right: -8px; box-shadow: 0 0 0 2px var(--card); }
+.ip-faces .avatar { margin-right: -8px; }
 .ip-who { margin-left: 16px; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .ip-foot { font-size: 14px; color: var(--body); }
 
@@ -3804,12 +3821,14 @@ a.header-btn.rm-open { text-decoration: none; }
 /* THE TAB: who the money's with and the season's line under the big number; one job per card */
 .tab-who { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 14px; color: var(--mute); font-weight: 600; }
 .tab-faces { display: inline-flex; }
-.tab-faces .avatar { margin: 0 -8px 0 0; box-shadow: 0 0 0 2px var(--canvas); }
+.tab-faces { --stack-ring: var(--canvas); }
+.tab-faces .avatar { margin: 0 -8px 0 0; }
 .tab-faces .avatar:last-child { margin-right: 0; }
 .pay-btn.icon-only { flex: 0 0 52px; padding: 0; }
 .tab-card > .tab-part { display: block; margin: 10px 2px 0; }
 .square-line { display: flex; align-items: center; gap: 12px; margin: 4px 16px 12px; padding: 10px 14px; border-radius: 18px; background: var(--win-bg); color: var(--win); font-size: 14px; font-weight: 700; }
-.square-line .tab-faces .avatar { box-shadow: 0 0 0 2px var(--win-bg); }
+/* On the mint band a mint plate would melt into it: the card colour rings every face there (tab-1, classic-4) */
+.square-line .tab-faces { --stack-ring: var(--card); }
 .square-line i { vertical-align: -2px; }
 .how.pad { margin: 4px 20px 12px; }
 .tab-tools { margin: 8px 16px 12px; background: var(--card); border-radius: 18px; overflow: hidden; }

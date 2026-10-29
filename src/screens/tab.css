@@ -21,7 +21,7 @@
   display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 14px; padding-top: 12px;
   border-top: 1px solid var(--line-soft); font-size: 13px; font-weight: 600; color: var(--mute);
 }
-.te-net .tab-faces .avatar { box-shadow: 0 0 0 2px var(--card); }
+.te-net .tab-faces { --stack-ring: var(--card); }
 /* The count after the five faces, like History's "+1" */
 .tab-faces .tab-more { align-self: center; margin-left: 12px; font-size: 13px; font-weight: 700; color: var(--mute); }
 

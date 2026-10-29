@@ -83,7 +83,7 @@
   grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 10px; border-top: 1px solid var(--line-soft);
 }
 .rc-faces { display: inline-flex; flex-shrink: 0; align-items: center; }
-.rc-faces .avatar { width: 24px; height: 24px; margin: 0 -6px 0 0; font-size: 11px; box-shadow: 0 0 0 2px var(--card); }
+.rc-faces .avatar { width: 24px; height: 24px; margin: 0 -6px 0 0; font-size: 11px; }
 .rc-faces .avatar:last-child { margin-right: 0; }
 .rc-more { margin-left: 10px; font-size: 12px; font-weight: 700; color: var(--mute); }
 .rc-moment { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 13px; color: var(--body); }
@@ -98,15 +98,15 @@
 .rc-card.big .rc-game { font-size: 22px; }
 .rc-card.big .rc-amt { font-size: 24px; }
 .rc-card.big .rc-foot { border-top-color: rgba(10, 10, 10, .08); }
-.rc-card.big .rc-faces .avatar { box-shadow: 0 0 0 2px var(--band-butter); }
+.rc-card.big .rc-faces { --stack-ring: var(--band-butter); }
 /* In dark mode a full butter band reads as heavy olive, two to a screen on a long History: the big
    card keeps the dark card's surface and gets a soft gold edge, the size and art still marking it */
 :root[data-theme="dark"] .rc-card.big { background: var(--card); box-shadow: inset 0 0 0 1.5px rgba(242, 193, 78, .45); }
-:root[data-theme="dark"] .rc-card.big .rc-faces .avatar { box-shadow: 0 0 0 2px var(--card); }
+:root[data-theme="dark"] .rc-card.big .rc-faces { --stack-ring: var(--card); }
 :root[data-theme="dark"] .rc-card.big .rc-foot { border-top-color: var(--line); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .rc-card.big { background: var(--card); box-shadow: inset 0 0 0 1.5px rgba(242, 193, 78, .45); }
-  :root:not([data-theme="light"]) .rc-card.big .rc-faces .avatar { box-shadow: 0 0 0 2px var(--card); }
+  :root:not([data-theme="light"]) .rc-card.big .rc-faces { --stack-ring: var(--card); }
   :root:not([data-theme="light"]) .rc-card.big .rc-foot { border-top-color: var(--line); }
 }
 @media (prefers-reduced-motion: reduce) { .rc-card:active { transform: none; } }
