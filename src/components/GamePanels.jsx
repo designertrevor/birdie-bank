@@ -179,9 +179,13 @@ export function VegasPanel({ round, hole, draft, touched }) {
           </div>
         ))}
       </div>
+      {/* This hole and the match, each named on its own line, so "take 11 points" and "All square"
+          never sit side by side reading like a contradiction */}
       <div className="vegas-line">
-        {pv ? (pv.diff === 0 ? 'Push. No points this hole' : `${pv.diff > 0 ? teams[0].name : teams[1].name} take${round.teams ? '' : 's'} ${Math.abs(pv.diff)} point${Math.abs(pv.diff) === 1 ? '' : 's'}${pv.mult > 1 ? ` (${pv.mult === 3 ? 'eagle' : 'birdie'} ${pv.mult}×)` : ''} · ${money(Math.abs(pv.diff) * point)} each`) : 'Low score first, high second: 4 and 5 make 45'}
-        <span className="vegas-total">{total === 0 ? 'All square' : `${total > 0 ? teams[0].name : teams[1].name} +${Math.abs(total)} · ${money(Math.abs(total) * point)}`}</span>
+        <span>{pv ? (pv.diff === 0 ? 'This hole: a push, no points' : <>This hole: <strong>{pv.diff > 0 ? teams[0].name : teams[1].name} +{Math.abs(pv.diff)}</strong>{pv.mult > 1 ? ` (${pv.mult === 3 ? 'eagle' : 'birdie'} ${pv.mult}×)` : ''} · {money(Math.abs(pv.diff) * point)} each</>) : 'Low score first, high second: 4 and 5 make 45'}</span>
+      </div>
+      <div className="vegas-line">
+        <span>Match: <span className="vegas-total">{total === 0 ? 'all square' : `${total > 0 ? teams[0].name : teams[1].name} +${Math.abs(total)} · ${money(Math.abs(total) * point)}`}</span></span>
       </div>
     </div>
   );

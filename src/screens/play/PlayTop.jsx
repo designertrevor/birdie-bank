@@ -115,7 +115,10 @@ export function HoleMeta({ round, hole, units, solo, holeFixed, onOpen }) {
       <span className="hl-no" aria-hidden="true">{hole.no}</span>
       <span className="hl-main">
         <span className="hl-meta">Par {hole.par} · HCP {hole.hdcp ?? '–'}{holeFixed && <span className="fixed-tag">Fixed</span>}</span>
-        {getting && <span className="hl-strokes"><span className="stroke-dots" aria-hidden="true">●</span>{getting.length ? `Strokes: ${getting.length > 2 ? `${getting.length} players` : getting.join(', ')}` : 'No strokes here'}</span>}
+        {/* The dot means a stroke, so it shows only on a hole where someone gets one */}
+        {getting && (getting.length
+          ? <span className="hl-strokes"><span className="stroke-dots" aria-hidden="true">●</span>Strokes: {getting.length > 2 ? `${getting.length} players` : getting.join(', ')}</span>
+          : <span className="hl-strokes none">No strokes here</span>)}
       </span>
       <span className="hl-card"><Icon name="table" /> Card</span>
     </button>
