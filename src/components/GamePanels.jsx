@@ -242,7 +242,8 @@ export function PanelArt({ game }) {
 export function ChipsPanel({ icon, game = null, label, items, color = 'var(--lav)' }) {
   return (
     <div className="banker-bar" style={{ '--panel-c': color }}>
-      <div><div className="bl">{label}</div><div className="bn">{game ? <PanelArt game={game} /> : <Icon name={icon} fill />} {items[0]?.lead || 'Even'}</div></div>
+      {/* The game's drawing beside the two lines, centred on them, at a size that reads */}
+      <div className={game ? 'bn-head' : undefined}>{game && <PanelArt game={game} />}<div><div className="bl">{label}</div><div className="bn">{!game && <Icon name={icon} fill />} {items[0]?.lead || 'Even'}</div></div></div>
       {/* Plain text standings, not chips: nothing here is tapped */}
       <div className="skin-counts cp-items">{items.map(it => <span key={it.id} className="cp-item">{it.name} <b>{it.value}</b></span>)}</div>
     </div>
@@ -318,9 +319,12 @@ export function RabbitPanel({ round, hole }) {
   const won = t.legs.filter(l => l.done && l.pays);
   return (
     <div className="banker-bar" style={{ '--panel-c': 'var(--lav)' }}>
-      <div>
-        <div className="bl">{leg?.seg.label} · ends H{holeAtPos(round, leg?.seg.end)}</div>
-        <div className="bn"><PanelArt game="rabbit" /> {holder ? `${nameOf(round, holder)} has the rabbit` : 'The rabbit is loose'}</div>
+      <div className="bn-head">
+        <PanelArt game="rabbit" />
+        <div>
+          <div className="bl">{leg?.seg.label} · ends H{holeAtPos(round, leg?.seg.end)}</div>
+          <div className="bn">{holder ? `${nameOf(round, holder)} has the rabbit` : 'The rabbit is loose'}</div>
+        </div>
       </div>
       <div className="skin-counts">
         {won.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}
@@ -340,9 +344,12 @@ export function SnakePanel({ round, hole, marks }) {
   const done = t.legs.filter(l => l.done && l !== leg && l.holder);
   return (
     <div className="banker-bar" style={{ '--panel-c': 'var(--lav)' }}>
-      <div>
-        <div className="bl">{t.legs.length > 1 ? `${leg.seg.label} · ` : ''}{leg.count ? `${leg.count} three-putt${leg.count === 1 ? '' : 's'} · worth ${money(leg.value)}` : 'No three-putts yet'}</div>
-        <div className="bn"><PanelArt game="snake" /> {leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
+      <div className="bn-head">
+        <PanelArt game="snake" />
+        <div>
+          <div className="bl">{t.legs.length > 1 ? `${leg.seg.label} · ` : ''}{leg.count ? `${leg.count} three-putt${leg.count === 1 ? '' : 's'} · worth ${money(leg.value)}` : 'No three-putts yet'}</div>
+          <div className="bn">{leg.holder ? `${firstName(nameOf(round, leg.holder))} has the snake` : 'Nobody has the snake'}</div>
+        </div>
       </div>
       <div className="skin-counts">
         {done.map(l => <span key={l.seg.label} className="press-chip">{l.seg.label}: {firstName(nameOf(round, l.holder))}</span>)}

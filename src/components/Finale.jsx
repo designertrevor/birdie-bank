@@ -442,7 +442,6 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   const faces = useGroupAvatars(round.players);
   const reaction = cardReaction(results);
   const buddies = (reaction?.ids || []).map((id, i) => (faces.get(id)?.kind === 'buddy' ? faces.get(id).buddy : STAND_IN_BUDDIES[i]));
-  const theme = gameTheme(round.game);
   const [cheer, grabCheer] = useArtSrc();
   const [game, grabGame] = useArtSrc();
   // Show scores: on until you turn it off, then remembered (Trevor 2026-10-14: the group wanted the golf, not just the bet)
@@ -458,7 +457,7 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
     {/* The game's art with a sticker edge thick enough to hold on the band in its own colour */}
     <span key={`game-${round.game}`} ref={grabGame} hidden>
       <svg viewBox="-6 -6 76 76" width={240} height={240} xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-        <Sticker r={4} box={[-6, -6, 76, 76]}><svg x={0} y={0} width={64} height={64} viewBox="0 0 64 64"><GameArt game={round.game} tint={theme.soft} size={240} /></svg></Sticker>
+        <Sticker r={4} box={[-6, -6, 76, 76]}><svg x={0} y={0} width={64} height={64} viewBox="0 0 64 64"><GameArt game={round.game} size={64} /></svg></Sticker>
       </svg>
     </span>
     <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}

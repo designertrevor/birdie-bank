@@ -4218,8 +4218,10 @@ svg.spot, svg.game-art { overflow: visible; }
 .money-bar.themed .mb-item.lead { background: var(--gt-soft); }
 .money-bar.themed .mb-item.lead .mb-p, .money-bar.themed .mb-item.lead .mb-d { color: var(--body); }
 /* A game panel's art, where an icon used to stand in for the game */
-/* No plate or frame behind it: the drawing's own sticker edge is its only edge, big enough to read */
-.bn-art { width: 34px; height: 34px; flex-shrink: 0; margin: -7px 0; }
+/* No plate or frame behind it: the drawing's own sticker edge is its only edge, big enough to read, and
+   beside the panel's two lines, centred on them */
+.bn-art { width: 36px; height: 36px; flex-shrink: 0; }
+.bn-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 /* Moments: the game's art stuck on the banner's corner like a sticker. It comes and goes with the banner */
 .moment-banner.stuck { padding-right: 52px; }
 .mo-sticker {
