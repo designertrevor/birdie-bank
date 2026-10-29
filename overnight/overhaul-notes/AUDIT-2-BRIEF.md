@@ -32,7 +32,7 @@ steps flush with their container's bottom edge. Zoom into the full-size shots fo
 aren't enough.
 
 Last night's findings that were deliberately left (don't re-report): see the "left" and "kept" lines in
-n3-polish.md and n3-play2.md. Also known: sheet and header titles aren't headings in ui.jsx;
+n3-polish.md and n3-play2.md. Also known:
 the blank frame when a lazy screen first opens (App.jsx Suspense, being handled); the pink strip on
 Vegas and Hammer (the head-to-head group colour, Trevor's call).
 
