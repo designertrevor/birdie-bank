@@ -1,13 +1,9 @@
 // The money strip under the round's header, or the card bar when everyone is just playing (Play.jsx).
-import { useState } from 'react';
-import { Icon, Sheet } from '../../components/ui.jsx';
+import { Icon } from '../../components/ui.jsx';
 import './play.css';
-import { ByGameTable } from '../../components/SideGames.jsx';
-import { bettingRound, holeComplete, isJustPlaying, playsHole, roundResults } from '../../lib/round.js';
-import { JUST_PLAYING_TAG, niceRound } from '../../lib/just-playing.js';
-import { money } from '../../lib/golf.js';
-import { countsMoney, unitFmt, wholeDelta } from '../../lib/play-for.js';
-import { nassauOpenNote } from '../../lib/side-games.js';
+import { holeComplete } from '../../lib/round.js';
+import { niceRound } from '../../lib/just-playing.js';
+import { useMoneyStrip } from './useMoneyStrip.jsx';
 
 /**
  * A card kept with no game (everyone just playing): each player's score so far and to par, where the
@@ -38,134 +34,29 @@ export function CardBar({ round }) {
 }
 
 /**
- * Each scored hole's money, in playing order: everyone's totals with the holes up to it, less the
- * totals before it (so a carried skin lands on the hole that won it). Display only: the money comes
- * from roundResults, as everywhere else.
- */
-function holeByHole(full) {
-  const rows = [];
-  const kept = {};
-  let before = {};
-  for (const h of full.holes) {
-    if (!holeComplete(full, h)) continue;
-    kept[h.no] = full.scores[h.no];
-    const now = roundResults({ ...full, scores: { ...kept } }).balances;
-    rows.push({ hole: h, d: Object.fromEntries(Object.keys(now).map(id => [id, Math.round(((now[id] || 0) - (before[id] || 0)) * 100) / 100])) });
-    before = now;
-  }
-  return rows;
-}
-
-/**
  * Everyone's money, pinned under the header from the first hole, updating as scores go in: one thin
  * strip of names and amounts (Layout Lab A), so the score rows get the room. A tap opens the whole
  * picture in a sheet: thru which hole, what this hole moves, each game's money, the side bets for
  * money in a reward round, and who's just playing.
  */
-export function MoneyBar({ round: full, hole, preview, themed = false }) {
-  // The bar is the betting players' money: anyone just playing is named under it, with no amount
-  const round = bettingRound(full);
-  const casual = full.players.filter(p => isJustPlaying(full, p.id)).map(p => p.name.split(' ')[0]);
-  // Holes counted besides this one, so going back to a saved hole doesn't count it twice ("Thru 3 + this one" on hole 3)
-  const saved = holeComplete(round, hole);
-  const played = round.holes.filter(h => holeComplete(round, h)).length - (saved ? 1 : 0);
-  const pending = saved || Object.values(preview.delta).some(Boolean);
-  const top = Math.max(...Object.values(preview.balances));
-  // Pop the amounts that just changed
-  const [prev, setPrev] = useState(preview.balances);
-  const [changed, setChanged] = useState([]);
-  if (prev !== preview.balances) {
-    setChanged(round.players.filter(p => prev[p.id] !== preview.balances[p.id]).map(p => p.id));
-    setPrev(preview.balances);
-  }
-  // With side games the sheet shows each game's money too
-  const byGame = preview.byGame || null;
-  // A reward round's side bets for money: dollars of their own, apart from the points (see roundResults' `cash`)
-  const cash = preview.cash || null;
-  const cashLine = cash && round.players.filter(p => cash.balances[p.id]).map(p => `${p.name.split(' ')[0]} ${money(cash.balances[p.id], { sign: true })}`).join(', ');
-  const [open, setOpen] = useState(false);
-  // A points or reward round counts the same numbers as points (never money)
-  const fmt = unitFmt(round);
-  const word = countsMoney(round) ? 'Money' : 'Points';
-  const thru = played ? (pending ? `Thru ${played} + this hole` : `Thru ${played} hole${played === 1 ? '' : 's'}`) : pending ? 'This hole' : `Everyone starts at ${fmt(0)}`;
-  // A button's label replaces what's in it, so it carries everyone's total too
-  const said = round.players.map(p => `${p.name.split(' ')[0]} ${fmt(preview.balances[p.id], { sign: true })}`).join(', ');
-  // and the dollar side bets line in a reward round, which the label would hide as well
-  const cashSaid = cash ? `. Side bets for money: ${cashLine || 'all square'}` : '';
-  // Not a live region: it changes on every tap. The saved hole's result is announced by the toast.
+export function MoneyBar({ round, hole, preview, themed = false }) {
+  const m = useMoneyStrip({ round, hole, preview });
   return (
     <>
-    <button type="button" className={`money-strip ${themed ? 'themed' : ''}`} aria-haspopup="dialog" onClick={() => setOpen(true)}
-      aria-label={`${word} so far, ${thru.toLowerCase()}: ${said}${cashSaid}. Show more`}>
+    <button type="button" className={`money-strip ${themed ? 'themed' : ''}`} aria-haspopup="dialog" onClick={m.show} aria-label={m.label}>
       {/* The round's theme is the strip's colour alone: the game's art was too small here to add anything */}
       <span className="ms-items">
-        {round.players.map(p => {
-          const v = preview.balances[p.id];
-          return (
-            <span key={p.id} className={`ms-item ${top > 0 && v === top ? 'lead' : ''}`}>
-              <span className="ms-p">{p.name.split(' ')[0]}</span>
-              <span key={changed.includes(p.id) ? v : 'same'} className={`ms-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''} ${changed.includes(p.id) ? 'bump' : ''}`}>{fmt(v, { sign: true })}</span>
-            </span>
-          );
-        })}
+        {m.rows.map(r => (
+          <span key={r.id} className={`ms-item ${r.lead ? 'lead' : ''}`}>
+            <span className="ms-p">{r.name}</span>
+            <span key={r.changed ? r.v : 'same'} className={`ms-a ${r.tone} ${r.changed ? 'bump' : ''}`}>{m.fmt(r.v, { sign: true })}</span>
+          </span>
+        ))}
       </span>
       <Icon name="caret-down" className="ms-more" />
     </button>
-    <Sheet open={open} onClose={() => setOpen(false)} title={word} className="sc-sheet">
-      <p className="sheet-text">{thru}.{byGame ? ' Every game adds up into one total each.' : ''}</p>
-      <div className="money-bar ms-detail" role="group" aria-label={`${word} so far`}>
-        <div className="mb-items" style={{ gridTemplateColumns: `repeat(${Math.min(round.players.length, 4)}, minmax(0, 1fr))` }}>
-          {round.players.map(p => {
-            const v = preview.balances[p.id];
-            // In points, the hole's change is the whole total less the whole total before, so they agree
-            const d = countsMoney(round) ? preview.delta[p.id] : wholeDelta(v, preview.delta[p.id]);
-            return (
-              <div key={p.id} className={`mb-item ${top > 0 && v === top ? 'lead' : ''}`}>
-                <div className="mb-p">{p.name.split(' ')[0]}</div>
-                <div className={`mb-a ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}`}>{fmt(v, { sign: true })}</div>
-                <div className="mb-d">{d ? `${fmt(d, { sign: true })} this hole` : round.left?.[p.id] != null ? 'Left' : round.joined?.[p.id] != null && !playsHole(round, p.id, hole) ? `From hole ${round.joined[p.id]}` : '\u00a0'}</div>
-              </div>
-            );
-          })}
-        </div>
-        {cash && <div className="mb-cash">Side bets for money · {cashLine || 'All square'}</div>}
-        {casual.length > 0 && <div className="mb-jp">{JUST_PLAYING_TAG} · {casual.join(', ')}</div>}
-      </div>
-      {byGame && <ByGameTable round={round} byGame={byGame} total={preview.balances} fmt={fmt} />}
-      {cash && (
-        <>
-          <p className="sheet-text">Side bets for money, in dollars. They go on the Tab and stay out of the points.</p>
-          <ByGameTable round={round} byGame={{ cash: { label: cash.label, balances: cash.balances } }} total={cash.balances} fmt={money} caption="Side bets for money" />
-        </>
-      )}
-      {byGame && nassauOpenNote(round, byGame) && <p className="field-help" style={{ padding: '0 20px' }}>{nassauOpenNote(round, byGame)}</p>}
-      {/* What the strip can't say: where it came from, hole by hole (the sheet's own close is its only way out) */}
-      {open && <HoleByHole full={full} players={round.players} fmt={fmt} />}
-    </Sheet>
+    {m.sheet}
     </>
   );
 }
 
-/** The money sheet's hole by hole: a row per scored hole, what each player won or lost on it. */
-function HoleByHole({ full, players, fmt }) {
-  const rows = holeByHole(full);
-  if (!rows.length) return null;
-  return (
-    <>
-      <h2 className="sec-label">Hole by hole</h2>
-      <div className="money-table-wrap ms-holes">
-        <table className="sc-table money-table">
-          <thead><tr><th style={{ textAlign: 'left', paddingLeft: 12 }}>Hole</th>{players.map(p => <th key={p.id}>{p.name.split(' ')[0]}</th>)}</tr></thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.hole.no}>
-                <td>{r.hole.no}</td>
-                {players.map(p => { const v = r.d[p.id] || 0; return <td key={p.id} className={v > 0 ? 'pos' : v < 0 ? 'neg' : 'zero'}>{v ? fmt(v, { sign: true }) : '–'}</td>; })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}

@@ -238,6 +238,7 @@
 :root[data-look="new"] .screen.play .side-tag,
 :root[data-look="new"] .screen.play .team-letter,
 :root[data-look="new"] .screen.play .avatar,
+:root[data-look="new"] .screen.play .tp-amt,
 :root[data-look="new"] .screen.play .person-row .set-name,
 :root[data-look="new"] .screen.play .season-bal.me .sb-name,
 :root[data-look="new"] .screen.play .mo-title,

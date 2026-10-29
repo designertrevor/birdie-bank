@@ -5,7 +5,7 @@ import { Icon } from '../../components/ui.jsx';
 import { LivePill } from '../../components/Live.jsx';
 import { GalleryBar } from '../../components/Gallery.jsx';
 import { BigBar } from '../../components/BigGame.jsx';
-import { addPlayerProblem, isJustPlaying, strokesFor } from '../../lib/round.js';
+import { addPlayerProblem } from '../../lib/round.js';
 import { addJustPlayingProblem } from '../../lib/just-playing.js';
 import { BIG_FORMAT } from '../../lib/big-game.js';
 import { firstName, gameLabel } from '../../lib/format.js';
@@ -14,6 +14,7 @@ import { bigBoardOnly, ownMoney } from '../../lib/play-screen.js';
 import { ASK_MS, clockText } from '../../lib/keeper.js';
 import { useNav } from '../../lib/nav.js';
 import { CardBar, MoneyBar } from './MoneyBar.jsx';
+import { strokesHere } from './hole-info.js';
 
 /** The header, the line that shows how far through the round, and the money strip (or the Big Game's board, or the card). */
 export function PlayHeader({ round, idx, hole, solo, theme, preview, onLive, onMenu, noMoney = false }) {
@@ -105,11 +106,7 @@ export function PlayBanners({ round, card, editable, dirty, requests, doneEditin
  * that opens the scorecard. The hole number is big; the rest is one quiet line.
  */
 export function HoleMeta({ round, hole, units, solo, holeFixed, onOpen }) {
-  // Who gets a stroke here, up top, so a birdie that doesn't move the money makes sense. Someone just
-  // playing has no game to get strokes in. Past two names it gives the count; each row says who
-  const getting = round.useHandicaps && !solo
-    ? units.filter(u => !isJustPlaying(round, u.id) && strokesFor(round, u, hole) > 0).map(u => u.team ? u.name : u.name.split(' ')[0])
-    : null;
+  const getting = strokesHere(round, hole, units, solo);
   return (
     <button type="button" className="hole-line" onClick={onOpen} aria-label={holeFixed ? `Open scorecard. Hole ${hole.no}’s par or HCP was fixed for this round` : 'Open scorecard'}>
       <span className="hl-no" aria-hidden="true">{hole.no}</span>

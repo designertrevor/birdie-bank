@@ -153,8 +153,10 @@ test('the toast is keyed, so the same words twice in a row are read out twice', 
 });
 
 test('the money strip, as a button, says everyone’s total (its label replaces what’s inside it)', () => {
-  const play = read('screens/play/MoneyBar.jsx');
-  assert.match(play, /aria-label=\{`\$\{word\} so far, \$\{thru\.toLowerCase\(\)\}: \$\{said\}\$\{cashSaid\}\. Show more`\}/);
+  // The words are made in useMoneyStrip.jsx (shared with the trial tops) and MoneyBar puts them on the strip
+  const play = read('screens/play/useMoneyStrip.jsx');
+  assert.match(play, /label: `\$\{word\} so far, \$\{thru\.toLowerCase\(\)\}: \$\{said\}\$\{cashSaid\}\. Show more`/);
+  assert.match(read('screens/play/MoneyBar.jsx'), /aria-label=\{m\.label\}/);
   // A reward round's dollar side bets line sits inside the button too, so the label carries it
   assert.match(play, /const cashSaid = cash \? `\. Side bets for money: \$\{cashLine \|\| 'all square'\}` : '';/);
 });

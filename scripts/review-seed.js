@@ -142,3 +142,63 @@ export async function newOnlyPlans(state, NOW) {
   const friend = { ...FACES.stampPlanFaces(state, structuredClone(open)), id: 'pl_open_friend', host: false, localMe: 'p_riley', hostName: 'Trevor' };
   return { open, friend };
 }
+
+/**
+ * The top of the scoring screen, five ways (n5/top): one round going on per game, on top of the seed
+ * without touching its rounds. Each is the active round in its own state, so the shots can open it:
+ * Nassau 2 v 2 on the 7th with a press and two side games (the busiest top there is), Wolf on the 5th
+ * before the wolf picks, Banker on the 4th (the bets step) and Vegas on the 4th. Skins is the seed's own.
+ */
+export async function topRounds(state, NOW) {
+  const R = await import('/src/lib/round.js');
+  const C = await import('/src/lib/courses.js');
+  const ST = await import('/src/lib/store.js');
+  const AV = await import('/src/lib/avatars.js');
+  let seed = 11;
+  const rnd = () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const s = structuredClone(state);
+  const ME = s.me;
+  const gross = (pid, par) => { const x = rnd(); const idx = s.players[pid].index; return par + (x < 0.1 ? -1 : x < 0.1 + Math.max(0.15, 0.55 - idx / 40) ? 0 : x < 0.88 ? 1 : 2); };
+  const out = {};
+  function make(id, game, pids, { scored, teams = null, sideGames = null, tweak = null }) {
+    const c = C.findCourse(s, 'logan-river');
+    const players = pids.map(pid => ({ ...s.players[pid], tee: c.tees?.[Math.min(2, c.tees.length - 1)]?.name }));
+    const r = R.createRound({ id, game, course: c, holesCount: 18, nine: 'front', players, settings: s.settings, hcPct: 100, useHandicaps: true, teams });
+    r.createdAt = NOW - (scored * 14 + 6) * 60000;
+    if (sideGames) r.sideGames = sideGames.map(g => ({ game: g, settings: structuredClone(ST.DEFAULT_SETTINGS[g] || {}) }));
+    for (let i = 0; i < scored; i++) {
+      const h = r.holes[i];
+      if (game === 'banker') {
+        const bh = R.bankerHoleSetup(r, i);
+        for (const k of Object.keys(bh.bets)) bh.bets[k] = [1, 2, 2, 3, 5][Math.floor(rnd() * 5)];
+        r.banker[h.no] = bh;
+      }
+      if (game === 'wolf') {
+        const w = R.wolfFor(r, i);
+        const others = pids.filter(p => p !== w);
+        r.wolf[h.no] = { wolf: w, partner: i === 1 ? null : others[Math.floor(rnd() * others.length)] };
+      }
+      r.scores[h.no] = Object.fromEntries(pids.map(pid => [pid, gross(pid, h.par)]));
+      r.marks[h.no] = {};
+    }
+    if (tweak) tweak(r);
+    r.current = scored;
+    AV.stampAvatars(s, r);
+    const st = structuredClone(s);
+    st.rounds[id] = structuredClone(r);
+    st.activeRoundId = id;
+    // Only this round going on, so Up next's resume card opens it
+    delete st.rounds['r_live'];
+    out[game] = st;
+  }
+  const four = [ME, 'p_jackson', 'p_marcus', 'p_dev'];
+  make('r_top_nassau', 'nassau', four, {
+    scored: 6, teams: [[ME, 'p_jackson'], ['p_marcus', 'p_dev']], sideGames: ['skins', 'dots'],
+    // A press on the front from the 5th, so the press bar shows too
+    tweak: r => { r.presses.push({ id: 'pr_top', leg: 'front', start: 5, by: 1 }); },
+  });
+  make('r_top_wolf', 'wolf', four, { scored: 4 });
+  make('r_top_banker', 'banker', four, { scored: 3 });
+  make('r_top_vegas', 'vegas', four, { scored: 3, teams: [[ME, 'p_marcus'], ['p_jackson', 'p_dev']] });
+  return out;
+}
