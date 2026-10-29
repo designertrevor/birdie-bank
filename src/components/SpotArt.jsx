@@ -40,7 +40,8 @@ function Ball({ cx = 60, cy = 66, r = 30, face = 'smile' }) {
   );
 }
 const Shadow = ({ cx = 60, cy = 108, rx = 26 }) => <ellipse cx={cx} cy={cy} rx={rx} ry="4.5" fill="rgba(10,10,10,.09)" />;
-const Hand = ({ x, y }) => <circle cx={x} cy={y} r="5.5" fill={BALL} stroke="rgba(10,10,10,.22)" strokeWidth="1.6" />;
+// A fist: inked like the buddies' heads, so it holds on the white border and on dark (a grey line read faded)
+const Hand = ({ x, y }) => <circle cx={x} cy={y} r="5.5" fill={BALL} stroke={INK} strokeWidth="2.4" />;
 
 /** A spot that only exists as an outside file (src/art/spots): nothing to draw by hand, so the card stays empty until its file lands. */
 const FileOnly = () => null;

@@ -3698,7 +3698,7 @@ a.header-btn.rm-open { text-decoration: none; }
 /* RESULTS: the winner's buddy in a crown, the top three on a podium, everyone in one list */
 .crowned { position: relative; display: inline-grid; place-items: center; width: var(--face); height: calc(var(--face) * 1.3); align-content: end; }
 .crowned .avatar { width: var(--face); height: var(--face); margin: 0; box-shadow: 0 0 0 4px rgba(255,255,255,.55); }
-.crowned .crown-art { position: absolute; top: 0; left: 50%; width: calc(var(--face) * .54); transform: translateX(-50%) rotate(-8deg); z-index: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.12)); animation: crownOn .7s .25s var(--ease-bounce) both; }
+.crowned .crown-art { position: absolute; top: 0; left: 50%; width: calc(var(--face) * .64); transform: translateX(-50%) rotate(-8deg); z-index: 1; animation: crownOn .7s .25s var(--ease-bounce) both; }
 @keyframes crownOn { from { transform: translate(-50%, -18px) rotate(-30deg); opacity: 0; } }
 .winner-hero .crowned { margin: 0 auto 2px; animation: pop .55s var(--spring) both; }
 .winner-hero .hero-spot { display: block; margin: -16px auto -14px; }
