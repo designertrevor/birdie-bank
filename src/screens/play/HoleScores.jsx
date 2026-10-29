@@ -104,8 +104,10 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
                   {v === 'X' && <span className="score-name pu"> Picked up, counts {shown}</span>}
                 </div>
               </div>
-              {/* The live region is the number alone, so the critter coming and going never re-reads the score */}
-              <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num pc-num ${touched[p.id] ? '' : 'untouched'} ${v !== 'X' && v < hole.par ? 'birdie' : ''}`}>
+              {/* The live region is the number alone, so the critter coming and going never re-reads the score.
+                  Ink from the start: an untouched box is par, and it saves as par, so it reads like any score.
+                  Who's still to tap shows on the chips (Par outlined, not filled), not in the number's colour */}
+              <span ref={el => { numRefs.current[p.id] = el; }} className={`sc-num pc-num ${v !== 'X' && v < hole.par ? 'birdie' : ''}`}>
                 <span aria-live="polite" aria-atomic="true">
                   <span className="sr-only">{p.name} </span>{v === 'X' ? <><span aria-hidden="true">X</span><span className="sr-only">picked up</span></> : v}
                 </span>

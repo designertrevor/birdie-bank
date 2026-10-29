@@ -16,7 +16,7 @@ import { DRAFTS } from './shared.js';
  * game's own round. Returns the draft and its setters, plus the side games that put marks on the hole.
  */
 export function useHoleDraft({ round, hole, units, main, game, editable, showToast }) {
-  // Draft scores for this hole: saved scores, else par (shown muted until touched)
+  // Draft scores for this hole: saved scores, else par (in ink, with the Par chip outlined until touched)
   const saved = round.scores[hole.no] || {};
   const draftKey = `${round.id}:${hole.no}`;
   const kept = DRAFTS.get(draftKey);
