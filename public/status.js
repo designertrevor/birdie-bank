@@ -54,9 +54,12 @@
 
     function paintRow(r) {
       r.el.dataset.state = r.state || 'wait';
-      // "Working" and "Working, but slow" say it already; down and off say so first
-      var plain = r.state === 'up' || r.label === 'Slow';
-      r.el.querySelector('.row-detail').textContent = !r.state ? 'Checking…' : plain ? r.detail : r.label + ': ' + r.detail;
+      // The dot says working, so a working row keeps only its version (if any); slow says so, and down
+      // and off say so first
+      var detail = !r.state ? 'Checking…'
+        : r.state === 'up' ? r.detail.replace(/^Working( · )?/, '').replace(/^version/, 'Version')
+          : r.label === 'Slow' ? r.detail : r.label + ': ' + r.detail;
+      r.el.querySelector('.row-detail').textContent = detail;
       r.el.querySelector('.row-ms').textContent = r.state && r.ms != null ? r.ms + ' ms' : '–';
       r.el.querySelector('.row-when').textContent = r.state ? core.checkedAgo(r.at) : '';
     }

@@ -88,6 +88,8 @@ function recordPayment(from, to, amount) {
 /**
  * Settle up one payment from the Tab's plan: pay or request in the right app when it's yours,
  * then mark it paid, in full or in part. For other people's payments it only records.
+ * A debt with `part` (from a "Paid part of it?" link) opens straight on the amount, named and
+ * capped, and closing it closes the lot (tab-10).
  */
 export function SettleSheet({ debt, onClose }) {
   const state = useStore();
@@ -109,9 +111,12 @@ export function SettleSheet({ debt, onClose }) {
   const myApp = payInfoFor(state, state.me);
   const note = 'Golf';
   const lede = debt && (iPay ? `You owe ${nameOf(state, debt.to)}` : imOwed ? `${nameOf(state, debt.from)} owes you` : `${nameOf(state, debt.from)} owes ${nameOf(state, debt.to)}`);
+  const straight = !!debt?.part;
+  const first = id => nameOf(state, id).split(' ')[0];
+  const padTitle = debt && `${iPay ? `What you paid ${first(debt.to)}` : `What ${first(debt.from)} paid${imOwed ? ' you' : ''}`} (of ${money(debt.amount)})`;
   return (
     <>
-      <Sheet open={!!debt && !partial} onClose={onClose} title="Settle up">
+      <Sheet open={!!debt && !partial && !straight} onClose={onClose} title="Settle up">
         {debt && (
           <>
             <div className="block">
@@ -127,8 +132,8 @@ export function SettleSheet({ debt, onClose }) {
           </>
         )}
       </Sheet>
-      <Numpad open={partial} title="Amount paid" prefix="$" initial="" min={0.01} max={debt?.amount} allowDecimal
-        onClose={() => setPartial(false)} onDone={v => record(v)} />
+      <Numpad open={!!debt && (partial || straight)} title={padTitle} prefix="$" initial="" min={0.01} max={debt?.amount} allowDecimal
+        onClose={() => (straight ? onClose() : setPartial(false))} onDone={v => record(v)} />
     </>
   );
 }

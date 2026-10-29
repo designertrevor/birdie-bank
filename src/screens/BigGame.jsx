@@ -146,9 +146,10 @@ export default function BigGame({ id, view: firstView = null }) {
 
         <Groups bs={bs} state={state} name={name} organizer={organizer} onOpen={g => (g.card && state.rounds[g.card.id] ? nav.push('play', { id: g.card.id }) : setGroupOpen(g))} />
         {organizer && started && !bs.final && (
-          <div className="chip-row big-share">
-            {big.groups.every(g => g.code) && <button className="pill-btn" onClick={share}><Icon name="share-network" /> Send every group its link</button>}
-            {big.groups.some(g => !g.code) && <button className="pill-btn" disabled={busy} onClick={reshare}><Icon name="broadcast" /> {busy ? 'Sharing…' : 'Share the groups again'}</button>}
+          // The same full-width button as a Cup trip's Send the link, quiet since it isn't the screen's one action (trips-18)
+          <div className="big-share">
+            {big.groups.every(g => g.code) && <button className="full-btn outline" onClick={share}><Icon name="share-network" /> Send every group its link</button>}
+            {big.groups.some(g => !g.code) && <button className="full-btn outline" disabled={busy} onClick={reshare}><Icon name="broadcast" /> {busy ? 'Sharing…' : 'Share the groups again'}</button>}
           </div>
         )}
 
@@ -258,10 +259,20 @@ function Money({ bs, st, id, state, me, isMe, name, off }) {
   if (!bs.final) {
     const ins = buyIns(big);
     const mineIn = Object.entries(ins).filter(([pid]) => isMe(pid)).reduce((a, [, c]) => a + c, 0);
+    // What's on the line as a small card of numbers, then the note (trips-22: two loose paragraphs before)
+    const rows = [
+      big.pot.on && ['Pot', money(bs.results.money.pot.pool / 100 || big.pot.stake * Object.keys(big.people).length), `Paying ${placesLabel(big.pot.places).toLowerCase()}`],
+      big.skins.on && ['Skins', money((Object.keys(big.people).length - big.skins.out.length) * big.skins.stake), 'One skin a hole across every group'],
+      mineIn > 0 && ['You’re in for', money(mineIn / 100), null],
+    ].filter(Boolean);
     return (
       <>
-        <p className="field-help pad">The money is worked out once every group is in, the same on every phone{bs.waiting.length ? `. Still waiting on ${bs.waiting.map(g => g.name).join(', ')}` : ''}.{mineIn ? ` You’re in for ${money(mineIn / 100)}.` : ''}</p>
-        <p className="field-help pad">{big.pot.on ? `The pot is ${money(bs.results.money.pot.pool / 100 || big.pot.stake * Object.keys(big.people).length)}, paying ${placesLabel(big.pot.places).toLowerCase()}. ` : ''}{big.skins.on ? `The skins pot is ${money((Object.keys(big.people).length - big.skins.out.length) * big.skins.stake)}. ` : ''}</p>
+        {rows.length > 0 && (
+          <div className="block kv-block big-money-card">
+            {rows.map(([k, v, sub]) => <div key={k} className="kv-row"><span className="kv-k">{k}{sub && <span className="sl-sub">{sub}</span>}</span><span className="kv-v">{v}</span></div>)}
+          </div>
+        )}
+        <p className="field-help pad">The money is worked out once every group is in, the same on every phone{bs.waiting.length ? `. Still waiting on ${bs.waiting.map(g => g.name).join(', ')}` : ''}.</p>
       </>
     );
   }

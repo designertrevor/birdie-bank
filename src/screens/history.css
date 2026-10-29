@@ -87,7 +87,8 @@
 .rc-more { margin-left: 10px; font-size: 12px; font-weight: 700; color: var(--mute); }
 .rc-moment { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 13px; color: var(--body); }
 .rc-moment i { color: var(--ochre); font-size: 15px; flex-shrink: 0; }
-.rc-mt { font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* The moment wraps to a second line rather than cutting off (classic-2) */
+.rc-mt { font-weight: 700; color: var(--ink); min-width: 0; text-wrap: pretty; }
 .rc-hole { flex-shrink: 0; color: var(--mute); font-size: 12px; font-weight: 600; }
 .rc-moment.quiet { color: var(--mute); font-size: 12px; font-weight: 600; }
 /* A good day: the bigger card, on a butter band */

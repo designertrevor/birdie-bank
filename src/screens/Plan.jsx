@@ -658,6 +658,8 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
   const host = plan.hostName || 'The organizer';
   const choice = planChoice(plan);
   const game = GAMES[choice.game];
+  const noDay = !plan.date;
+  const lead = noDay ? leadingDay(normalizePlan(plan)) : null;
   const settings = useStore(s => s.settings);
   const bet = choice.bet ? inUnits(plan, betLabel(choice.game, planRules(plan, settings), choice.bet, plan.holesCount ?? 18) || money(choice.bet)) : '';
   return (
@@ -665,9 +667,10 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
       <div className="scroll join-body plan-who">
         <div className="invite-card">
           <div className="ic-from"><PlanAvatar plan={plan} who={plan.hostWho} name={host} /> <span><strong>{host}</strong> {plan.date ? 'is getting a game together' : 'wants to get a round in'}</span></div>
-          {/* No day yet (plan-open.js): "No day yet" where the date goes, and the group picks the game */}
-          <div className="eyebrow ph-when">{whenLine(plan)}</div>
-          <div className="ic-game"><Icon name={plan.groupPicks?.game ? 'golf' : game?.icon || 'golf'} fill /> {plan.groupPicks?.game ? 'Golf soon?' : game?.name || 'Golf'}</div>
+          {/* No day yet (plan-open.js): the same title and eyebrow as the ticket they see once they answer,
+              so it reads as the same plan before and after (more-6) */}
+          <div className="eyebrow ph-when">{noDay ? (lead ? `${shortDay(lead.iso)} leads so far` : 'When works?') : whenLine(plan)}</div>
+          <div className="ic-game">{noDay ? 'No day yet' : <><Icon name={plan.groupPicks?.game ? 'golf' : game?.icon || 'golf'} fill /> {plan.groupPicks?.game ? 'Golf soon?' : game?.name || 'Golf'}</>}</div>
           {plan.ask && <div className="ic-course">“{plan.ask}”</div>}
           <div className="ic-course">{plan.course?.name || (plan.date ? 'Course to be set' : 'Any course')} · {plan.groupPicks?.game ? 'Game and bet up to the group' : `${plan.holesCount} holes${bet ? ` · ${bet}` : ''}`}</div>
           {playForLine(plan) && <div className="ic-playfor"><Icon name={plan.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(plan)}</div>}
@@ -684,7 +687,8 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
                     aria-label={theirs ? `${first(p.name)}, already answered from their own phone` : undefined}>
                     <Avatar id={p.id} name={p.name} />
                     <span className="seat-name">{first(p.name)}</span>
-                    <span className="seat-sub">{theirs ? 'Answered' : taken.has(p.id) ? RSVP_LABEL[plan.answers[p.id].status] || ' ' : ' '}</span>
+                    {/* Every tile three lines: No answer where nobody's answered yet (more-7) */}
+                    <span className="seat-sub">{theirs ? 'Answered' : taken.has(p.id) ? RSVP_LABEL[plan.answers[p.id].status] || ' ' : 'No answer'}</span>
                   </button>
                 );
               })}

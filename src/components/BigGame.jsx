@@ -83,7 +83,8 @@ export function BigCard({ status: st, onTab = false }) {
 /** One chip a group: waiting, how far they are, or done. */
 export function BigDots({ bs }) {
   return (
-    <div className="trip-days" aria-hidden="true">
+    // Counts, not buttons: hairline chips, the live ones edged in ink (trips-17)
+    <div className="trip-days big-dots" aria-hidden="true">
       {bs.field.groups.map(g => (
         <span key={g.id} className={`trip-day ${g.status === 'done' ? 'done' : g.status === 'live' ? 'now' : ''}`}>
           {g.name.replace(/^Group /, 'G')}{g.status === 'live' ? ` · ${g.thru}` : g.status === 'waiting' ? ' · –' : ''}
@@ -174,7 +175,8 @@ export function PotTable({ bs, isMe, name }) {
               <span className="tr-name">{name(r.id)}</span>
               <span className="tr-sub">{g?.name}{r.thru ? ` · ${r.complete ? 'done' : `thru ${r.thru}`}` : ''}{won?.[r.id] ? ` · wins ${money(won[r.id] / 100)}` : ''}</span>
             </span>
-            <span className="tr-amt">{stableford ? (r.thru ? `${r.points}` : '–') : toParText(r.toPar)}</span>
+            {/* No score yet is the same quiet en dash as the rank, not a heavy one (trips-16) */}
+            {r.thru ? <span className="tr-amt">{stableford ? `${r.points}` : toParText(r.toPar)}</span> : <span className="tr-amt empty">–</span>}
           </div>
         );
       })}
@@ -191,6 +193,7 @@ export function SkinsList({ bs, name, isMe = () => false }) {
   const m = results.money.skins;
   const now = skinsNow(big, bs.field, results.skins, m);
   const won = results.skins.filter(h => h.state === 'won');
+  const decided = results.skins.filter(h => h.state !== 'open');
   const count = won.reduce((a, h) => a + (h.skins || 1), 0);
   const kind = SKINS_KINDS[big.skins.kind].toLowerCase();
   const cash = c => money(Math.round(c) / 100);
@@ -226,8 +229,10 @@ export function SkinsList({ bs, name, isMe = () => false }) {
         </>
       )}
       <div className="sec-label">Hole by hole</div>
-      <div className="trip-table big-table">
-        {results.skins.map(h => (
+      {/* Only the holes that are decided: before any is, one line instead of 18 "Still out" rows (trips-4) */}
+      {!decided.length && <p className="hint-card"><Icon name="coins" fill /> No skins yet. Holes fill in here as every group plays them.</p>}
+      {decided.length > 0 && <div className="trip-table big-table">
+        {decided.map(h => (
           <div key={h.no} className="trip-row">
             <span className="tr-rank">{h.no}</span>
             <span className="tr-main">
@@ -238,7 +243,8 @@ export function SkinsList({ bs, name, isMe = () => false }) {
             {h.state === 'won' && <Icon name="coins" fill />}
           </div>
         ))}
-      </div>
+      </div>}
+      {decided.length > 0 && decided.length < results.skins.length && <p className="field-help pad">{results.skins.length - decided.length} hole{results.skins.length - decided.length === 1 ? '' : 's'} still out, until every group has played {results.skins.length - decided.length === 1 ? 'it' : 'them'}.</p>}
       <p className="field-help pad">
         {count} skin{count === 1 ? '' : 's'} so far across every group, from a {cash(now.pool)} pot.{' '}
         {big.skins.carry
@@ -404,7 +410,8 @@ export function BigBetSheet({ open, onClose, tripId = null, big, bet = null, onR
             options={Object.entries(BIG_BET_KINDS).map(([value, k]) => ({ value, label: k.label }))} />
           <p className="field-help">{BIG_BET_KINDS[kind].help}</p>
           <div className="field-label">How much {kind === 'hole' ? 'a hole' : ''}</div>
-          <button type="button" className="amt-btn" onClick={() => setPad(true)}>{money(stake)}</button>
+          {/* A field with an edge and a pencil, so it reads as one you can change (trips-21) */}
+          <button type="button" className="text-input field-btn" onClick={() => setPad(true)} aria-label={`How much: ${money(stake)}. Change it`}><span>{money(stake)}</span><Icon name="pencil-simple" /></button>
           {sides.length === 2 && big.useHandicaps && (
             <>
               <div className="field-label">Strokes between them</div>

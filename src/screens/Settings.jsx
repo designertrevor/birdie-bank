@@ -230,7 +230,8 @@ export default function Settings() {
           {row('star', 'Your plan', planStatus(state, undefined, { lifetime, offer: upsellAllowed(state, { gated: PAYWALL_ON }) }), () => nav.push('yourPlan'))}
         </>}
         {/* Feedback: easy to find, warm, and out of the way of your own settings */}
-        <Callout spot="bulb" soft title="Help shape Birdie Bank"
+        {/* A white card like the rest, the bulb centred above the words (more-9) */}
+        <Callout spot="bulb" className="stack" title="Help shape Birdie Bank"
           action={<div className="co-acts">
             <button className="pill-btn dark co-act" onClick={() => nav.push('suggest')}><Icon name="megaphone" /> Send an idea or a bug</button>
             <button className="pill-btn co-act" onClick={() => nav.push('roadmap')}><Icon name="signpost" /> Roadmap</button>

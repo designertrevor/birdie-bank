@@ -45,8 +45,10 @@
   color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pl-name .new-chip { font-family: var(--body-font); }
-.pl-sub { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; }
-.pl-record { overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+/* The record wraps to a second line rather than cutting off ("won 2, lost 0, ev…" in classic, classic-2) */
+.pl-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin-top: 2px; font-size: 13px; color: var(--mute); }
+.pl-sub > .pl-rsvp { white-space: nowrap; }
+.pl-record { min-width: 0; font-variant-numeric: tabular-nums; text-wrap: pretty; }
 .pl-rsvp { flex-shrink: 0; padding: 1px 6px; border-radius: var(--r-chip); background: var(--surface); color: var(--mute); font-size: 11px; font-weight: 700; }
 .pl-rsvp.in { background: var(--win-bg); color: var(--win); }
 .pl-rsvp.maybe { background: var(--state-vote-bg); color: var(--state-vote-ink); }
@@ -70,3 +72,25 @@
 .pl-pay-help { margin: 4px 20px; }
 /* The money on a row reads as coloured text, not a filled pill: Players stays a calm list */
 .pl-owe.pos, .pl-owe.neg { background: none; padding: 0 4px; }
+
+/* New crew: the players are one card of rows with hairlines between, like the Players list. A
+   picked row keeps its tint and pink ring, inside the card (tab-14) */
+.pick-list.joined { margin: 0 16px 10px; padding: 0; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
+:root .pick-list.joined > .list-item, :root[data-look] .pick-list.joined > .list-item { margin: 0; border-radius: 0; box-shadow: none; }
+:root .pick-list.joined > .list-item.pick.on, :root[data-look] .pick-list.joined > .list-item.pick.on { box-shadow: inset 0 0 0 2px var(--pink-fill); }
+.pick-list.joined > .list-item + .list-item { border-top: 1px solid var(--line); }
+
+/* The list's last row: Add a player, an ink plus in a quiet circle where the faces sit (players-2) */
+.pl-add-ci { width: 40px; height: 40px; margin-right: 12px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--ink); font-size: 18px; }
+.pl-add-lbl { font-weight: 600; font-size: 16px; color: var(--ink); }
+/* The empty state's one button, and its outlines read as faces to come, not as buttons (players-4) */
+.people-empty .pe-add { margin-top: 10px; }
+.people-empty .pe-ghost { border-style: solid; border-width: 1.5px; border-color: var(--line); }
+
+/* Edit player: the handicap is a field like the name, a quiet placeholder when empty, a clear X inside it once set (players-6) */
+.pe-hc { position: relative; }
+.pe-hc-btn { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; padding-right: 52px; text-align: left; cursor: pointer; }
+.pe-hc-btn.empty { padding-right: 18px; }
+.pe-hc-btn.empty > span { font-family: var(--body-font); font-size: 16px; font-weight: 500; color: var(--mute); }
+.pe-hc-btn > i { font-size: 18px; color: var(--ink); flex-shrink: 0; }
+.pe-hc-clear { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 44px; height: 44px; border: none; border-radius: 50%; background: none; color: var(--mute); display: grid; place-items: center; font-size: 18px; cursor: pointer; }

@@ -22,6 +22,8 @@
   border-top: 1px solid var(--line-soft); font-size: 13px; font-weight: 600; color: var(--mute);
 }
 .te-net .tab-faces .avatar { box-shadow: 0 0 0 2px var(--card); }
+/* The count after the five faces, like History's "+1" */
+.tab-faces .tab-more { align-self: center; margin-left: 12px; font-size: 13px; font-weight: 700; color: var(--mute); }
 
 /* A section: its name with a count, and its total on the right. The name is the same section label
    as every other screen's (and the Tab's own Everyone else and Payments), so the screen has one

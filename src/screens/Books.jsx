@@ -53,7 +53,7 @@ export function CloseBooks({ scope = ALL }) {
     <Screen>
       <Header title="Close the books" small onBack={nav.pop} />
       <div className="scroll">
-        <div className="settle-lede">
+        <div className="settle-lede books-lede">
           <div className="eyebrow">{scopeName}</div>
           <div className="d settle-count">{prev.rounds.length ? `${plural(prev.rounds.length, 'round')}${prev.since ? ` since ${fullDay(prev.since)}` : ''}` : 'No rounds since the last close'}</div>
           <p>Rounds stay just as they are. This keeps the season with everyone’s totals, and each balance still open is paid or rolled into the next season.</p>
@@ -70,6 +70,8 @@ export function CloseBooks({ scope = ALL }) {
 
         <div className="sec-label">Settle up or roll it</div>
         {prev.lines.length === 0 && <p className="field-help pad">Everyone’s square, so there’s nothing to settle.</p>}
+        {/* What rolling means, said once here rather than under every line (tab-13) */}
+        {prev.lines.length > 0 && <p className="field-help pad">A line you roll stays owed into the next season.</p>}
         {prev.lines.map(l => {
           const mineLine = l.from === me || l.to === me;
           const other = l.from === me ? l.to : l.from;
@@ -77,7 +79,7 @@ export function CloseBooks({ scope = ALL }) {
           const asks = mineLine && !off && canCarry(state, me, other, now);
           const sub = how(l) === 'paid'
             ? (mineLine ? 'Marked paid when the books close, like I paid on the Tab.' : 'Marked paid for them when the books close.')
-            : asks ? `${label(other)} gets a note to agree, like Roll to next time.` : 'Stays owed into the next season.';
+            : asks ? `${label(other)} gets a note to agree, like Roll to next time.` : null;
           return (
             <div key={lineKey(l)} className="pay-card book-line">
               <div className="pay-who">
@@ -88,7 +90,7 @@ export function CloseBooks({ scope = ALL }) {
               <Segmented label={`${text} ${money(l.amount)}`} className="press-mode-row book-pick" btn="pm-btn" value={how(l)}
                 onChange={v => setPicks(p => ({ ...p, [lineKey(l)]: v }))}
                 options={[{ value: 'paid', label: 'Paid', aria: `Paid: ${text} ${money(l.amount)}` }, { value: 'rolled', label: 'Roll to next season', aria: `Roll to next season: ${text} ${money(l.amount)}` }]} />
-              <div className="trip-pay-sub">{sub}</div>
+              {sub && <div className="trip-pay-sub">{sub}</div>}
             </div>
           );
         })}
@@ -138,7 +140,7 @@ export function Book({ id }) {
     <Screen>
       <Header title={book.name} small onBack={nav.pop} />
       <div className="scroll">
-        <div className="settle-lede">
+        <div className="settle-lede books-lede">
           <div className="eyebrow">{bookScopeName(state, book)} · closed season</div>
           <div className={`d settle-count ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}>{played ? (net > 0 ? `You finished up ${money(net / 100)}` : net < 0 ? `You finished down ${money(-net / 100)}` : 'You finished even') : 'You weren’t in these rounds'}</div>
           <p>{span} · {plural((book.rounds || []).length, 'round')}</p>

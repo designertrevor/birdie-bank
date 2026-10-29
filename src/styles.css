@@ -101,6 +101,8 @@ h2.sec-label { margin: 0; }
 .screen-header.large { transition: padding .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s ease-out; }
 .screen-header.large .screen-title { transition: font-size .25s cubic-bezier(.2, .8, .2, 1); }
 .screen-header.large .av-in-btn { transition: width .25s cubic-bezier(.2, .8, .2, 1), height .25s cubic-bezier(.2, .8, .2, 1); }
+.screen-header:not(.large) { transition: box-shadow .25s ease-out; }
+.screen-header.edged { box-shadow: 0 1px 0 var(--line); }
 .screen-header.tucked { padding-top: 6px; padding-bottom: 6px; min-height: 0; box-shadow: 0 1px 0 var(--line); }
 .screen-header.tucked .screen-title { font-size: 20px; letter-spacing: -.01em; }
 .screen-header.tucked .avatar-btn .av-in-btn { width: 34px; height: 34px; font-size: 13px; }
@@ -155,9 +157,10 @@ h2.sec-label { margin: 0; }
 .full-btn:active i { transform: translateX(4px); }
 .full-btn.outline { background: var(--surface); color: var(--ink); }
 .cta-wrap, .pin-btn { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-/* A pinned footer over a scroll that carries on under it: a short canvas fade above, so the cut-off row reads as more */
-.cta-wrap.fade { position: relative; }
-.cta-wrap.fade::before { content: ''; position: absolute; left: 0; right: 0; top: -28px; height: 28px; background: linear-gradient(to bottom, transparent, var(--canvas)); pointer-events: none; }
+/* A pinned footer over a scroll that carries on under it: a short canvas fade above, so the cut-off row
+   reads as more. Every pinned footer has it now, not only .fade ones (play-65: a hard cut sliced rows) */
+:is(.cta-wrap, .pin-btn) { position: relative; }
+:is(.cta-wrap, .pin-btn)::before { content: ''; position: absolute; left: 0; right: 0; top: -28px; height: 28px; background: linear-gradient(to bottom, transparent, var(--canvas)); pointer-events: none; }
 /* A sheet open at the screen sits after the footer, so it doesn't count as last */
 .screen > div[style*="border-top"]:nth-last-child(1 of :not(.sheet-overlay, .numpad-overlay, [hidden])) { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
 
@@ -483,8 +486,9 @@ a.set-row { text-decoration: none; }
 .sheet-overlay.closing > *, .numpad-overlay.closing > * { animation: sheetDown var(--duration-fast) var(--ease-in) both; }
 @keyframes scrimOut { to { background: transparent; } }
 /* While a sheet is up, the screen's pinned buttons step out, so none peeks past the floating sheet's
-   rounded corner (a black sliver of Save & next hole under the number pad) */
-.screen:has(> :is(.sheet-overlay, .numpad-overlay).open:not(.closing)) > :is(.cta-wrap, .pin-btn) { visibility: hidden; }
+   rounded corner (a black sliver of Save & next hole under the number pad), including a step's own
+   footer further down the screen (Big Game setup's Start the groups, trips-20), but not the sheet's */
+.screen:has(> :is(.sheet-overlay, .numpad-overlay).open:not(.closing)) :is(.cta-wrap, .pin-btn):not(:is(.sheet-overlay, .numpad-overlay) *) { visibility: hidden; }
 @keyframes sheetDown { to { transform: translateY(calc(100% + var(--sheet-gap) + env(safe-area-inset-bottom) + 8px)); } }
 .sheet, .numpad-sheet, .sc-sheet, .rules-sheet {
   --canvas: var(--sheet-bg); --card: var(--sheet-card); --surface: var(--sheet-surface); --surface-strong: var(--sheet-surface-strong);
@@ -500,7 +504,8 @@ a.set-row { text-decoration: none; }
 .sheet-close { color: var(--body); }
 /* A confirm whose way out is the X (the age check): the title and the X share the row */
 /* A sheet's title row stays put at the top while a long sheet scrolls under it */
-.sheet-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px; background: inherit; border-radius: inherit; }
+/* The title starts 20px in, on the same edge as a confirm's title and a sheet's words under it (play-42, play-43) */
+.sheet-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px 20px; background: inherit; border-radius: inherit; }
 .sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 16px; }
 .sheet-title-row .sheet-title { flex: 1; min-width: 0; }
 .sheet-handle { width: 40px; height: 5px; background: var(--surface-strong); margin: 10px auto 0; border-radius: 3px; }
@@ -511,14 +516,18 @@ a.set-row { text-decoration: none; }
 }
 .sheet-item:active { transform: scale(.97); }
 .sheet-item.selected { background: var(--pink-fill); color: #fff; }
-.sheet-item.selected span { color: #fff !important; }
+.sheet-item.selected span, .sheet-item.selected .set-name { color: #fff !important; }
 .sheet-cancel {
   width: calc(100% - 32px); margin: 8px 16px 0; height: 54px; background: var(--surface); border: none; border-radius: 999px;
   font-family: var(--display); font-size: 17px; font-weight: 800; cursor: pointer; color: var(--ink);
 }
 
 /* NUMPAD */
-.numpad-header { padding: 18px 20px 10px; display: flex; align-items: center; justify-content: space-between; }
+.numpad-header { padding: 18px 12px 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.numpad-header > div:first-child { flex: 1; min-width: 0; }
+/* The pad closes with the same round X as every sheet; an empty value is a faint dash beside it */
+.numpad-close { flex-shrink: 0; }
+.numpad-value.empty { color: color-mix(in srgb, var(--mute) 45%, transparent); font-weight: 400; }
 .numpad-title { font-size: 15px; font-weight: 600; color: var(--mute); }
 .numpad-value { font-family: var(--display); font-size: 40px; font-weight: 800; color: var(--ink); }
 .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 16px 0; }
@@ -1652,7 +1661,8 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .sb-track { position: relative; height: 16px; }
 .sb-track.right { border-left: 2px solid var(--ink); }
 .sb-track i { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
-.sb-track.left i { right: 0; background: var(--loss-bg); box-shadow: inset 0 0 0 1.5px var(--loss); }
+/* A loss is a solid muted red, not a pink outline round a pale fill (maroon in dark) (tab-12) */
+.sb-track.left i { right: 0; background: color-mix(in srgb, var(--loss) 60%, transparent); }
 .sb-track.right i { left: 0; background: var(--win); }
 .sb-amt { padding-left: 8px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
 .kv-block { display: flex; flex-direction: column; }
@@ -1660,6 +1670,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .kv-row:last-child { border-bottom: 0; }
 .kv-k { color: var(--mute); }
 .kv-v { font-weight: 700; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.kv-who { font-weight: 600; color: var(--ink); }
 .sample-tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1.5px dashed var(--mute); color: var(--mute); }
 .tour-dots { display: flex; gap: 6px; padding: 4px 20px 8px; }
 .tour-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-strong); }
@@ -1687,7 +1698,8 @@ button.lately-row:active { background: var(--surface); }
    dots was the same noise as the cards). The tint classes stay for anything that wants them back */
 .lately-ic.mint, .lately-ic.lav, .lately-ic.peach, .lately-ic.ochre, .lately-ic.pink { background: var(--surface); color: var(--ink); }
 .lately-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.lately-text { font-weight: 700; color: var(--ink); font-size: 15px; line-height: 1.3; }
+/* No one-word last line ("took it", "putter") (history-10) */
+.lately-text { font-weight: 700; color: var(--ink); font-size: 15px; line-height: 1.3; text-wrap: pretty; }
 .lately-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
 .lately-all { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 32px); min-height: 44px; margin: 0 16px 4px; border: none; border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
 
@@ -1783,7 +1795,7 @@ button.lately-row:active { background: var(--surface); }
 .rv-note { margin-top: 2px; }
 .nemesis-card {
   display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); margin: 12px 16px 0; padding: 14px; text-align: left;
-  background: var(--card); border: 1.5px solid var(--loss-bg); border-radius: 20px; cursor: pointer; font: inherit; color: inherit;
+  background: var(--card); border: none; box-shadow: var(--hair); border-radius: var(--r-card); cursor: pointer; font: inherit; color: inherit;
   transition: transform .2s var(--spring);
 }
 .nemesis-card:active { transform: scale(.97); }
@@ -1979,6 +1991,12 @@ button.trip-card:active { transform: scale(.97); }
 .trip-day { flex: 1 1 0; min-width: 44px; text-align: center; font-size: 12px; font-weight: 700; padding: 6px 4px; border-radius: 10px; background: var(--surface); color: var(--mute); white-space: nowrap; }
 .trip-day.done { background: var(--surface-strong); color: var(--ink); }
 .trip-day.now { background: var(--pink-fill); color: #fff; }
+/* The Big Game's group counts (G1 · 4): hairline chips, the groups out there edged in ink (trips-17) */
+.big-dots .trip-day, .big-dots .trip-day.done { background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--body); font-weight: 600; }
+.big-dots .trip-day.now { background: none; box-shadow: inset 0 0 0 1.5px var(--ink); color: var(--ink); }
+/* A field that opens a pad: the amount, a pencil, the field's own edge (Big Game's side bet, trips-21) */
+.field-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; text-align: left; cursor: pointer; font-weight: 600; box-shadow: var(--hair); }
+.field-btn > i { color: var(--ink); font-size: 18px; flex-shrink: 0; }
 .trip-stand { margin-top: 10px; }
 .ts-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); font-variant-numeric: tabular-nums; }
 .ts-row:first-child { border-top: none; }
@@ -2010,6 +2028,8 @@ button.trip-card:active { transform: scale(.97); }
 .tr-name { font-weight: 700; font-size: 16px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-sub { font-size: 12px; color: var(--mute); }
 .tr-amt { font-family: var(--display); font-weight: 800; font-size: 18px; color: var(--ink); white-space: nowrap; }
+/* No score yet: the rank column's quiet en dash, not a heavy one (trips-16) */
+.tr-amt.empty, :root[data-look] .tr-amt.empty { font-family: var(--body-font); font-weight: 400; font-size: 13px; color: var(--mute); }
 .trip-row.me .tr-name { color: var(--pink-text); }
 .ledger-row.trip-live { background: var(--surface); }
 .text-link.danger, .text-link.danger i { color: var(--loss); }
@@ -2105,8 +2125,9 @@ button.trip-card:active { transform: scale(.97); }
 .av-pick { position: relative; width: 64px; height: 64px; padding: 0; border: none; border-radius: 50%; background: none; cursor: pointer; transition: transform .2s var(--spring); }
 .av-pick:active { transform: scale(.92); }
 .av-pick .av-tile { width: 64px; height: 64px; margin: 0; }
-.av-pick.on .av-tile { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 6px var(--pink); }
-.av-check { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--pink-fill); color: #fff; font-size: 12px; box-shadow: 0 0 0 2px var(--canvas); }
+/* The picked buddy: an ink ring and an ink check, like the picked backdrop under it (players-8) */
+.av-pick.on .av-tile { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
+.av-check { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--on-ink); font-size: 12px; box-shadow: 0 0 0 2px var(--canvas); }
 .av-eyebrow { margin: 14px 0 8px; text-align: center; }
 .av-swatches { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; justify-items: center; padding: 4px 0 8px; }
 .av-swatch { width: 100%; max-width: 40px; aspect-ratio: 1; border: none; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
@@ -2350,7 +2371,8 @@ button.trip-card:active { transform: scale(.97); }
 .callout-row:active { background: var(--surface); }
 .callout-text { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.35; }
 .callout-go { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; background: var(--mint); color: var(--on-pastel); font-size: 17px; }
-.callout-off { display: block; min-height: 44px; margin: 2px auto 0; padding: 10px 14px; border: none; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--mute); cursor: pointer; }
+/* Tucked under the bubbles on their left edge, so it reads as theirs and not a section of its own (home-21) */
+.callout-off { display: block; min-height: 44px; margin: 0; padding: 10px 4px; border: none; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--mute); cursor: pointer; }
 
 /* ---- Mid-round lineup (o7 midround): who banks or is the wolf on the holes still to play ---- */
 .lineup-runs { padding-top: 4px; }
@@ -2362,6 +2384,10 @@ button.trip-card:active { transform: scale(.97); }
 /* COMMENTS AND REACTIONS (overnight 7, comments): trash talk on a finished round, its settle-up
    lines and side bets, and on a plan. Reactions are pills with a count, yours filled in. */
 .talk-card { margin: 0 16px 6px; padding: 12px; background: var(--card); border-radius: 20px; }
+/* In a sheet (the plan's Trash talk) the talk sits on the sheet itself, not a card inside it, and the
+   quick jabs run to the sheet's edges so none is clipped by a card's padding (plan-19) */
+.sheet .talk .talk-card { padding: 0; background: none; box-shadow: none; border-radius: 0; }
+.sheet .talk .talk-jabs { margin-left: -16px; margin-right: -16px; padding: 0 16px 2px; scroll-padding-inline: 16px; }
 .talk-reacts { display: flex; gap: 8px; flex-wrap: wrap; }
 .talk-react {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 52px; min-height: 44px; padding: 0 12px;
@@ -2438,7 +2464,9 @@ button.ch-main:active { transform: scale(.98); }
 .ch-actions .pill-btn.ch-yes { background: var(--ink); color: var(--on-ink); }
 .ch-card.done { background: var(--surface); }
 .ch-card.done .ch-status { background: var(--card); }
-.ch-add .add-ci { background: var(--lav); color: var(--on-pastel); }
+/* Challenges on the plan: a white hairline row with a neutral icon, like the rows around it (plan-17) */
+.add-row.ch-add { border: none; background: var(--card); box-shadow: var(--hair); }
+.ch-add .add-ci { background: var(--surface); color: var(--ink); }
 .ch-page { padding-top: 4px; }
 .ch-illo { display: block; width: 96px; height: 96px; margin: 8px auto 12px; }
 .ch-setup-note { margin-top: 4px; }
@@ -2566,8 +2594,9 @@ button.ch-main:active { transform: scale(.98); }
 /* ---------- Team points trips, Ryder Cup style (o7 rydercup): the cup's score, matches, leaderboard, teams ---------- */
 /* Two team colors, deep enough for white text in light mode and bright enough on dark cards */
 :root { --cup-a: #2563b8; --cup-a-bg: #e1ecfb; --cup-b: #c2382c; --cup-b-bg: #fde3df; }
-:root[data-theme="dark"] { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #46201c; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #46201c; } }
+/* Dark red leans rose, not brown, beside the navy (trips-7); the template badge splits brighter ones (trips-24) */
+:root[data-theme="dark"] { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #4d1f2a; --cup-a-lift: #2a4170; --cup-b-lift: #6a2a37; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --cup-a: #7fb0ff; --cup-a-bg: #1d2d47; --cup-b: #ff8a7a; --cup-b-bg: #4d1f2a; --cup-a-lift: #2a4170; --cup-b-lift: #6a2a37; } }
 .cup-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; vertical-align: 1px; }
 .cup-dot.t0 { background: var(--cup-a); }
 .cup-dot.t1 { background: var(--cup-b); }
@@ -2646,6 +2675,8 @@ button.ch-main:active { transform: scale(.98); }
 .cup-sheet { padding: 4px 0 0; background: none; }
 .cup-order { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 6px; border-radius: 12px; background: var(--card); }
 .cup-order-n { width: 18px; text-align: center; font-size: 12px; font-weight: 700; color: var(--mute); flex-shrink: 0; }
+/* A captain has no pick number: no empty slot, so the name starts at the chip's edge and fits (trips-13) */
+.cup-order-n:empty { display: none; }
 .cup-order .icon-btn { width: 32px; height: 32px; font-size: 14px; background: var(--surface); }
 .cup-preview { padding: 6px 0; font-size: 14px; color: var(--body); overflow-wrap: anywhere; }
 .cup-preview b { color: var(--ink); margin-right: 4px; }
@@ -2736,6 +2767,9 @@ button.ch-main:active { transform: scale(.98); }
 .tee-block .tb-label { display: block; margin: 0 0 8px; }
 .tee-block .day-strip + .field-help { margin-bottom: 4px; }
 .tee-block .tb-label + .day-strip { margin-top: 0; }
+/* The reminder days and Schedule for later's days run to the card's edge and fade there, so the cut
+   reads as more to scroll (plan-21, setup-28) */
+.tee-block .day-strip, .when-block .day-strip { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
 .tb-link-row { display: flex; gap: 8px; align-items: center; }
 .tb-link-row .text-input { flex: 1; min-width: 0; }
 .tb-link-row .rc-btn { flex-shrink: 0; }
@@ -2778,6 +2812,10 @@ button.ch-main:active { transform: scale(.98); }
 .fr-views { margin: 4px 16px 12px; }
 .fr-views .pm-btn { flex: 1; }
 .fr-friend { gap: 12px; }
+/* Friends and Suggested: one card of rows with hairlines between, like the Players list (players-7) */
+.fr-list { margin: 0 16px 10px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
+:root .fr-list > .set-row, :root[data-look] .fr-list > .set-row { width: 100%; margin: 0; border-radius: 0; box-shadow: none; background: none; }
+.fr-list > .set-row + .set-row { border-top: 1px solid var(--line); }
 .fr-friend .set-sub { overflow-wrap: anywhere; }
 .fr-via { color: var(--body); font-weight: 600; }
 .fr-sugg-help { margin-top: -4px; }
@@ -2811,7 +2849,7 @@ button.ch-main:active { transform: scale(.98); }
 .tm-template:active { transform: scale(.98); }
 .tm-template.on { box-shadow: inset 0 0 0 2px var(--ink); background: var(--card); }
 .tm-template > i { margin-left: auto; font-size: 20px; color: var(--ink); flex-shrink: 0; }
-.tm-t-size { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: linear-gradient(135deg, var(--cup-a-bg) 50%, var(--cup-b-bg) 50%); font-weight: 800; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tm-t-size { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: linear-gradient(135deg, var(--cup-a-lift, var(--cup-a-bg)) 50%, var(--cup-b-lift, var(--cup-b-bg)) 50%); font-weight: 800; font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .tm-t-main { display: flex; flex-direction: column; min-width: 0; }
 .tm-t-name { font-weight: 700; font-size: 15px; }
 .tm-t-sub { font-size: 13px; color: var(--mute); overflow-wrap: anywhere; }
@@ -2832,7 +2870,8 @@ button.ch-main:active { transform: scale(.98); }
 .tm-total { display: flex; flex-direction: column; gap: 2px; padding: 4px 2px 10px; }
 .tm-total .d { font-size: 20px; font-weight: 800; color: var(--ink); text-wrap: balance; }
 .tm-total-sub { font-size: 13px; color: var(--mute); }
-.tm-day { margin: 0 0 10px; padding: 14px; background: var(--surface); }
+/* A schedule day is a card with a hairline, so its fields and chips sit one layer deep, not on a beige panel (trips-26) */
+.tm-day { margin: 0 0 10px; padding: 14px; background: var(--card); box-shadow: var(--hair); }
 .tm-day .select { background: var(--card); }
 .tm-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .tm-day-name { font-weight: 800; font-size: 16px; color: var(--ink); }
@@ -2877,7 +2916,8 @@ button.ch-main:active { transform: scale(.98); }
 .cup-chip.static-row { cursor: default; }
 .cup-chip.static-row:active { transform: none; }
 .tm-draft-pool { margin: 0 16px; }
-.tm-draft-pool .cup-chip:disabled { cursor: default; opacity: .85; }
+/* Waiting for your turn isn't disabled-looking: full colour faces in both themes (trips-35) */
+.tm-draft-pool .cup-chip:disabled { cursor: default; opacity: 1; color: var(--ink); }
 .tm-draft-pool .cup-chip:disabled:active { transform: none; }
 .tm-captain { gap: 8px; }
 .tm-captain .lr-name { display: flex; align-items: center; gap: 6px; }
@@ -2987,7 +3027,7 @@ button.ch-main:active { transform: scale(.98); }
 /* A sheet's chips sit on the same gutter as its text, with room before the buttons */
 .pot-hole-chips { padding: 0 20px 12px; }
 /* The Big Game: the organizer's share pills stand apart from the groups above them */
-.chip-row.big-share { padding-top: 4px; padding-bottom: 14px; }
+.big-share { display: flex; flex-direction: column; gap: 8px; padding: 4px 16px 14px; }
 /* Big Game setup: "Keeps score" is its own question under the group's players, not stuck to them */
 .big-setup-group .field-label { margin-top: 14px; }
 .big-setup-group .big-group-head + .chip-row.flush { padding-bottom: 4px; }
@@ -2997,7 +3037,8 @@ button.ch-main:active { transform: scale(.98); }
    toggle than to the next one. Only this step, so Settings and game setup keep their spacing */
 .big-games > .toggle-row + .block { margin-top: -2px; margin-bottom: 16px; }
 /* The tee time block: Booked is its own step after the reminder day */
-.tee-block .tb-done { margin-top: 12px; }
+/* "I booked it" is a step you take (it opens the tee time sheet), so it's a hairline button, not a beige status bar (plan-21) */
+.tee-block .tb-done { margin-top: 12px; background: var(--card); box-shadow: var(--hair); color: var(--ink); }
 .rc-sheet-body .full-btn { margin-top: 6px; }
 /* Your stats: the privacy line under the last card */
 .stats-foot { margin-top: 6px; }
@@ -3511,6 +3552,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .ic-playfor i { margin-top: 2px; }
 /* Settle the trip: the lede on the 16px gutter with room between its lines */
 .settle-lede { padding: 4px 16px 16px; }
+/* Close the books: on the section labels' 20px edge, so the intro and "Final net" line up (tab-13) */
+.settle-lede.books-lede { padding-left: 20px; padding-right: 20px; }
 .settle-lede p { line-height: 1.45; }
 /* "I paid" and "I got it" are the quiet second button next to the pay app's, so a page of them
    doesn't stack up black bars */
@@ -3636,6 +3679,10 @@ a.header-btn.rm-open { text-decoration: none; }
 .pf-chip i { color: var(--icon); font-size: 12px; }
 .co-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .co-acts .co-act { margin-top: 0; }
+/* A stacked callout: the drawing centred on top, the words and buttons centred under it */
+.callout.stack { flex-direction: column; align-items: center; text-align: center; padding: 20px 16px 18px; gap: 10px; }
+.callout.stack .co-body { align-items: center; }
+.callout.stack .co-acts { justify-content: center; }
 .callout.soft .pill-btn:not(.dark) { background: var(--card); }
 /* "How this works": the long explanation, folded away under a one-line note */
 .how { margin-top: 8px; font-size: 13px; color: var(--mute); }
@@ -3765,6 +3812,11 @@ a.header-btn.rm-open { text-decoration: none; }
 .tab-tools .text-link { margin: 0; padding: 12px 14px; width: 100%; }
 .tab-tools .text-link + .text-link, .tab-tools > * + * { border-top: 1px solid var(--line); }
 .tab-tools.solo { background: none; display: flex; justify-content: center; }
+/* Off the Tab (Season), the same card with its hairline, icons by the titles */
+.tab-tools.edged { border-radius: var(--r-card); box-shadow: var(--hair); }
+.tab-tools.edged .stats-link { align-items: flex-start; }
+.tab-tools.edged .stats-link > i:first-child { margin-top: 2px; }
+.tab-tools.edged .stats-link > i:last-child { align-self: center; }
 .tab-tools.solo .text-link { width: auto; }
 
 /* PLAYERS: a new player says New instead of a dash, and an empty group shows four seats to fill */
@@ -3780,6 +3832,9 @@ a.header-btn.rm-open { text-decoration: none; }
 .money-card:not(:has(.pay-acts, .carry-note, .mc-links, .reward-lines)) { display: none; }
 .mc-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; }
 .mc-links .link-btn, .mc-links button { font-size: 14px; }
+/* Both links the same quiet style on one baseline: Where it comes from is the Tab's .tab-part (tab-9) */
+.mc-links { align-items: center; }
+.mc-links .link-btn { display: inline-flex; align-items: center; min-height: 44px; margin: 0; padding: 0 4px; color: var(--ink); font-weight: 600; }
 /* The rivalry card's top row: "Your nemesis" on the left when it applies, Share this rivalry on the right */
 .rv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .rv-head .rv-tag { margin-bottom: 0; }
@@ -4011,7 +4066,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .ob-review-me { display: flex; align-items: center; gap: 12px; padding: 10px 0 12px; border-bottom: 1px solid var(--line-soft); }
 .ob-review-me .avatar { margin: 0; width: 56px; height: 56px; font-size: 24px; flex-shrink: 0; }
 .ob-review-me .li-name { font-family: var(--display); font-size: 20px; font-weight: 800; }
-.ob-review-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); animation: rise .4s calc(.15s + var(--i) * .08s) var(--ease-out) both; }
+/* The rows come in right behind the card, quick, so it never sits big and empty first (onboarding-7) */
+.ob-review-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); animation: rise .3s calc(.04s + var(--i) * .05s) var(--ease-out) both; }
 .ob-review-row:last-child { border-bottom: none; }
 .ob-review-k { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
 .ob-review-v { font-size: 16px; font-weight: 600; color: var(--ink); margin-top: 1px; line-height: 1.3; }
@@ -4058,7 +4114,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .st-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
 .st-top .eyebrow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-chev { color: var(--mute-soft); font-size: 14px; flex-shrink: 0; }
-.st-state { font-size: 14px; font-weight: 700; color: var(--mute); }
+.st-state { font-weight: 700; color: var(--body); }
 .st-state.pos { color: var(--win) !important; }
 .st-state.neg { color: var(--loss) !important; }
 .st-big { margin-top: 8px; font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -4102,12 +4158,19 @@ a.header-btn.rm-open { text-decoration: none; }
 .stats-tiles.stat-grid .stat-tile { grid-column: auto; }
 .trend-card .cc-head { align-items: flex-start; }
 .trend-card .trend-official { padding-bottom: 0; }
+/* The official index's dotted swatch (the chart's baseline) and the note on which way is better (history-17) */
+.trend-dash { display: inline-block; width: 16px; margin-right: 6px; vertical-align: .3em; border-top: 2px dotted var(--mute-soft); }
+.trend-note { margin: 6px 0 0; font-size: 12px; font-weight: 600; color: var(--mute); }
 .trend-card .trend-pill { display: flex; justify-content: flex-end; margin: 4px 0 2px; }
 .trend-card .insight { margin-top: 10px; }
 
 /* HALL OF FAME: the records as score tiles, with who holds it in the accent and the number big */
 .badge-tile { gap: 2px; box-shadow: var(--card-shadow); }
-.bt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+/* The drawing on its own row at the top right, the label full width under it (two lines' room), so
+   every tile's who and number start at the same height (history-18) */
+.bt-top { display: flex; flex-direction: column-reverse; align-items: stretch; gap: 6px; width: 100%; }
+.bt-top .bt-art { align-self: flex-end; }
+.bt-top .bt-k { min-height: 2.5em; line-height: 1.25; }
 .bt-ic { width: 28px; height: 28px; margin: 0; font-size: 15px; }
 .bt-k { font-size: 12px; font-weight: 600; letter-spacing: .08em; }
 .bt-who { font-size: 14px; font-weight: 700; color: var(--ink); }
@@ -4213,6 +4276,6 @@ a.header-btn.rm-open { text-decoration: none; }
 /* Add it to your Home Screen (InstallUpNext.jsx): the steps as a short numbered list with icons */
 .install-steps { list-style: none; margin: 12px 0 2px; padding: 0; display: grid; gap: 8px; counter-reset: is; }
 .install-steps li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--body); line-height: 1.35; }
-.install-steps li::before { counter-increment: is; content: counter(is); width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+/* One marker a step: the icon tile (the list is an ol, so the order still reads; home-17 dropped the number circles) */
 .is-ic { width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: var(--surface); color: var(--icon); display: grid; place-items: center; font-size: 17px; }
 .install-steps .link-btn { font-size: inherit; padding: 0; min-height: 0; }

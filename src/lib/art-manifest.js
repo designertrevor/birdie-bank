@@ -36,7 +36,7 @@ export const ART_USES = {
   'spots/face-off': { name: 'Face: something was off', used: ['Results, How was it? (52px)'] },
   'spots/gift': { name: 'It shipped', used: ['What’s new, the hero (104px)', 'Up next, the It shipped card (56px)'] },
   'spots/shades': { name: 'Keeping it private', used: ['Join invite, the private step (140px)', 'Set up, the games payoff, Good taste (136px)'] },
-  'spots/crowd': { name: 'The group', used: ['Round ready, the crew on the tee (220px)', 'Results hero for a tie (128px)', 'Up next, the Big Game card (56px)', 'Friends row (40px) and recap bubbles (34px)', 'Players with nobody yet (150px)', 'Set up, the group size question, as many as you pick (160px)'], note: 'Hand-drawn from the group’s own buddies; a file shows one picture for every group.' },
+  'spots/crowd': { name: 'The group', used: ['Round ready, the crew on the tee (220px)', 'Results hero for a tie (128px)', 'Up next, the Big Game card (56px)', 'Friends row (40px) and recap bubbles (34px)', 'Players with nobody yet (150px)', 'Set up, the group size question, as many as you pick (160px)', 'Set up, All set, your group with your buddy first (136px)'], note: 'Hand-drawn from the group’s own buddies; a file shows one picture for every group.' },
   'spots/highfive': { name: 'High five', used: ['First tee card when the bets lock (84px)', 'The Tab when all square (150px)'], note: 'Hand-drawn from the two players’ buddies; a file shows one picture for everyone.' },
   // Landed as outside files on 2026-10-26 (round 4), ahead of the screens that will show them
   'spots/podium': { name: 'Winner', used: ['Results, the winner’s block and the reveal while a Big Game waits on its other groups, the trophy still up for grabs (88px)'] },

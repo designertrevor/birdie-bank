@@ -81,7 +81,8 @@ function FriendsList({ state, rounds }) {
       {friends.length === 0 && (
         <Empty illo="crowd" title="Nobody yet" text="Everyone you finish a round with shows up here, from every crew, with your record against them." />
       )}
-      {friends.map(f => {
+      {/* One card of rows with hairlines, like the Players list beside it (players-7) */}
+      {friends.length > 0 && <div className="fr-list">{friends.map(f => {
         const record = recordLine(f);
         return (
           <button key={f.id} className="set-row person-row fr-friend" onClick={() => nav.push('person', { id: f.id })}
@@ -95,12 +96,12 @@ function FriendsList({ state, rounds }) {
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
         );
-      })}
+      })}</div>}
       {suggested.length > 0 && (
         <>
           <div className="sec-label">Suggested</div>
           <p className="field-help pad fr-sugg-help">People your friends played with lately. Tap one to see the round.</p>
-          {suggested.map(s => (
+          <div className="fr-list">{suggested.map(s => (
             <button key={s.key} className="set-row person-row fr-friend" onClick={() => nav.push(...s.target)} aria-label={`${s.name.replace(/\.$/, '')}, ${s.viaText}. ${s.sub}`}>
               <Avatar id={s.seat} name={s.name} />
               <div className="row-main">
@@ -110,7 +111,7 @@ function FriendsList({ state, rounds }) {
               </div>
               <span className="chevron"><Icon name="caret-right" /></span>
             </button>
-          ))}
+          ))}</div>
         </>
       )}
     </>
