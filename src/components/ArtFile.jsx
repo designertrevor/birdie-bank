@@ -15,7 +15,7 @@ function useFilterId() {
 }
 
 /**
- * The sticker filter: the drawing's shape blurred and cut at a low level is the same shape grown
+ * The sticker filter: the drawing's shape dilated a little, blurred and cut at a low level is the same shape grown
  * by `r` evenly all round (and filled across gaps narrower than the border, as a die-cut sticker
  * is). That shape is filled white, with a hairline just outside it in the light theme so the white
  * edge still reads on a white card. `r` and the region are in the user units of whatever it's on.
@@ -23,15 +23,20 @@ function useFilterId() {
  * attributes are what a share card's picture gets.
  */
 function StickerFilter({ id, r, x, y, w, h, edgeOnly = false }) {
-  const s = r / 1.28;
+  // Grown in two steps: a small dilate first, so a thin ray or speed line is thick enough for the blur
+  // to reach full white round it (blur alone left a 2px stroke in a grey glow), then the blur and a
+  // steep cut for the rest, which keeps the edge round and even (a dilate alone grows square corners)
+  const d = r * 0.45;
+  const s = (r - d) / 1.28;
   const pad = r * 3;
   return (
     <filter id={id} filterUnits="userSpaceOnUse" x={x - pad} y={y - pad} width={w + pad * 2} height={h + pad * 2} colorInterpolationFilters="sRGB">
-      <feGaussianBlur in="SourceAlpha" stdDeviation={s} result="spread" />
-      {/* Cut at 0.1: a straight edge grows by 1.28 times the blur, which is r */}
-      <feComponentTransfer in="spread" result="cut"><feFuncA type="linear" slope="16" intercept="-1.12" /></feComponentTransfer>
+      <feMorphology in="SourceAlpha" operator="dilate" radius={d} result="grown" />
+      <feGaussianBlur in="grown" stdDeviation={s} result="spread" />
+      {/* Cut at 0.1: a straight edge grows by 1.28 times the blur, which with the dilate is r */}
+      <feComponentTransfer in="spread" result="cut"><feFuncA type="linear" slope="24" intercept="-1.9" /></feComponentTransfer>
       {/* A little lower for the hairline, so it sits just outside the white */}
-      <feComponentTransfer in="spread" result="ring"><feFuncA type="linear" slope="16" intercept="-0.5" /></feComponentTransfer>
+      <feComponentTransfer in="spread" result="ring"><feFuncA type="linear" slope="24" intercept="-0.75" /></feComponentTransfer>
       <feFlood className="stk-hair" floodColor="rgba(10,10,10,.14)" />
       <feComposite in2="ring" operator="in" result="hair" />
       <feFlood className="stk-edge" floodColor="#ffffff" />
