@@ -13,8 +13,11 @@ const loadArt = () => import('./BuddyArt.jsx');
 const BuddyArt = lazy(() => loadArt().then(m => ({ default: m.BuddyArt }), () => ({ default: () => null })));
 if (typeof window !== 'undefined') loadArt().catch(() => {});
 
-/** The circle for a model from avatarModel(). */
-export function AvatarArt({ model, size = '', base = 'avatar', className = '' }) {
+/**
+ * The circle for a model from avatarModel(). `bare` draws a buddy or critter with no backdrop, as a
+ * die-cut sticker `px` wide (a drawing beside a label, not a person: no colour plate behind art).
+ */
+export function AvatarArt({ model, size = '', base = 'avatar', className = '', bare = false, px = 28 }) {
   const [brokenUrl, setBrokenUrl] = useState(null);
   // A link from outside the app's own photo bucket is never fetched (see photoAllowed). The picker's
   // preview of a picture picked on this phone is a blob: link this page made, so it can show
@@ -23,6 +26,9 @@ export function AvatarArt({ model, size = '', base = 'avatar', className = '' })
   const cls = `${base} ${size} ${className}`.trim();
   if (model.kind === 'photo' && !broken) {
     return <span className={`${cls} av-photo`} aria-hidden="true"><img src={model.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBrokenUrl(model.url)} /></span>;
+  }
+  if (model.kind === 'buddy' && bare) {
+    return <span className={`${cls} av-bare`} aria-hidden="true"><Suspense fallback={null}><BuddyArt id={model.buddy} bg={null} px={px} /></Suspense></span>;
   }
   if (model.kind === 'buddy') {
     return <span className={`${cls} av-buddy`} style={{ background: backdropOf(model.bg).hex }} aria-hidden="true"><Suspense fallback={null}><BuddyArt id={model.buddy} bg={model.bg} /></Suspense></span>;

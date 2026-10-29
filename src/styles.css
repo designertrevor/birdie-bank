@@ -2078,7 +2078,9 @@ button.trip-card:active { transform: scale(.97); }
 }
 /* Initials get the same ring, so the teal colour still has an edge on dark cards */
 .avatar.av-initials:not(.av-in-btn) { box-shadow: 0 0 0 1.5px var(--av-ring); }
-.av-buddy > svg, .av-photo > img { display: block; width: 100%; height: 100%; }
+.av-buddy > svg, .av-photo > img, .av-bare > svg { display: block; width: 100%; height: 100%; }
+/* A buddy drawn as a sticker beside a label: no plate, no ring */
+.avatar.av-bare { background: none; box-shadow: none; overflow: visible; padding: 0; }
 .av-photo > img { object-fit: cover; }
 .avatar.sm { width: 30px; height: 30px; font-size: 14px; }
 .avatar.xl { width: 96px; height: 96px; font-size: 40px; margin: 0 auto; }
