@@ -49,11 +49,8 @@
 /* Standings: every place level with first wears the gold disc */
 .stand-line .sr.gold { background: var(--ochre); color: var(--on-pastel); }
 
-/* A 2 v 2 on two steps: each side's buddies side by side, a little overlapped, over the side's name */
+/* A 2 v 2 on two steps: each side's buddies side by side, a little overlapped (podium.css), over the side's name */
 .podium.team-podium { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.team-podium .pod-faces { display: flex; align-items: flex-end; justify-content: center; }
-.team-podium .pod-faces > * + * { margin-left: -8px; }
-.team-podium .pod-faces .avatar { box-shadow: 0 0 0 3px var(--card); border-radius: 50%; }
 .team-podium .pod-name { white-space: normal; text-align: center; line-height: 1.2; text-wrap: balance; }
 
 /* The dark winner block's game colour as a straight bar across the top, clipped by the corners, not an
@@ -67,3 +64,24 @@
 
 /* The results' tables (the hole by hole money) wear the card's hairline like everything around them */
 .money-table-wrap { box-shadow: var(--hair); }
+
+/* A solo round's card: the player's buddy over the title, the score in ink (pink is for tapping), and
+   the line under it breaking evenly */
+.nice-hero .nice-hero-face { display: block; margin: 0 auto 8px; width: 72px; height: 72px; }
+.nice-hero .nice-hero-face .avatar { width: 72px; height: 72px; margin: 0; }
+:root .winner-hero.nice-hero .wa { color: var(--ink); }
+:root .winner-hero.nice-hero .wa .nice-par { color: var(--body); opacity: 1; }
+.winner-hero .ws { text-wrap: balance; }
+.ra-title .ra-line { display: block; }
+.ra-none { margin: 0; padding: 0 4px; font-size: 15px; line-height: 1.45; color: var(--body); }
+
+/* Who pays who: one talk button a row (reacting is in the sheet it opens), with a 44px tap over its
+   36px chip */
+.ra-pays .talk-react.sm::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+
+/* The foot of the results: Run it back full width, then Save as our usual and Edit scores side by side */
+.detail-two { display: flex; gap: 10px; margin-top: 10px; }
+.detail-two:empty { display: none; }
+.detail-two > .full-btn { flex: 1 1 0; min-width: 0; margin: 0; padding-inline: 10px; font-size: 15px; gap: 6px; white-space: nowrap; }
+.detail-two > .usual-saved { flex: 1 1 100%; padding: 0 4px; margin: 0; }
+.detail-two:has(> .usual-saved) { flex-wrap: wrap; }

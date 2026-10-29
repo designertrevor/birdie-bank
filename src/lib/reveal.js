@@ -188,7 +188,7 @@ function mainRevealSteps(round, res) {
       .filter(p => won[p.id]?.skins)
       .sort((a, b) => won[b.id].skins - won[a.id].skins)
       .map(p => ({
-        key: p.id, label: name(p.id), text: won[p.id].holes.map(holeTag).join(', '),
+        key: p.id, label: name(p.id), who: true, text: won[p.id].holes.map(holeTag).join(', '),
         value: count(won[p.id].skins), amount: won[p.id].amount,
       }));
     const unclaimed = (d.skins.unclaimed || 0) + (d.skinsGross?.unclaimed || 0);
@@ -248,7 +248,7 @@ function mainRevealSteps(round, res) {
     }
     const steps = d.holes.length ? [...players]
       .sort((a, b) => count[b.id].ace - count[a.id].ace || count[a.id].deuce - count[b.id].deuce)
-      .map(p => ({ key: p.id, label: name(p.id), text: plural(count[p.id].deuce, 'deuce'), value: plural(count[p.id].ace, 'ace') })) : [];
+      .map(p => ({ key: p.id, label: name(p.id), who: true, text: plural(count[p.id].deuce, 'deuce'), value: plural(count[p.id].ace, 'ace') })) : [];
     return { title: 'Aces and deuces', steps };
   }
 
@@ -282,7 +282,7 @@ function mainRevealSteps(round, res) {
     const dots = round.game === 'dots';
     const steps = [...players]
       .sort((a, b) => (d.points[b.id] || 0) - (d.points[a.id] || 0))
-      .map(p => ({ key: p.id, label: name(p.id), text: '', value: dots ? plural(d.points[p.id] || 0, 'dot') : plural(d.points[p.id] || 0, 'point') }));
+      .map(p => ({ key: p.id, label: name(p.id), who: true, text: '', value: dots ? plural(d.points[p.id] || 0, 'dot') : plural(d.points[p.id] || 0, 'point') }));
     return { title: dots ? 'Dots' : 'Points', steps };
   }
 
@@ -291,7 +291,7 @@ function mainRevealSteps(round, res) {
     const tenth = v => Math.round(v * 10) / 10;
     const toPar = v => (v === 0 ? 'E' : v > 0 ? `+${tenth(v)}` : String(tenth(v)));
     const steps = [...d.teamQuota].sort((a, b) => b.over - a.over)
-      .map(t => ({ key: t.id, label: t.players.map(name).join(' & '), text: `${t.points} pts, quota ${tenth(t.quota)}`, value: toPar(t.over) }));
+      .map(t => ({ key: t.id, label: t.players.map(name).join(' & '), who: true, text: `${t.points} pts, quota ${tenth(t.quota)}`, value: toPar(t.over) }));
     return { title: 'Team quota', steps };
   }
 

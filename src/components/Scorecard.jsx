@@ -13,7 +13,9 @@ import './scorecard.css';
  * player's running to par (+3, E, −1) on the holes they've scored, and net too when anyone gets
  * strokes, so it shows without scrolling the card sideways.
  */
-export function Scorecard({ round, current, onHole, holes = null }) {
+export function Scorecard({ round, current, onHole, holes = null, me = null, compact = false }) {
+  // `me`: the viewer's row reads "You", as in Who pays who and Standings around it. `compact`: the
+  // halfway sheet's front nine fits the phone's width, no sideways scroll, with an Out total
   // `holes`: a part of the round (the halfway sheet's first nine); strokes still fall as the whole round deals them
   const out = holes || round.holes;
   const cls = (g, par) => (g === 'X' ? 'pu' : g <= par - 2 ? 'eagle' : g === par - 1 ? 'birdie' : g === par + 1 ? 'bogey' : g >= par + 2 ? 'dbl' : '');
@@ -49,7 +51,7 @@ export function Scorecard({ round, current, onHole, holes = null }) {
     measure();
   }, [current, out.length]);
   return (
-    <div className="sc-wrap">
+    <div className={`sc-wrap ${compact ? 'sc-compact' : ''}`.trim()}>
       <div className={`sc-scroll ${more ? 'more' : ''}`} ref={scroller} onScroll={measure}>
       <table className="sc-table scorecard">
         <thead>
@@ -62,7 +64,7 @@ export function Scorecard({ round, current, onHole, holes = null }) {
                   : <>{h.no}{round.holeFixes?.[h.no] && <><span className="sc-fixed" aria-hidden="true" /><span className="sr-only">, fixed</span></>}</>}
               </th>
             ))}
-            <th>Tot</th>
+            <th>{compact ? 'Out' : 'Tot'}</th>
             {anyStrokes && <th>Net</th>}
           </tr>
           <tr className="par-row"><td className="sticky">Par</td>{out.map(h => <td key={h.no} {...colProps(h.no)}>{h.par}</td>)}<td>{holes ? out.reduce((a, h) => a + (h.par || 0), 0) : round.par}</td>{anyStrokes && <td />}</tr>
@@ -78,7 +80,7 @@ export function Scorecard({ round, current, onHole, holes = null }) {
             return (
               <tr key={p.id}>
                 <td className="sticky">
-                  <span className="sc-name">{p.team ? p.name : p.name.split(' ')[0]}</span>
+                  <span className="sc-name">{p.id === me ? 'You' : p.team ? p.name : p.name.split(' ')[0]}</span>
                   {casual(p) && !solo && <span className="sc-jp">Just playing</span>}
                   {par.played > 0 && (
                     <span className="sc-topar">

@@ -6,6 +6,7 @@ import { lighten } from '../lib/game-theme.js';
 import { OCHRE } from '../lib/art-palette.js';
 import { artFile } from '../lib/art-files.js';
 import { ArtImage } from './ArtFile.jsx';
+import './podium.css';
 
 // The winner's crown: the round 4 crown alone, in gold (src/art/spots/goldcrown.svg). On the page the
 // file is shown, so a redrawn file lands with no code change; its paths are also kept here, since
@@ -30,7 +31,7 @@ export function Crown({ className = 'crown-art' }) {
   const b = CROWN_BOX;
   return (
     <svg className={className} viewBox={`${b.x} ${b.y} ${b.w} ${b.h}`} aria-hidden="true" focusable="false">
-      {CROWN_FILE ? <ArtImage file={CROWN_FILE} x={b.x} y={b.y} w={b.w} h={b.h} outline={false} /> : <CrownShape />}
+      {CROWN_FILE ? <ArtImage file={CROWN_FILE} x={b.x} y={b.y} w={b.w} h={b.h} /> : <CrownShape />}
     </svg>
   );
 }
@@ -52,23 +53,31 @@ export function CrownedFace({ model, size = 96 }) {
  */
 export function Podium({ standings, faces, fmt, tint = OCHRE, amounts = true }) {
   // `rank` is the place with ties shared (two level on top are both 1st), so tied players stand on steps of the same height
-  const top = standings.slice(0, 3).map((p, i) => ({ ...p, label: placeLabel(standings, i), i, rank: Math.min(3, 1 + standings.filter(q => q.amount > p.amount).length) }));
+  const rankOf = p => 1 + standings.filter(q => q.amount > p.amount).length;
+  const top = standings.slice(0, 3).map((p, i) => ({ ...p, label: placeLabel(standings, i), i, rank: Math.min(3, rankOf(p)), more: [] }));
+  // Anyone level with the last step's player shares that step (a tie for 3rd puts both on it), side by
+  // side as on the team podium, so nobody tied into the top three is left off
+  if (top.length === 3) top[2].more = standings.slice(3).filter(p => rankOf(p) === rankOf(top[2]));
   const order = top.length === 3 ? [top[1], top[0], top[2]] : top;
   // Everyone level with first wears the crown, as on the reveal: a tie for top crowns them all
   const crowned = p => p.i === 0 || (top[0].amount > 0 && p.amount === top[0].amount);
   // The steps: first place in the full gold, second and third in paler washes of it (butter, cream), the
   // same podium on every screen so gold always means the winner (`tint` is there for a one-off)
   const steps = tint ? { '--pod-1': tint, '--pod-2': lighten(tint, 0.38), '--pod-3': lighten(tint, 0.6), '--pod-tint': tint } : undefined;
+  const face = (p, size) => faces.get(p.id) && (crowned(p) ? <CrownedFace key={p.id} model={faces.get(p.id)} size={size} /> : <AvatarArt key={p.id} model={faces.get(p.id)} />);
   return (
     <div className={`podium ${tint ? 'themed' : ''}`.trim()} style={steps} role="list" aria-label="Top three">
-      {order.map(p => (
-        <div key={p.id} className={`pod pod-${p.rank}`} role="listitem">
-          <span className="pod-face">{crowned(p) && faces.get(p.id) ? <CrownedFace model={faces.get(p.id)} size={64} /> : faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}</span>
-          <span className="pod-name">{p.name.split(' ')[0]}</span>
-          {amounts && <span className={`pod-amt ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</span>}
-          <span className="pod-step d"><span className="sr-only">Place </span>{p.label}</span>
-        </div>
-      ))}
+      {order.map(p => {
+        const all = [p, ...p.more];
+        return (
+          <div key={p.id} className={`pod pod-${p.rank}`} role="listitem">
+            <span className={`pod-face ${all.length > 1 ? 'pod-faces' : ''}`.trim()}>{all.map(q => face(q, 64))}</span>
+            <span className={`pod-name ${all.length > 1 ? 'shared' : ''}`.trim()}>{all.map(q => q.name.split(' ')[0]).join(' & ')}</span>
+            {amounts && <span className={`pod-amt ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}{all.length > 1 ? ' each' : ''}</span>}
+            <span className="pod-step d"><span className="sr-only">Place </span>{p.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

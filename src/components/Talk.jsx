@@ -176,9 +176,10 @@ export function TalkSection({ ctx, on, title = 'Trash talk' }) {
 
 /**
  * A small bar under one settle-up line or side bet: its reactions, a button to add one, and its
- * comments in a sheet. `title` names the thing ("Sam pays Mike").
+ * comments in a sheet. `title` names the thing ("Sam pays Mike"). `one`: a single talk button (the
+ * sheet it opens has the reactions to tap too), for a list of payments where two chips a row crowd the money.
  */
-export function TalkBar({ ctx, on, title }) {
+export function TalkBar({ ctx, on, title, one = false }) {
   const { rows, reach, canTalk } = useCtx(ctx);
   const [tray, setTray] = useState(false);
   const [open, setOpen] = useState(false);
@@ -192,13 +193,13 @@ export function TalkBar({ ctx, on, title }) {
         ? <button key={r.key} type="button" className={`talk-react sm ${r.mine ? 'on' : ''}`} aria-pressed={r.mine} aria-label={`${r.label}, ${r.count}${r.mine ? ', yours' : ''}`}
             onClick={() => react(ctx.key, { on, who: ctx.who, name: ctx.myName, emoji: r.key })}><span aria-hidden="true">{r.emoji}</span><span className="tr-n">{r.count}</span></button>
         : <span key={r.key} className="talk-react sm static" role="img" aria-label={`${r.label}, ${r.count}`}><span aria-hidden="true">{r.emoji}</span><span className="tr-n">{r.count}</span></span>)}
-      {canTalk && (
+      {canTalk && !one && (
         <button type="button" className={`talk-react sm add ${tray ? 'on' : ''}`} aria-expanded={tray} aria-label={`React to ${title}`} onClick={() => setTray(t => !t)}>
           <Icon name="smiley" /><Icon name="plus" className="tr-plus" />
         </button>
       )}
       {(canTalk || comments > 0) && (
-        <button type="button" className="talk-react sm" onClick={() => setOpen(true)} aria-label={comments ? `${comments} comment${comments === 1 ? '' : 's'} on ${title}` : `Comment on ${title}`}>
+        <button type="button" className="talk-react sm" onClick={() => setOpen(true)} aria-label={comments ? `${comments} comment${comments === 1 ? '' : 's'} on ${title}` : one ? `React or comment on ${title}` : `Comment on ${title}`}>
           <Icon name="chat-circle" fill={comments > 0} />{comments > 0 && <span className="tr-n">{comments}</span>}
         </button>
       )}

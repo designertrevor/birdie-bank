@@ -4,6 +4,7 @@ import { CrownedFace } from './Podium.jsx';
 import { RaceBoard } from './RaceBoard.jsx';
 import { GameArt } from './GameArt.jsx';
 import { CheerArt } from './ResultsArt.jsx';
+import { Sticker } from './ArtFile.jsx';
 import { useArtSrc } from '../lib/useArtSrc.js';
 import { gameTheme } from '../lib/game-theme.js';
 import './finale.css';
@@ -79,7 +80,7 @@ function RevealStep({ step, on, skip, fmt: roundFmt = money }) {
   if (step.value) val = step.value;
   else if (step.amount != null) val = on ? <StepAmount amount={step.amount} skip={skip} fmt={fmt} /> : fmt(0);
   return (
-    <div className={`rv-step ${on ? 'on' : ''} ${step.tie ? 'tie' : ''}`} aria-hidden={!on}>
+    <div className={`rv-step ${on ? 'on' : ''} ${step.tie ? 'tie' : ''} ${step.who ? 'who' : ''}`} aria-hidden={!on}>
       <div className="rv-main">
         <div className="rv-label">{step.label}</div>
         {step.text && <div className="rv-text">{step.text}</div>}
@@ -137,7 +138,12 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
       const cta = el.parentElement?.querySelector('.cta-wrap');
       const bottom = Math.min(el.getBoundingClientRect().bottom, cta ? cta.getBoundingClientRect().top : Infinity);
       const over = last.getBoundingClientRect().bottom - bottom + 12;
-      if (over > 0) el.scrollBy({ top: over, behavior: reducedMotion() ? 'auto' : 'smooth' });
+      // Never so far that the headline ("Marcus takes it") or the course over it slides under the
+      // header: it's the moment's main line
+      const head = hero.current?.querySelector('.rv-eyebrow');
+      const room = head ? head.getBoundingClientRect().top - el.getBoundingClientRect().top - 6 : Infinity;
+      const by = Math.min(over, room);
+      if (by > 0) el.scrollBy({ top: by, behavior: reducedMotion() ? 'auto' : 'smooth' });
     }, done ? 500 : 560); // after the card's tightening, or the last total's landing pop
     return () => clearTimeout(id);
   }, [resolved, done, instant]);
@@ -188,7 +194,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
           {/* The winner's buddy takes the crown once the totals land; a tie or a winning side crowns them all */}
           {done && heroFaces.length > 0 && (
             <div className={`rv-crowned ${heroFaces.length > 1 ? 'many' : ''}`}>
-              {heroFaces.map(([id, face]) => <CrownedFace key={id} model={face} size={heroFaces.length > 1 ? 56 : 76} />)}
+              {heroFaces.map(([id, face]) => <CrownedFace key={id} model={face} size={heroFaces.length > 1 ? 52 : 64} />)}
             </div>
           )}
           {/* Nobody to crown: the handshake when it's all square, the trophy still up for grabs while a
@@ -214,7 +220,7 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
         {extra}
       </div>
       <Sheet open={cardOpen} onClose={() => setCardOpen(false)} title="Scorecard" className="sc-sheet">
-        <Scorecard round={round} />
+        <Scorecard round={round} me={me} />
         <div className="cta-wrap"><button className="full-btn outline" onClick={() => setCardOpen(false)}>Close</button></div>
       </Sheet>
       <div className="cta-wrap">
@@ -263,7 +269,7 @@ export function NiceRound({ round, me, onDetail, onDone }) {
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onDone}>Done <Icon name="check" /></button>
-        <button className="full-btn outline" onClick={onDetail}>{solo ? 'See your card' : 'See the card and how the group did'}</button>
+        <button className="full-btn outline" onClick={onDetail}>{solo ? 'Scorecard' : 'See the card and how the group did'}</button>
       </div>
     </>
   );
@@ -407,13 +413,13 @@ export function SettleUp({ round, res, onBack, onNext, fromResults = false }) {
             );
           })}
         </div>
-        <p className="field-help pad">
+        <p className="field-help pad settle-note">
           {paidCount === n ? 'All paid. Nice and tidy.' : `${paidCount} of ${n} paid. Anything left stays on the Tab.`}
           {missingApp ? ' Add each person’s payment app in Players to get pay buttons.' : ''}
         </p>
         {/* Tap a person to see what's between you, game by game and side bet by side bet */}
         {/* A reward round settles only its side bets for money here, so they read in dollars */}
-        <RoundWhereFrom round={round} res={res} fmt={countsMoney(round) ? null : money} />
+        <div className="settle-from"><RoundWhereFrom round={round} res={res} fmt={countsMoney(round) ? null : money} /></div>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onNext}>{fromResults ? <>Done <Icon name="check" /></> : <>Share results <Icon name="arrow-right" /></>}</button>
@@ -449,7 +455,12 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
   return (
     <>
     {buddies.length > 0 && <span key={`cheer-${buddies.join('-')}-${reaction.kind}`} ref={grabCheer} hidden><CheerArt buddies={buddies} crowned={reaction.kind !== 'square'} /></span>}
-    <span key={`game-${round.game}`} ref={grabGame} hidden><GameArt game={round.game} tint={theme.soft} size={240} /></span>
+    {/* The game's art with a sticker edge thick enough to hold on the band in its own colour */}
+    <span key={`game-${round.game}`} ref={grabGame} hidden>
+      <svg viewBox="-6 -6 76 76" width={240} height={240} xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <Sticker r={4} box={[-6, -6, 76, 76]}><svg x={0} y={0} width={64} height={64} viewBox="0 0 64 64"><GameArt game={round.game} tint={theme.soft} size={240} /></svg></Sticker>
+      </svg>
+    </span>
     <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}
       fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={bettors(round)}
       onText="Dollar figures are on the image" offText="Off: only the order and the bets, no money"
@@ -460,7 +471,7 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
       </div>
       {/* For the clubhouse wall: the results on paper, the same numbers as here (Print.jsx) */}
       {round.status === 'done' && <button className="text-link" onClick={() => nav.push('print', { kind: 'round', id: round.id })}><Icon name="printer" /> Print the results sheet</button>}
-      <HowWasIt round={round} />
+      <HowWasIt round={round} where="share" />
     </ShareView>
     </>
   );
@@ -491,8 +502,8 @@ function ResultsStandIn({ round, res, show, scores = false }) {
 }
 
 // "How was Birdie Bank today?" shows once per round: the first time it appears it's saved as asked on this phone,
-// and it stays put for the rest of this visit until answered or dismissed.
-const shownNow = new Set();
+// and it stays put where it first showed (round id to where) for the rest of this visit until answered or dismissed.
+const shownNow = new Map();
 const answered = new Set();
 const RECENT = 3 * 24 * 60 * 60 * 1000; // only ask about rounds that just finished
 
@@ -506,20 +517,22 @@ const REACTIONS = [
  * A small, dismissible check-in after a round. One tap saves the reaction as feedback straight
  * away (it waits on the phone with no signal), then offers a form to say more.
  */
-export function HowWasIt({ round }) {
+export function HowWasIt({ round, where = 'results' }) {
   const nav = useNav();
+  // Once a round: shown on Share, it stays there (a remount brings it back) but the results after it
+  // don't ask again in the same finish
   const [show] = useState(() => {
     if (!nav || round.status !== 'done' || answered.has(round.id)) return false;
     if (Date.now() - (round.finishedAt || round.createdAt || 0) > RECENT) return false;
-    return shownNow.has(round.id) || !roundAsked(round.id);
+    return shownNow.get(round.id) === where || !roundAsked(round.id);
   });
   const [gone, setGone] = useState(false);
   const [picked, setPicked] = useState(null);
   useEffect(() => {
     if (!show) return;
-    shownNow.add(round.id);
+    if (!shownNow.has(round.id)) shownNow.set(round.id, where);
     markRoundAsked(round.id);
-  }, [show, round.id]);
+  }, [show, round.id, where]);
   if (!show || gone) return null;
 
   const close = () => { answered.add(round.id); setGone(true); };
