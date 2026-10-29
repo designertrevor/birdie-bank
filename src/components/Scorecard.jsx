@@ -35,7 +35,8 @@ export function Scorecard({ round, current, onHole, holes = null, me = null, com
   // Best ball and Shamble: a row per team with its score on each hole, and the scores that made it underlined
   const tt = isTeamGame(round.game) && !oneBall(round.game) && round.teams?.length === 2 ? teamTable(bettingRound(round)) : null;
   const countedOn = (k, pid) => !!tt && tt.rows[k].counted.some(list => list.includes(pid));
-  // The key lists only the marks this card has (no "eagle" on a card without one), double and worse too
+  // The key always shows eagle, birdie and bogey (Trevor 2026-10-29); double or worse and picked up only
+  // when the card has one
   const marks = new Set(units.flatMap(p => out.map(h => { const g = round.scores[h.no]?.[p.id]; return g == null ? null : cls(g, h.par); })).filter(Boolean));
   // The card scrolls sideways past the first holes: a fade on the right edge says so while there's more,
   // and the hole being played starts in view
@@ -140,9 +141,9 @@ export function Scorecard({ round, current, onHole, holes = null, me = null, com
       <div className="sc-legend">
         {/* Each mark stays on the same line as its words. No birdie or eagle drawings here: they pop up
             as a moment when someone makes one (Moments.jsx), not sit on the card all round */}
-        {marks.has('eagle') && <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>}
-        {marks.has('birdie') && <span className="sc-key"><span className="sc-mark birdie">3</span> birdie</span>}
-        {marks.has('bogey') && <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>}
+        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>
+        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie</span>
+        <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>
         {marks.has('dbl') && <span className="sc-key"><span className="sc-mark dbl">6</span> double or worse</span>}
         {marks.has('pu') && <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>}
         {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> {half ? 'half stroke' : 'gets a stroke'}</span>}
