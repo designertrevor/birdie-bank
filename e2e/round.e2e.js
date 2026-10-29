@@ -323,11 +323,13 @@ async function playThrough(page, nav, step, context, problems) {
   await page.getByRole('button', { name: 'See the full breakdown' }).click();
   await page.getByText(`${leader} wins the day`).waitFor();
   const standings = await page.getByTestId('standing').evaluateAll(rows => rows.map(r => [...r.children].map(c => c.innerText.trim()).filter(Boolean)));
-  const got = Object.fromEntries(standings.map(cells => [cells.at(-2), dollars(cells.at(-1))]));
+  // This phone's owner reads as "You" in the standings and payments
+  const who = n => (n === 'You' ? 'Alex' : n);
+  const got = Object.fromEntries(standings.map(cells => [who(cells.at(-2)), dollars(cells.at(-1))]));
   assert.deepEqual(got, want.net, 'standings match the Skins rules');
   assert.equal(sum(Object.values(got)), 0, 'standings add to zero');
   const payments = await page.getByTestId('payment').evaluateAll(rows => rows.map(r => [...r.children].map(c => c.innerText.trim()).filter(Boolean)));
-  const gotPay = payments.map(([from, to, amount]) => ({ from, to, amount: dollars(amount) }));
+  const gotPay = payments.map(([from, to, amount]) => ({ from: who(from), to: who(to), amount: dollars(amount) }));
   const byPair = xs => [...xs].sort((a, b) => `${a.from}>${a.to}`.localeCompare(`${b.from}>${b.to}`));
   assert.deepEqual(byPair(gotPay), byPair(wantPay), 'who pays who matches');
   // Paying it all leaves everyone square

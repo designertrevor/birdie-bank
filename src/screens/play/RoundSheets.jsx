@@ -59,7 +59,7 @@ export function HolesSheet({ round, onClose }) {
       )}
       <div className="cta-wrap">
         <button className="full-btn" disabled={!preview} onClick={apply}>
-          {changed ? <>Switch to {count} holes <Icon name="arrow-right" /></> : 'No change'}
+          {changed ? <>Switch to {count} holes <Icon name="arrow-right" /></> : 'No changes yet'}
         </button>
       </div>
     </Sheet>

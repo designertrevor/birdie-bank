@@ -131,6 +131,12 @@ test('reward: a clear winner wins it, last place is buying', () => {
   assert.equal(o.text, 'Sam wins lunch. Dave’s buying.');
 });
 
+test('reward: one typed as a sentence reads after the winner, not as the prize', () => {
+  const o = outcome(['t', 's', 'd'], { 1: 's', 2: 's', 3: 't' }, reward('last', 'Loser buys lunch'));
+  assert.equal(o.win, 'Sam wins. Loser buys lunch.');
+  assert.equal(o.text, 'Sam wins. Loser buys lunch. Dave’s buying.');
+});
+
 test('reward: a tie at the top shares the win', () => {
   const o = outcome(['t', 's', 'd'], { 1: 's', 2: 't' }, reward());
   assert.deepEqual(o.winners.sort(), ['s', 't']);

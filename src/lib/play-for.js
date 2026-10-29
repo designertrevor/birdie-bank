@@ -239,6 +239,9 @@ function listNames(names) {
  * and anyone who left early can still top it but never owes it.
  * Null when the round isn't played for a reward.
  */
+// A reward that's a whole sentence, with its own verb: "Loser buys lunch", "Last place pays for drinks"
+const SENTENCE = /\b(buys?|pays?|owes?|gets?|shouts?|treats?|covers?)\b/i;
+
 export function rewardOutcome(round, res) {
   const pf = playForOf(round);
   if (pf.kind !== 'reward') return null;
@@ -262,7 +265,12 @@ export function rewardOutcome(round, res) {
   const split = pf.owes !== 'everyone' && owers.length > 1;
   const lines = owers.map(from => ({ from, to: [...winners], split, with: split ? owers.filter(x => x !== from) : [] }));
   const w = listNames(winners.map(name));
-  const win = winners.length > 1 ? `${w} share ${noun}.` : `${w} wins ${noun}.`;
+  // A reward typed as a sentence ("Loser buys lunch") reads after the winner, not as their prize:
+  // "Sam wins. Loser buys lunch.", never "Sam wins loser buys lunch."
+  const sentence = SENTENCE.test(pf.reward || '');
+  const said = cleanReward(pf.reward).replace(/[.!]+$/, '');
+  const win = sentence ? `${w} ${winners.length > 1 ? 'share it' : 'wins'}. ${said.charAt(0).toUpperCase()}${said.slice(1)}.`
+    : winners.length > 1 ? `${w} share ${noun}.` : `${w} wins ${noun}.`;
   const o = listNames(owers.map(name));
   const buy = !owers.length ? 'Nobody’s buying.' : owers.length === 1 ? `${o}’s buying.` : split ? `${o} split it.` : `${o} each buy one.`;
   return { reward: pf.reward, noun, winners, owers, lines, win, buy, text: `${win} ${buy}` };

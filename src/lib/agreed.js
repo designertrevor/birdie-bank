@@ -24,7 +24,7 @@ import { lineupKind, lineupLabel, orderText, playForText, sidesText } from './li
 
 export const GIMMES = [
   { value: 'none', label: 'None', text: 'None. Everything gets putted out.' },
-  { value: 'leather', label: 'Inside the leather', text: 'Inside the leather' },
+  { value: 'leather', label: 'In the leather', text: 'Inside the leather' },
   { value: 'keeper', label: 'Keeper’s call', text: 'The scorekeeper’s call' },
 ];
 export const MULLIGANS = [

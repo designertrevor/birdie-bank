@@ -15,7 +15,7 @@ import { ArtNote } from '../components/ArtNote.jsx';
 import { daysUntil } from '../lib/plan-basics.js';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
-import { SquareFaces, TripDays, TripSheet, myTripPlace } from '../components/Trips.jsx';
+import { SquareFaces, TripSheet, myTripPlace } from '../components/Trips.jsx';
 import { TripExpensesView } from '../components/TripExpenses.jsx';
 import { getState, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -212,7 +212,7 @@ function TripPage({ id, view: firstView = null, add = false }) {
           {allInLine && <div className="trip-allin">{allInLine}</div>}
           {/* The dates once, so not here when the eyebrow already has them */}
           {(st.phase !== 'soon' || trip.where) && <div className="trip-sub">{[st.phase === 'soon' ? null : tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>}
-          <TripDays status={st} />
+          {/* No day chips here: they read as a second tab bar over the views, and Rounds lists the same days */}
         </div>
         <p className="hint-card trip-hint"><Icon name={st.phase === 'square' ? 'handshake' : 'suitcase-rolling'} fill /> {hint}</p>
 
@@ -425,8 +425,8 @@ function Standings({ st, state, label, me, flights = false }) {
   // With flights, who's going is listed once, by flight, below
   if (!st.standings.length && st.going.length > 1 && flights) return <p className="trip-empty">The standings fill in as soon as a round is finished. Who’s going is below, by flight.</p>;
   if (!st.standings.length && st.going.length > 1) {
-    // Who's going, before anyone has played: everyone even, and when it tees off instead of a
-    // dash for each of them (tees-off.js: the first planned round, or the trip's first day)
+    // Who's going, before anyone has played: an en dash where the money will be, and when it tees off
+    // said once, in the note under the card (tees-off.js: the first planned round, or the trip's first day)
     const when = { planned: st.planned, start: st.trip.start };
     return (
       <>
@@ -436,7 +436,7 @@ function Standings({ st, state, label, me, flights = false }) {
               <span className="tr-rank">–</span>
               <Avatar id={id} name={nameOf(state, id)} />
               <span className="tr-main"><span className="tr-name">{label(id)}</span></span>
-              <span className="tr-amt soon">{teesOffLine(when)}</span>
+              <span className="tr-amt none">–</span>
             </div>
           ))}
         </div>

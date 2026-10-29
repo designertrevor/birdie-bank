@@ -5,6 +5,8 @@ import { bettingRound, cardOnly, holeComplete, isJustPlaying, isTeamGame, netFor
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { strokeKey } from '../lib/stroke-key.js';
 import { getsStrokes, toParOf, toParText, toParTone, toParWords } from '../lib/to-par.js';
+import { useEffect, useRef, useState } from 'react';
+import './scorecard.css';
 
 /**
  * Gross scorecard, one column per hole. onHole makes columns tappable. Under each name, the
@@ -31,8 +33,24 @@ export function Scorecard({ round, current, onHole, holes = null }) {
   // Best ball and Shamble: a row per team with its score on each hole, and the scores that made it underlined
   const tt = isTeamGame(round.game) && !oneBall(round.game) && round.teams?.length === 2 ? teamTable(bettingRound(round)) : null;
   const countedOn = (k, pid) => !!tt && tt.rows[k].counted.some(list => list.includes(pid));
+  // The key lists only the marks this card has (no "eagle" on a card without one), double and worse too
+  const marks = new Set(units.flatMap(p => out.map(h => { const g = round.scores[h.no]?.[p.id]; return g == null ? null : cls(g, h.par); })).filter(Boolean));
+  // The card scrolls sideways past the first holes: a fade on the right edge says so while there's more,
+  // and the hole being played starts in view
+  const scroller = useRef(null);
+  const [more, setMore] = useState(false);
+  const measure = () => { const el = scroller.current; if (el) setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 4); };
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const cur = current != null ? el.querySelector('th.cur') : null;
+    const first = el.querySelector('th.sticky');
+    if (cur && first && cur.offsetLeft + cur.offsetWidth > el.clientWidth) el.scrollLeft = cur.offsetLeft - first.offsetWidth - 8;
+    measure();
+  }, [current, out.length]);
   return (
     <div className="sc-wrap">
+      <div className={`sc-scroll ${more ? 'more' : ''}`} ref={scroller} onScroll={measure}>
       <table className="sc-table scorecard">
         <thead>
           <tr>
@@ -71,7 +89,7 @@ export function Scorecard({ round, current, onHole, holes = null }) {
                 </td>
                 {out.map((h, k) => {
                   const g = round.scores[h.no]?.[p.id];
-                  // A player who left shows an en dash on the holes after
+                  // A hole not played yet, or after a player left, is an en dash, the app's empty value
                   // (an alternate shot or Chapman team needs both partners there, see scorers)
                   const gone = g == null && !(p.team ? scorers(round, h).some(u => u.id === p.id) : playsHole(round, p.id, h));
                   const st = hc && !gone && !casual(p) ? popsFor(round, p, h) : 0;
@@ -79,7 +97,7 @@ export function Scorecard({ round, current, onHole, holes = null }) {
                   return (
                     <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
                       <span className="sc-cell">
-                        {gone ? <span className="empty-dot">–</span> : g == null ? <span className="empty-dot">·</span> : <span className={`sc-mark ${cls(g, h.par)} ${countedOn(k, p.id) ? 'sc-counts' : ''}`}>{g}</span>}
+                        {gone || g == null ? <span className="empty-dot">–</span> : <span className={`sc-mark ${cls(g, h.par)} ${countedOn(k, p.id) ? 'sc-counts' : ''}`}>{g}</span>}
                         {st > 0 && <span className="sc-strokes" role="img" aria-label={`Gets ${strokesWords(st, half)}`}>{Array.from({ length: st }, (_, i) => <i key={i} />)}</span>}
                         {st < 0 && <span className="sc-strokes give" role="img" aria-label={`Gives back ${strokesWords(-st, half)}`}>{'–'.repeat(-st)}</span>}
                       </span>
@@ -104,7 +122,7 @@ export function Scorecard({ round, current, onHole, holes = null }) {
                   const tap = colProps(h.no);
                   return (
                     <td key={h.no} className={`${h.no === current ? 'cur' : ''} ${tap.className || ''}`} onClick={tap.onClick}>
-                      <span className="sc-cell">{v == null ? <span className="empty-dot">·</span> : <span className="sc-mark">{netText(v)}</span>}</span>
+                      <span className="sc-cell">{v == null ? <span className="empty-dot">–</span> : <span className="sc-mark">{netText(v)}</span>}</span>
                     </td>
                   );
                 })}
@@ -116,13 +134,15 @@ export function Scorecard({ round, current, onHole, holes = null }) {
           })}
         </tbody>
       </table>
+      </div>
       <div className="sc-legend">
         {/* Each mark stays on the same line as its words. No birdie or eagle drawings here: they pop up
             as a moment when someone makes one (Moments.jsx), not sit on the card all round */}
-        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie</span>
-        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>
-        <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>
-        <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>
+        {marks.has('eagle') && <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>}
+        {marks.has('birdie') && <span className="sc-key"><span className="sc-mark birdie">3</span> birdie</span>}
+        {marks.has('bogey') && <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>}
+        {marks.has('dbl') && <span className="sc-key"><span className="sc-mark dbl">6</span> double or worse</span>}
+        {marks.has('pu') && <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>}
         {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> {half ? 'half stroke' : 'gets a stroke'}</span>}
         {round.holeFixes && Object.keys(round.holeFixes).length > 0 && <span className="sc-key"><span className="sc-fixed inline" aria-hidden="true" /> par or HCP fixed</span>}
       </div>

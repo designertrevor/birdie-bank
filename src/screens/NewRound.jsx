@@ -218,6 +218,8 @@ function NewRoundSetup({ rematch, fromPlan, present, edit = null, ahead = false,
           {!editing && (planning || (!passDone && step <= 3)) && <Steps steps={planning ? PLAN_STEPS : STEPS} current={step} canGo={canGo} onGo={goTo} />}
           {/* Editing a plan is one page under "Edit plan", so it has no second title */}
           {step !== OVERVIEW && !editing && <h2 className="step-q d">{(planning ? PLAN_QUESTIONS : QUESTIONS)[step] || OWN_QUESTIONS[step]}</h2>}
+          {/* A game for a set number says so under Who's in?, not only on the footer's disabled button */}
+          {step === 2 && !planning && !editing && g && g.min === g.max && <p className="step-sub">{g.name} takes exactly {g.max}.</p>}
           {step === 1 && lostHint}
           {step === 2 && planning && stillMissing.length > 0 && (
             <p className="hint-card"><Icon name="user-plus" fill /> {listNames(stillMissing)} {stillMissing.length === 1 ? 'isn’t' : 'aren’t'} saved on this phone yet. Add {stillMissing.length === 1 ? 'their name' : 'their names'} below, or send the group link.</p>
@@ -262,7 +264,7 @@ function NewRoundSetup({ rematch, fromPlan, present, edit = null, ahead = false,
       )}
       {step === HANDICAPS_STEP && hub && game && (
         <HandicapsStep game={game} teams={teams} players={betting.length} opts={opts} setOpts={setOpts} useHc={useHc} setUseHc={setUseHc}
-          sideGames={sidesFor(game)} setSideGames={editSides} onDone={() => advance(HANDICAPS_STEP)} />
+          sideGames={sidesFor(game)} setSideGames={editSides} onDone={() => advance(HANDICAPS_STEP)} onPlayers={course ? () => openStep(2) : null} />
       )}
       {step === PLAY_FOR_STEP && hub && <PlayForStep playFor={playFor} setPlayFor={setPlayFor} onDone={() => advance(PLAY_FOR_STEP)} />}
       {step === 4 && created && <ReadyStep round={created} onStart={() => nav.reset('upnext', ['play', { id: created.id }])} onLater={fromPlan || created.shared ? null : () => later(created.id)} />}

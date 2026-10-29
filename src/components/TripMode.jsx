@@ -187,10 +187,11 @@ export function ScheduleCard({ st, onRounds }) {
           : st.organizer ? <p className="field-help">Plan every round now: each group gets its day, a tee time and its matches.</p> : null)}
         {st.organizer && !problem && !drafting && (
           <div className="tm-sched-acts">
+            {/* Once planned: the rounds are the full-width way on, planning again (rare) a quiet link under it */}
+            {planned.length > 0 && onRounds && <button className="full-btn outline" onClick={onRounds}>See the rounds <Icon name="caret-right" /></button>}
             {!planned.length && !past.length
               ? <button className="full-btn" onClick={() => plan(false)}><Icon name="calendar-plus" /> Plan the rounds</button>
-              : <button className="pill-btn" onClick={() => plan(true)}><Icon name="arrows-clockwise" /> Plan them again from the teams</button>}
-            {planned.length > 0 && onRounds && <button className="pill-btn" onClick={onRounds}>See the rounds <Icon name="caret-right" /></button>}
+              : <button className="text-link tm-replan" onClick={() => plan(true)}><Icon name="arrows-clockwise" /> Plan them again from the teams</button>}
           </div>
         )}
       </div>

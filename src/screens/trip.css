@@ -15,3 +15,18 @@
   white-space: nowrap;
 }
 .trip-amt-col .trip-place + .trip-amt { font-size: 16px; line-height: 1.3; }
+
+/* The road trip scene whole, under the header (trips-8): the drawing's own shape, so its slice from the
+   top never cuts the car's roof and the drivers' caps */
+.trip-screen .trip-scene { height: auto; aspect-ratio: 400 / 240; max-height: 236px; margin: 4px 0 10px; }
+
+/* The schedule card's actions: See the rounds full width, planning again a quiet link under it (trips-32) */
+.tm-sched-acts { flex-direction: column; align-items: stretch; }
+.tm-sched-acts .tm-replan { align-self: center; margin: 0; }
+/* The foot's links share one left edge (trips-31) */
+.trip-foot .how { margin-left: 0; margin-right: 0; }
+/* An expense's date never splits ("Mon," / "Oct 26") (trips-30) */
+.exp-row .nowrap { white-space: nowrap; }
+/* Start a trip: a longer, softer fade over the rows under the pinned button, so a row sliding under it
+   reads as more to scroll, not as letters cut in half (trips-23, trips-26) */
+.sheet .trip-form-cta { padding-top: 32px; background: linear-gradient(rgba(0,0,0,0), var(--canvas) 30px); }

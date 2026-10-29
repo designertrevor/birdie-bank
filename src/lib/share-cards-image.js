@@ -78,8 +78,13 @@ function draw(ctx, m) {
 
   // The ranked rows, as many as fit with room left for the sections
   const lineCount = m.sections.reduce((a, s) => a + Math.min(s.lines.length, 3) + 1, 0);
-  const rowH = m.rows.length > 6 ? 84 : 96;
-  const fitRows = Math.max(0, Math.floor((footerY - 60 - y - Math.min(lineCount, 6) * 56) / rowH));
+  const minRowH = m.rows.length > 6 ? 84 : 96;
+  const fitRows = Math.max(0, Math.floor((footerY - 60 - y - Math.min(lineCount, 6) * 56) / minRowH));
+  // Rows that all fit share the room down to the sections, up to 124px each, so a short list doesn't
+  // leave the bottom third of the card empty (trips-37)
+  const shown = Math.min(m.rows.length, fitRows);
+  const spare = footerY - 60 - y - Math.min(lineCount, 6) * 56 - (m.sections.length ? 84 * m.sections.length : 0);
+  const rowH = shown ? Math.max(minRowH, Math.min(124, Math.floor(spare / shown))) : minRowH;
   const rows = m.rows.slice(0, Math.min(m.rows.length, fitRows));
   for (const [i, p] of rows.entries()) {
     const top = y + i * rowH;

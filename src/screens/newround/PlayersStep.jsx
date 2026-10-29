@@ -73,6 +73,9 @@ export function PlayersStep({ game, gameKey, course, holesCount, nine, picked, s
           </div>
         )}
         <div className="sec-label">Players · {pickedLine(gameKey, picked, justPlaying)}</div>
+        {/* Who's in, by name: picked rows stay where they are in the list (so nothing jumps under a
+            tap), and this line saves scrolling the whole list to check */}
+        {picked.length > 0 && <p className="field-help pad pk-in">In: {listNames(picked.map(pid => (pid === state.me ? 'you' : (state.players[pid]?.name || '?').split(' ')[0])))}</p>}
         {/* Up top, not under the list, so it's seen before Next (Trevor 2026-10-14) */}
         {noHc.length > 0 && (
           <p className="hint-card warn nohc-top"><Icon name="warning" fill /> {noHc.length === bettingCount

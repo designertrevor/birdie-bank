@@ -114,7 +114,7 @@
 .pc-chip.more { font-size: 18px; background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); }
 .pc-chip.more.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }
 .pc-chip .pc-v { font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 20px; }
-.pc-help { margin: 2px 20px 12px; font-size: 13px; color: var(--mute); text-align: center; }
+.pc-help { margin: 2px 20px 12px; font-size: 13px; color: var(--mute); text-align: center; text-wrap: balance; }
 .pcard.pc-row.with-dots .dots-row, .pcard.pc-row.with-dots > :last-child:not(.pc-chips) { margin-top: 10px; }
 
 /* ---------- The number pad sheet ---------- */
@@ -156,3 +156,108 @@
 
 /* The first tee card's Lock it in stays at the sheet's foot while the calls scroll above it */
 .ft-cta { position: sticky; bottom: -16px; z-index: 1; background: var(--sheet-bg); box-shadow: 0 -1px 0 var(--line-soft); }
+
+/* End round's Delete round: a quiet red link under Keep playing (ui.jsx ask, a `quiet` action) */
+.danger-link.ask-quiet { margin: 2px auto 0; min-height: 44px; }
+
+/* Wolf, picked: the panel folds to one line of the sides with Change, so the score rows get the room */
+.wolf-panel.folded { padding: 6px 6px 6px 14px; }
+.wp-line { display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 15px; }
+.wp-line > i { flex: none; }
+.wp-sides { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wp-v { opacity: .7; font-weight: 600; padding: 0 2px; }
+.wp-line .change-btn { flex: none; }
+.wolf-panel.folded .wolf-note { margin: 2px 0 6px; }
+
+/* ---------- The game panels: the game's pastel in light; in the dark the plain card with the colour as
+   a rule down its left edge, like the money strip, never a bright slab on a dark screen ---------- */
+.play .banker-bar { background: var(--panel-c, var(--ochre)); }
+.play .wolf-panel, .play .press-bar { --panel-c: var(--lav); }
+:root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel, .press-bar), :root[data-theme="dark"] .play .banker-bar .bn { color: var(--ink); }
+:root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel, .press-bar) { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--panel-c, var(--ochre)); }
+:root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel) :is(.bl, .wolf-note, .wp-v),
+:root[data-theme="dark"] .play .press-bar-lbl { color: var(--body); }
+:root[data-theme="dark"] .play :is(.banker-bar, .wolf-panel, .press-bar) :is(.change-btn, .press-chip) { background: var(--surface); color: var(--ink); }
+/* Nassau's tiles: the leader's in the win colour on its own dark wash, not a mint slab */
+:root[data-theme="dark"] .play .ms-tile.ahead { background: var(--win-bg); }
+:root[data-theme="dark"] .play .ms-tile.ahead :is(.ms-lbl, .ms-sub, .ms-val) { color: var(--win); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel, .press-bar), :root:not([data-theme="light"]) .play .banker-bar .bn { color: var(--ink); }
+  :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel, .press-bar) { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--panel-c, var(--ochre)); }
+  :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel) :is(.bl, .wolf-note, .wp-v),
+  :root:not([data-theme="light"]) .play .press-bar-lbl { color: var(--body); }
+  :root:not([data-theme="light"]) .play :is(.banker-bar, .wolf-panel, .press-bar) :is(.change-btn, .press-chip) { background: var(--surface); color: var(--ink); }
+  :root:not([data-theme="light"]) .play .ms-tile.ahead { background: var(--win-bg); }
+  :root:not([data-theme="light"]) .play .ms-tile.ahead :is(.ms-lbl, .ms-sub, .ms-val) { color: var(--win); }
+}
+
+/* Two teams: a side's name over its rows, and the side's colour down each row's left edge */
+.side-head { display: flex; align-items: center; gap: 8px; margin: 4px 20px 6px; font-size: 13px; font-weight: 700; color: var(--body); }
+.pcard.on-side { box-shadow: var(--card-shadow), inset 3px 0 0 var(--side-c); }
+.pcard.side-a { --side-c: var(--teal); }
+.pcard.side-b { --side-c: var(--coral); }
+/* Vegas and a team game by holes: a game panel like the others, the card with the game's colour down
+   its left edge (Vegas's colour is pink, so a wash of it would be a pink slab) */
+.play .vegas-panel { background: var(--card); box-shadow: var(--hair), inset 3px 0 0 var(--gt, var(--line)); }
+:root[data-theme="dark"] .pcard.side-a { --side-c: var(--mint); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pcard.side-a { --side-c: var(--mint); } }
+/* Hammer: the two sides' hammer buttons share the row, half each, instead of a stack down the left */
+.wolf-panel .chip-row .hm-btn { flex: 1 1 calc(50% - 4px); min-width: 0; justify-content: center; gap: 8px; padding-block: 6px; }
+.hm-btn .hm-t { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.2; text-align: left; }
+.hm-btn .hm-t, .hm-btn .hm-v { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.hm-btn .hm-v { font-variant-numeric: tabular-nums; }
+
+/* ---------- Soft edges: the score rows scrolling under the hole's panels and over Save meet a short
+   fade, not a hard cut, and only once there's something under it (scroll-driven, so a list that
+   doesn't scroll, or a browser without it, shows no fade at all) ---------- */
+.play > .scroll .pc-row { scroll-margin-top: 16px; }
+@supports (animation-timeline: scroll()) {
+  .play { timeline-scope: --hole-scroll; }
+  .play > .scroll { scroll-timeline: --hole-scroll block; }
+  .play > .scroll::before {
+    content: ''; position: sticky; top: 0; z-index: 3; display: block; height: 16px; margin-bottom: -16px; pointer-events: none;
+    background: linear-gradient(var(--canvas), transparent); opacity: 0;
+    animation: edgeFadeIn linear both; animation-timeline: --hole-scroll; animation-range: 0 16px;
+  }
+  .play > .play-cta { position: relative; }
+  .play > .play-cta::before {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 24px; pointer-events: none;
+    background: linear-gradient(transparent, var(--canvas)); opacity: 0;
+    animation: edgeFadeOut linear both; animation-timeline: --hole-scroll; animation-range: calc(100% - 24px) 100%;
+  }
+}
+@keyframes edgeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes edgeFadeOut { from { opacity: 1; } to { opacity: 0; } }
+/* Nassau's tiles name the leader ("Trevor 1 up") a size down so a third of the row holds it */
+.ms-tile .ms-val.named { display: block; font-size: 17px; line-height: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A panel's standings (Stableford, points, totals): plain text in a tidy column pair, not chips */
+.skin-counts.cp-items { gap: 2px 12px; }
+.cp-item { font-size: 14px; font-weight: 600; color: inherit; opacity: .85; white-space: nowrap; }
+.cp-item b { font-weight: 800; opacity: 1; font-variant-numeric: tabular-nums; }
+
+/* Pink on the scoring rows is for what's tapped (the Birdie chip, Save): the stroke line reads in the
+   body colour with its pink dot, and a score's name and an under-par number in ink, readable in the sun */
+.play .stroke-dots { color: var(--body); }
+.play .stroke-dots > [aria-hidden], .play .hl-strokes > .stroke-dots { color: var(--pink-text); }
+.play .score-name.s-1, .play .score-name.s-2, .play .sc-num.birdie { color: var(--ink); }
+.score-pad .sp-num.under { color: var(--ink); }
+
+/* First tee card: the high five gets room under it before the lede */
+.ft-card .ft-art { margin: -18px 0 10px; }
+
+/* Any side bets?: the chip and its × are 44px tall, a gloved thumb's tap */
+.bp-chip { min-height: 44px; }
+.bp-chip-x { width: 44px; height: 44px; }
+/* The number pad's key names (Birdie, Bogey) in the body colour, a touch bigger, for the sun */
+.sp-key .sp-kl { font-size: 11px; color: var(--body); }
+/* Banker: the banker and what's on the line sit on one line, labels and values level */
+.play .banker-bar { align-items: flex-end; }
+.play .banker-bar .change-btn { align-self: center; }
+/* A locked Double back reads, not greyed out to nothing: why it's locked is its label */
+.play .dbl-btn:disabled { color: var(--body); }
+
+/* The halfway sheet's bets: who leads in bold, what they won (the holes) as the caption under it, and
+   the amounts in the strip's own numerals */
+.hw-row .hw-label:has(+ .hw-line) { font-size: 15px; font-weight: 700; color: var(--ink); }
+.hw-row .hw-label + .hw-line { font-size: 13px; font-weight: 600; color: var(--mute); }
+.play .hw-val { font-family: var(--play-num); font-weight: var(--play-num-weight); }

@@ -101,7 +101,7 @@ function ExpenseRow({ x, me, short, onOpen }) {
       <div className="exp-ic"><Icon name={iconFor(x.what)} /></div>
       <div className="lr-info">
         <div className="exp-name">{x.what}</div>
-        <div className="lr-status">{payer === 'You' ? 'You paid' : `${payer} paid`} · {splitLine(x, short)} · {dayOf(x.at)}</div>
+        <div className="lr-status">{payer === 'You' ? 'You paid' : `${payer} paid`} · {splitLine(x, short)} · <span className="nowrap">{dayOf(x.at)}</span></div>
         {line && <div className={`exp-mine ${owed > 0 ? 'pos' : 'neg'}`}>{line}</div>}
       </div>
       <div className="exp-amt">{money(x.amount)}</div>
@@ -168,7 +168,7 @@ function ExpenseView({ x, me, short, full, onClose }) {
         <div className="exp-ic"><Icon name={iconFor(x.what)} /></div>
         <div className="row-main">
           <div className="d exp-big sm">{money(x.amount)}</div>
-          <div className="exp-sum-sub">{short(x.payer) === 'You' ? 'You paid' : `${full(x.payer)} paid`} · {splitLine(x, short)} · {dayOf(x.at)}</div>
+          <div className="exp-sum-sub">{short(x.payer) === 'You' ? 'You paid' : `${full(x.payer)} paid`} · {splitLine(x, short)} · <span className="nowrap">{dayOf(x.at)}</span></div>
         </div>
       </div>
       <ul className="exp-people">

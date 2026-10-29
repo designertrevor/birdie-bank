@@ -1,7 +1,7 @@
 // The hole's scrolling middle (Play.jsx): the notes and cards over the scores (the Calcutta's
 // auction, "Any side bets?", this hole's side bets), the game's pickers, and a row per player or team
 // with its par chips (ParChips.jsx), or the saved scores when this phone isn't keeping score.
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Icon } from '../../components/ui.jsx';
 import { BuddyArt } from '../../components/BuddyArt.jsx';
 import { AvatarArt } from '../../components/Avatar.jsx';
@@ -27,6 +27,11 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
   const { betPrompt, promptAdd, promptLater, promptSkip, promptOff } = prompt;
   // Whose number pad is up (a box's id), or null
   const [pad, setPad] = useState(null);
+  // Two teams (Vegas, a 2 v 2): the rows sit together by side under the side's name, each with the
+  // side's colour down its edge, so the scorer sees who's with whom. Anyone on no side goes last
+  const sideOf = pid => round.teams?.length === 2 ? round.teams.findIndex(t => t.players.includes(pid)) : -1;
+  const bySide = round.teams?.length === 2 && !units.some(u => u.team);
+  const rows = bySide ? [...units].sort((a, b) => (sideOf(a.id) < 0 ? 9 : sideOf(a.id)) - (sideOf(b.id) < 0 ? 9 : sideOf(b.id))) : units;
   return (
     <div className="scroll">
       {!editable && sharedLive && <p className="field-help" style={{ padding: '0 20px' }}>{round.status === 'active' ? `Scores as ${holderName} saves them. Browse any hole.` : 'Only the players in this round can fix its scores.'}</p>}
@@ -67,8 +72,10 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
           </div>
         );
       })}
-      {editable && units.map(p => {
+      {editable && rows.map((p, i) => {
         const casual = isJustPlaying(round, p.id);
+        const side = bySide ? sideOf(p.id) : -1;
+        const sideHead = side >= 0 && (i === 0 || sideOf(rows[i - 1].id) !== side);
         // First names on the score rows (a last initial only when two share one), so a name
         // never wraps to two lines beside the buddy and the number
         const short = p.team ? p.name : shortRowNames.get(p.id) || p.name;
@@ -79,9 +86,13 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
         const v = draft[p.id];
         const isBanker = banker?.banker === p.id;
         const isWolf = wolf?.wolf === p.id;
+        // The wolf's partner wears a tag too, so the score rows show the side, not just the wolf
+        const isPartner = !!wolf?.partner && wolf.partner === p.id;
         const shown = v === 'X' ? pickupGross(hole.par, st) : v;
         return (
-          <div key={p.id} className={`pcard score-row pc-row ${game === 'dots' || junk ? 'with-dots' : ''} ${isBanker || isWolf ? 'bkr' : ''}`}>
+          <Fragment key={p.id}>
+          {sideHead && <div className="side-head"><span className={`side-tag ${side ? 'b' : 'a'}`}>{side ? 'B' : 'A'}</span> {round.teams[side].name}</div>}
+          <div className={`pcard score-row pc-row ${game === 'dots' || junk ? 'with-dots' : ''} ${isBanker || isWolf || isPartner ? 'bkr' : ''} ${side >= 0 ? `on-side side-${side ? 'b' : 'a'}` : ''}`}>
             <div className="pc-head">
               {!p.team && faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}
               <div className="row-main">
@@ -89,6 +100,7 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
                   {short}
                   {isBanker && <span className="bkr-badge"><Icon name="bank" fill /> Banker</span>}
                   {isWolf && <span className="bkr-badge"><Icon name="paw-print" fill /> Wolf</span>}
+                  {isPartner && <span className="bkr-badge"><Icon name="handshake" fill /> Partner</span>}
                   {casual && !solo && <span className="jp-tag">{JUST_PLAYING_TAG}</span>}
                   {/* Only someone on a team gets its letter: anyone just playing (or only in the side games) is on none */}
                   {round.teams && !p.team && round.teams.some(t => t.players.includes(p.id)) && <span className={`side-tag ${round.teams.findIndex(t => t.players.includes(p.id)) === 0 ? 'a' : 'b'}`}>{['A', 'B', 'C', 'D'][round.teams.findIndex(t => t.players.includes(p.id))]}</span>}
@@ -118,14 +130,15 @@ export function HoleScores({ round, main, hole, game, solo, editable, sharedLive
             {game === 'dots' && main.players.some(x => x.id === p.id) && <DotsRow round={main} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} />}
             {junk && junk.players.some(x => x.id === p.id) && <DotsRow round={junk} player={p} hole={hole} marks={marks} setMarks={setMarksDirty} gross={touched[p.id] ? v : null} label={`${firstName(p.name)}’s junk`} />}
           </div>
+          </Fragment>
         );
       })}
       {editable && units.length > 0 && <p className="pc-help">Everyone starts at par. Tap only what changed, or + for anything else.</p>}
       {editable && (() => {
-        // The pad for one box, and Next through the rest in playing order
-        const at = units.findIndex(u => u.id === pad);
-        const unit = units[at];
-        const after = units[at + 1];
+        // The pad for one box, and Next through the rest in the order they're shown
+        const at = rows.findIndex(u => u.id === pad);
+        const unit = rows[at];
+        const after = rows[at + 1];
         const casual = unit && isJustPlaying(round, unit.id);
         return (
           <ScorePadSheet open={!!unit} unit={unit} hole={hole} v={unit ? draft[unit.id] : null}

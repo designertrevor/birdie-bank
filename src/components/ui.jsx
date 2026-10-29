@@ -387,13 +387,17 @@ const UICtx = createContext(null);
 
 export function UIProvider({ children }) {
   const [toast, setToast] = useState(null);
+  // The last toast's words stay in the pill while it fades out, so it never shrinks to an empty shell
+  const [said, setSaid] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const timer = useRef();
   // An optional action ({ label, run }), like Undo, keeps the toast up a little longer
   // `tone` is 'money' (pink, money moved), 'win' (mint, good news) or nothing (ink, routine)
   const showToast = useCallback((msg, action = null, { tone = null } = {}) => {
     clearTimeout(timer.current);
-    setToast({ msg, action, tone, key: Date.now() });
+    const t = { msg, action, tone, key: Date.now() };
+    setToast(t);
+    setSaid(t);
     timer.current = setTimeout(() => setToast(null), action ? 5000 : 2000);
   }, []);
   const ask = useCallback(opts => new Promise(resolve => setConfirm({ ...opts, resolve })), []);
@@ -412,10 +416,10 @@ export function UIProvider({ children }) {
   return (
     <UICtx.Provider value={{ showToast, ask }}>
       {children}
-      <div ref={toastRef} className={`toast ${toast ? 'show' : ''} ${toast?.action ? 'has-act' : ''} ${toast?.tone ? `t-${toast.tone}` : ''}`} role="status" aria-live="polite">
-        {/* Keyed, so the same words twice in a row are read out twice */}
-        {toast && <span key={toast.key}>{toast.msg}</span>}
-        {toast?.action && <button className="toast-act" onClick={() => { toast.action.run(); setToast(null); }}>{toast.action.label}</button>}
+      <div ref={toastRef} className={`toast ${toast ? 'show' : ''} ${said?.action ? 'has-act' : ''} ${said?.tone ? `t-${said.tone}` : ''}`} role="status" aria-live="polite">
+        {/* Keyed, so the same words twice in a row are read out twice. Hidden from the reader once it's going */}
+        {said && <span key={said.key} aria-hidden={!toast}>{said.msg}</span>}
+        {said?.action && <button className="toast-act" tabIndex={toast ? 0 : -1} aria-hidden={!toast} onClick={() => { said.action.run(); setToast(null); }}>{said.action.label}</button>}
       </div>
       {confirm && <Confirm confirm={confirm} close={close} />}
     </UICtx.Provider>
@@ -440,13 +444,18 @@ function Confirm({ confirm, close }) {
           : <h2 className="sheet-title" id="bb-confirm-title">{confirm.title}</h2>}
         {confirm.text && <p className="sheet-text" id="bb-confirm-text">{confirm.text}</p>}
         <div style={{ padding: '4px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {(confirm.actions || [{ label: confirm.confirmLabel || 'Confirm', value: true, danger: confirm.danger }]).map(a => (
+          {(confirm.actions || [{ label: confirm.confirmLabel || 'Confirm', value: true, danger: confirm.danger }]).filter(a => !a.quiet).map(a => (
             <button key={a.label} className={`full-btn ${a.danger ? 'danger' : ''} ${a.secondary ? 'outline' : ''}`} onClick={() => close(a.value)}>{a.label}</button>
           ))}
           {confirm.cancelX ? null
             : confirm.cancelLink
               ? <button className="link-btn center" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>
               : <button className="full-btn outline" onClick={() => close(null)}>{confirm.cancelLabel || 'Cancel'}</button>}
+          {/* A `quiet` action (a destructive way out that needs its own confirm) is a text link after the
+              way back, never a big button between the two you mean to tap */}
+          {(confirm.actions || []).filter(a => a.quiet).map(a => (
+            <button key={a.label} className={a.danger ? 'danger-link ask-quiet' : 'link-btn center'} onClick={() => close(a.value)}>{a.danger && <Icon name="trash" />} {a.label}</button>
+          ))}
         </div>
       </div>
     </div>

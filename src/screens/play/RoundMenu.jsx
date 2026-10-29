@@ -8,7 +8,6 @@ import { isLocked } from '../../lib/agreed.js';
 import { lineupKind, lineupMenuText } from '../../lib/lineup.js';
 import { courseTeeLabel } from '../../lib/hole-fix.js';
 import { findCourse } from '../../lib/courses.js';
-import { roundStakeLines } from '../../lib/stakes.js';
 import { playForShort } from '../../lib/play-for.js';
 import { roundsInProgress } from '../../lib/rounds.js';
 import { syncConfigured } from '../../lib/sync.js';
@@ -53,8 +52,8 @@ export function RoundMenu({ open, onClose, round, hole, game, editable, solo, me
       <div className="menu-sec">Games and bets</div>
       <div className="menu-group">
         {/* Changing the game is for the phone keeping score (see keeper.js) */}
+        {/* Bets is the tile up top, so it isn't listed twice */}
         {editable && <>
-        <MenuRow icon="coins" label="Bets" value={roundStakeLines(round).map(l => l.line).join(' + ')} onClick={() => { onClose(); onBets(); }} />
         {game !== 'bbb' && (
           <MenuRow icon="scales" label="Handicaps" value={round.useHandicaps === false ? 'Off' : noHandicap(round).length ? `On, ${noHandicap(round).length} with none` : 'On'} onClick={() => { onClose(); onFix('hc'); }} />
         )}
@@ -83,9 +82,7 @@ export function RoundMenu({ open, onClose, round, hole, game, editable, solo, me
       {(syncConfigured || editable) && <>
       <div className="menu-sec">Players</div>
       <div className="menu-group">
-        {syncConfigured && (
-          <MenuRow icon="broadcast" label={round.shared ? 'Live' : 'Invite the group'} value={round.shared ? `Code ${round.shared.code}` : null} onClick={() => { onClose(); onLive(); }} />
-        )}
+        {/* Live and Invite the group is the tile up top */}
         {amKeeper && round.status === 'active' && !round.editing && (
           <MenuRow icon="pencil-simple" label="Hand off the card" value="You’re keeping score" onClick={() => { onClose(); onHand(); }} />
         )}

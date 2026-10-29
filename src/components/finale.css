@@ -26,11 +26,15 @@
   background: color-mix(in srgb, var(--rv-tint) var(--rv-mix), var(--card));
 }
 /* In the dark the low wash read olive: the card, with the game's colour as an edge on top (as on results) */
-:root[data-theme="dark"] .reveal-head.rv-themed { --rv-mix: 0%; box-shadow: inset 0 3px 0 var(--rv-tint); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) .reveal-head.rv-themed { --rv-mix: 0%; box-shadow: inset 0 3px 0 var(--rv-tint); } }
+/* ...as a straight bar across the top, clipped by the corners (an inset edge bent down round them) */
+:root[data-theme="dark"] .reveal-head.rv-themed { --rv-mix: 0%; position: relative; overflow: hidden; }
+:root[data-theme="dark"] .reveal-head.rv-themed::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--rv-tint); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .reveal-head.rv-themed { --rv-mix: 0%; position: relative; overflow: hidden; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .reveal-head.rv-themed::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--rv-tint); }
+}
 .rv-eyebrow { display: inline-flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
 .rv-eyebrow .eyebrow { color: var(--body); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.game-art.rv-game { width: 28px; height: 28px; flex-shrink: 0; }
 .rv-themed .rv-skip { color: var(--mute); }
 
 /* The podium's steps in the game's colour (Podium's `tint`) */
@@ -44,4 +48,38 @@
 
 @media (prefers-reduced-motion: reduce) {
   .rv-av-wrap.racing .rv-av, .crown-art.rv-row-crown { animation: none; }
+}
+
+/* Settle up: the payments are one card of rows with hairlines between, like Who pays who on the
+   results. Mark paid is the outline button; the payment app keeps the Tab's quiet style (its
+   colour on the name over the quiet surface, tab-card.css .pay-more) */
+.settle-list { margin: 0 16px 10px; border-radius: var(--r-card, 20px); background: var(--card); box-shadow: var(--card-shadow); overflow: hidden; }
+.settle-pay { padding: 14px 16px; transition: opacity .2s; }
+.settle-pay + .settle-pay { border-top: 1px solid var(--line-soft); }
+.settle-pay.paid .pay-who { opacity: .6; }
+.screen.active .settle-pay { animation: rowIn var(--duration-slow) var(--ease-smooth-out) both; animation-delay: calc(var(--duration-micro) + var(--i, 0) * 60ms); }
+.settle-pay .pay-acts.pay-more { margin-top: 12px; }
+.pay-btn.mark { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--edge); }
+.pay-btn.mark.done { background: var(--win-bg); color: var(--win); box-shadow: none; }
+
+/* Where it comes from: one card of rows too, each one's total on the right */
+.wf-group { margin: 0 16px 10px; border-radius: var(--r-card, 20px); background: var(--card); box-shadow: var(--card-shadow); overflow: hidden; }
+:root .wf-group .set-row, :root[data-look] .wf-group .set-row { width: 100%; margin: 0; border-radius: 0; background: none; box-shadow: none; }
+.wf-group .set-row + .set-row { border-top: 1px solid var(--line-soft); }
+.wf-group .set-row:active { transform: none; background: var(--surface); }
+
+/* The reward card closes its own IOU: a quiet button on the card's colour (the card keeps dark text in both themes) */
+.reward-card .rc-done {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 12px; padding: 0 16px; border: none; border-radius: var(--r-btn, 999px);
+  background: rgba(255,255,255,.72); color: var(--on-pastel); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform .2s var(--spring);
+}
+.reward-card .rc-done:active { transform: scale(.96); }
+
+/* In the dark: the winner's ring is cream like a sticker's edge (not a dull grey), and the reveal's
+   place discs get a hairline ring so the 1 to 4 column reads as discs, not loose numbers */
+:root[data-theme="dark"] .crowned .avatar { box-shadow: 0 0 0 3px var(--ink); }
+:root[data-theme="dark"] .reveal-row .sr { box-shadow: inset 0 0 0 1px var(--line); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .crowned .avatar { box-shadow: 0 0 0 3px var(--ink); }
+  :root:not([data-theme="light"]) .reveal-row .sr { box-shadow: inset 0 0 0 1px var(--line); }
 }

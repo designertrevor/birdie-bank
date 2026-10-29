@@ -137,7 +137,8 @@ function MoneyTripTabCard({ status: st }) {
           <div className="eyebrow">{tripEyebrow(st)} <Updated st={st} /></div>
           <div className="trip-name d">{st.trip.name}</div>
           {cupOn && <div className="trip-sub"><CupLine cup={st.cup} /></div>}
-          <div className="trip-sub">{sub}</div>
+          {/* A non-breaking space before each dot, so a part never starts a line with "· " */}
+          <div className="trip-sub">{sub.replace(/ · /g, '\u00a0· ')}</div>
         </div>
         {showAmt && (
           <div className="trip-amt-col">

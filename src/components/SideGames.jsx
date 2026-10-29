@@ -39,7 +39,7 @@ const offerName = k => ({ birdies: 'a Birdie pot', ctp: 'a closest to the pin po
  * (calcuttaEntries), `buyers` who can bid ([{ id, name }]), and `started` a round already under way,
  * which can't add a Calcutta (its auction is before the first tee) but can still fix one.
  */
-export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null, holesCount = holes?.length ?? 18, entries = [], buyers = [], started = false }) {
+export function SideGamesSetup({ game, sideGames, setSideGames, defaults, players = 4, playFor = null, holes = null, holesCount = holes?.length ?? 18, entries = [], buyers = [], started = false, label = true }) {
   const fmt = unitFmt({ playFor });
   const u = t => inUnits({ playFor }, t);
   const unit = padUnit({ playFor });
@@ -81,7 +81,8 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
   const padGame = pad != null ? sideGames[pad] : null;
   return (
     <>
-      <div className="sec-label">Side games</div>
+      {/* The Side games sheet mid-round is titled that already, so it goes without */}
+      {label && <div className="sec-label">Side games</div>}
       {sideGames.map((sg, i) => {
         const meta = SIDE_GAMES[sg.game];
         const key = amountKey(sg.game, sg.settings);
@@ -196,7 +197,8 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
       ) : choices.length > 0 && (
         <button className="set-row add-side" onClick={() => setAdding(true)}>
           <div className="set-icon"><Icon name="plus" /></div>
-          <div className="row-main"><div className="set-name">Add a side game</div><div className="set-sub">{orList(choices.map(offerName))} on top of {GAMES[game].name}</div></div>
+          {/* A few by name and "and more", so the line stays short (the sheet lists them all) */}
+          <div className="row-main"><div className="set-name">Add a side game</div><div className="set-sub">{choices.length > 3 ? `${orList(choices.slice(0, 3).map(offerName)).replace(/ or /, ', ')} and more` : orList(choices.map(offerName))}</div></div>
         </button>
       )}
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add a side game">
@@ -209,10 +211,11 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
               <button className="sheet-item side-choice" onClick={() => add(k)} aria-label={`Add ${SIDE_GAMES[k].label}, ${u(sideBetLine(k, s))}`}>
                 <GameArt game={k} className="set-icon" />
                 <div className="row-main" style={{ textAlign: 'left' }}>
-                  <div className="set-name">{SIDE_GAMES[k].label} · {u(sideBetLine(k, s))}</div>
+                  {/* The name's already there, so a pot's bet is just "$5 each", not "$5 each in the birdie pot" */}
+                  <div className="set-name">{SIDE_GAMES[k].label} · {u(sideBetLine(k, s)).replace(/ each in the .+$/, ' each')}</div>
                   <div className="set-sub">{u(sideExample(k, asPlayedWith(k, s, sideGames), players, holes))}</div>
                 </div>
-                <Icon name="plus" />
+                <span className="add-ci" aria-hidden="true"><Icon name="plus" /></span>
               </button>
               <button className="rules-chip side-choice-rules" onClick={() => setHowTo(k)} aria-label={`How to play ${SIDE_GAMES[k].label}`}><Icon name="info" /> Rules</button>
             </div>

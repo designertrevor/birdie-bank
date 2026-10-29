@@ -1,4 +1,5 @@
 import { Icon, PickChip, Segmented } from './ui.jsx';
+import './game-options.css';
 import { FoldRule, HouseRule } from './HouseRulesFold.jsx';
 import { GAMES, blindMultiplierOf } from '../lib/round.js';
 import { CHAPMAN_ALLOWANCE, DOT_KINDS, FOURSOMES_ALLOWANCE, SCRAMBLE_ALLOWANCE, sixesPairings } from '../lib/games.js';
@@ -32,7 +33,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
   const amount = (path, title, { min = 1, max = 500, label } = {}) => (
     <div className="nassau-bet-row" key={path}>
       <div className="nassau-bet-lbl">{label || title}</div>
-      <button className="nassau-bet-btn" aria-label={`${label || title}: ${money(get(path))}. Change`} onClick={() => onAmount(path, title, { min, max })}>{money(get(path))}</button>
+      <button className="nassau-bet-btn" aria-label={`${label || title}: ${money(get(path))}. Change`} onClick={() => onAmount(path, title, { min, max })}>{money(get(path))}<Icon name="pencil-simple" className="amt-pen" /></button>
     </div>
   );
   const seg = (path, options, eyebrow, first = false) => (

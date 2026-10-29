@@ -112,9 +112,11 @@ function allSquare(ctx) {
   return s;
 }
 /** A live round of `game` at hole 1 (or with some holes in) on top of the finished seed */
-function liveGame(ctx, game, { pids = ['p_trevor', 'p_jackson', 'p_marcus', 'p_dev'], holesScored = 0, current = null, holesCount = 18, playFor = null, extra = '' } = {}) {
-  return ctx.memo(`live:${game}:${pids.length}:${holesScored}:${current}:${holesCount}:${JSON.stringify(playFor)}:${extra}`, () => ctx.build(ctx.STATES.done, `S.update(s => { mkRound(s, { id: 'r_${game}', game: '${game}', pids: ${JSON.stringify(pids)}, holesScored: ${holesScored}, current: ${current}, holesCount: ${holesCount}, playFor: ${JSON.stringify(playFor)} }); }); ${extra}`));
+function liveGame(ctx, game, { pids = ['p_trevor', 'p_jackson', 'p_marcus', 'p_dev'], holesScored = 0, current = null, holesCount = 18, playFor = null, teams = null, extra = '' } = {}) {
+  return ctx.memo(`live:${game}:${pids.length}:${holesScored}:${current}:${holesCount}:${JSON.stringify(playFor)}:${JSON.stringify(teams)}:${extra}`, () => ctx.build(ctx.STATES.done, `S.update(s => { mkRound(s, { id: 'r_${game}', game: '${game}', pids: ${JSON.stringify(pids)}, holesScored: ${holesScored}, current: ${current}, holesCount: ${holesCount}, playFor: ${JSON.stringify(playFor)}, teams: ${JSON.stringify(teams)} }); }); ${extra}`));
 }
+// Vegas is always two teams of two (setup asks for them)
+const VEGAS_TEAMS = [['p_trevor', 'p_jackson'], ['p_marcus', 'p_dev']];
 /** Finished rounds for the results screens */
 function resultsState(ctx) {
   return ctx.memo('results', () => ctx.build(ctx.STATES.done, `S.update(s => {
@@ -410,7 +412,7 @@ export const SHOTS = [
       await p.js(`tryTap('Skip for now'); await w(400); tap('Round menu'); await w(1000);`);
       await p.shoot('round-menu', 'Round menu');
       const sub = [['Bets', 'menu-bets', 'Bets from the round menu'], ['Handicaps', 'menu-handicaps', 'Handicaps from the round menu'], ['Play for', 'menu-play-for', 'Play for from the round menu'],
-        ['Add a side game', 'menu-add-side-game', 'Add a side game mid-round'], ['Side bets', 'menu-side-bets', 'Side bets mid-round'], ['Invite the group', 'menu-invite', 'Invite the group (share the round)'],
+        ['Add a side game', 'menu-add-side-game', 'Add a side game mid-round'], ['Side bets', 'menu-side-bets', 'Side bets mid-round'], ['Invite', 'menu-invite', 'Invite the group (share the round)'],
         ['Fix par or HCP', 'menu-fix-hole', 'Fix par or HCP for hole 3'], ['A player left', 'menu-player-left', 'A player left'], ['Add a player', 'menu-add-player', 'Add a player mid-round'],
         ['Round length', 'menu-round-length', 'Round length'], ['Course and tee', 'menu-course-tee', 'Course and tee'], ['Skins rules', 'menu-rules', 'Skins rules from the menu'], ['End round', 'menu-end-round', 'End round confirm']];
       for (const [label, id, what] of sub) {
@@ -428,7 +430,7 @@ export const SHOTS = [
   { area: 'play', id: 'banker', page: async ctx => ({ state: await liveGame(ctx, 'banker', { holesScored: 4 }), place: ['upnext', [['play', { id: 'r_banker' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(600);`); await p.shoot('banker-hole-5', 'Banker hole 5: the banker and the bets'); } },
   { area: 'play', id: 'hammer', page: async ctx => ({ state: await liveGame(ctx, 'hammer', { pids: ['p_trevor', 'p_sam'] }), place: ['upnext', [['play', { id: 'r_hammer' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(600);`); await p.shoot('hammer-hole-1', 'Hammer hole 1, head to head'); } },
   { area: 'play', id: 'snake', page: async ctx => ({ state: await liveGame(ctx, 'snake'), place: ['upnext', [['play', { id: 'r_snake' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(600);`); await p.shoot('snake-hole-1', 'Snake hole 1'); } },
-  { area: 'play', id: 'vegas', page: async ctx => ({ state: await liveGame(ctx, 'vegas'), place: ['upnext', [['play', { id: 'r_vegas' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(600);`); await p.shoot('vegas-hole-1', 'Vegas hole 1, 2 v 2'); } },
+  { area: 'play', id: 'vegas', page: async ctx => ({ state: await liveGame(ctx, 'vegas', { teams: VEGAS_TEAMS }), place: ['upnext', [['play', { id: 'r_vegas' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(600);`); await p.shoot('vegas-hole-1', 'Vegas hole 1, 2 v 2'); } },
   { area: 'play', id: 'nassau', page: async ctx => ({ state: await liveGame(ctx, 'nassau', { pids: ['p_trevor', 'p_sam'], holesScored: 5 }), place: ['upnext', [['play', { id: 'r_nassau' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(600);`); await p.shoot('nassau-hole-6', 'Nassau hole 6, front/back/total strip'); } },
   { area: 'play', id: 'stableford', page: async ctx => ({ state: await liveGame(ctx, 'stableford', { holesScored: 3, playFor: { kind: 'points' } }), place: ['upnext', [['play', { id: 'r_stableford' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(600);`); await p.shoot('stableford-points-hole-4', 'Stableford played for points, hole 4'); } },
   {

@@ -62,9 +62,17 @@ export function RoundWhereFrom({ round: whole, res, fmt: fmtIn = null, title = '
     const [payer, payee] = total > 0 ? [b, a] : [a, b];
     return `${nm(payer)} ${payer === me ? 'pay' : 'pays'} ${nm(payee)} ${fmt(Math.abs(total))}`;
   };
+  // The row's own total is on the right, so its sub line names the games alone ("Skins"), and only
+  // splits the amount by game when there's more than one
+  const subLine = items => {
+    const shown = items.filter(x => Math.round(x.amount * 100));
+    return shown.length === 1 ? shown[0].label : breakdownLine(items, fmt);
+  };
   return (
     <>
       <div className="sec-label">{title}</div>
+      {/* One card of rows with hairlines, like the payments above it */}
+      <div className="wf-group">
       {rows.map(({ a, b }) => {
         const x = pairBreakdown(round, a, b, res);
         const name = roundPlayerName(round, b);
@@ -74,13 +82,14 @@ export function RoundWhereFrom({ round: whole, res, fmt: fmtIn = null, title = '
             <Avatar id={b} name={name} />
             <div className="row-main">
               <div className="set-name">{who(a, b)}</div>
-              <div className="set-sub">{breakdownLine(x.items, fmt)}</div>
+              <div className="set-sub">{subLine(x.items)}</div>
             </div>
             <div className={`wf-total ${cls(x.total)}`}>{fmt(x.total, { sign: true })}</div>
             <span className="chevron"><Icon name="caret-right" /></span>
           </button>
         );
       })}
+      </div>
       <Sheet open={!!open} onClose={() => setOpen(null)} title={open ? who(open.a, open.b) : ''}>
         {bd && (
           <>

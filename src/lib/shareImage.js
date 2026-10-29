@@ -74,6 +74,9 @@ export function shareCardModel(round, res, { showAmounts: moneyOn = true, showSc
     meta: `${roundDate(round)} · ${gameLabel(round)}`,
     headline, sub, big: showAmounts && !square,
     standings,
+    // With the money off and the scores on, the order can look wrong (a 72 above a 70): a line over the
+    // list says what it's in order of
+    rankedBy: !showAmounts && showScores && !square ? `In order of the ${gameLabel(round)} result` : null,
     betsTitle: title,
     bets,
     // A reward round's line goes where the money would: "Sam wins lunch. Dave's buying."
@@ -120,10 +123,22 @@ export const C = {
 export const DISPLAY = '"Bricolage Grotesque", Inter, system-ui, sans-serif';
 export const BODY = 'Inter, system-ui, sans-serif';
 
+/**
+ * The results card's faces follow the app's look, so what friends see looks like the app: the new
+ * look's Fraunces serif for the winner, the amount and the course, Figtree for the rest; the classic
+ * look keeps its grotesque. `w` is the display face's weight (Fraunces tops out at 600).
+ */
+export function cardFonts() {
+  const isNew = typeof document !== 'undefined' && document.documentElement?.dataset?.look === 'new';
+  return isNew
+    ? { display: '"Fraunces", Georgia, serif', w: 600, body: '"Figtree", Inter, system-ui, sans-serif', brand: '"Figtree", Inter, system-ui, sans-serif' }
+    : { display: DISPLAY, w: 800, body: BODY, brand: DISPLAY };
+}
+
 /** Make sure the web fonts are in before drawing, or the canvas falls back to system fonts. */
-export async function fontsReady() {
+export async function fontsReady(more = []) {
   if (typeof document === 'undefined' || !document.fonts) return;
-  const want = [`800 100px ${DISPLAY}`, `500 100px ${DISPLAY}`, `600 40px ${BODY}`, `700 40px ${BODY}`];
+  const want = [`800 100px ${DISPLAY}`, `500 100px ${DISPLAY}`, `600 40px ${BODY}`, `700 40px ${BODY}`, ...more];
   const timeout = new Promise(r => setTimeout(r, 2500));
   try { await Promise.race([Promise.all(want.map(f => document.fonts.load(f))).then(() => document.fonts.ready), timeout]); }
   catch { /* draw with whatever is available */ }
@@ -162,7 +177,7 @@ function drawContained(ctx, pic, x, y, w, h) {
   ctx.drawImage(pic, x + (w - dw) / 2, y + h - dh, dw, dh);
 }
 
-function draw(ctx, m, pics = {}) {
+function draw(ctx, m, pics = {}, f = { display: DISPLAY, w: 800, body: BODY, brand: DISPLAY }) {
   const W = IMAGE_W, H = IMAGE_H, PAD = 96, inner = W - PAD * 2;
   const theme = m.theme || { tint: C.peach, ink: C.onPastel };
   ctx.fillStyle = C.bg;
@@ -189,13 +204,13 @@ function draw(ctx, m, pics = {}) {
 
   // Wordmark and where, in ink on the band
   ctx.fillStyle = theme.ink;
-  ctx.font = `800 40px ${DISPLAY}`;
+  ctx.font = `800 40px ${f.brand}`;
   spaced(ctx, m.brand.toUpperCase(), PAD, 150, 6);
-  fit(ctx, m.course, 700, BODY, 52, 34, textW);
+  fit(ctx, m.course, f.w, f.display, 52, 34, textW);
   ctx.fillText(clip(ctx, m.course, textW), PAD, 240);
   ctx.save();
   ctx.globalAlpha = 0.72;
-  ctx.font = `600 38px ${BODY}`;
+  ctx.font = `600 38px ${f.body}`;
   ctx.fillText(clip(ctx, m.meta, textW), PAD, 296);
   ctx.restore();
   // The game's art as a sticker under the words
@@ -204,20 +219,28 @@ function draw(ctx, m, pics = {}) {
   // The headline: who won, and how much
   let y = 680;
   ctx.fillStyle = C.ink;
-  fit(ctx, m.headline, 800, DISPLAY, 180, 96, inner);
+  fit(ctx, m.headline, f.w, f.display, 180, 96, inner);
   ctx.fillText(clip(ctx, m.headline, inner), PAD - 6, y);
   y += m.big ? 156 : 92;
   ctx.fillStyle = m.big ? C.mint : C.soft;
-  if (m.big) fit(ctx, m.sub, 800, DISPLAY, 150, 80, inner);
-  else ctx.font = `500 64px ${DISPLAY}`;
+  if (m.big) fit(ctx, m.sub, f.w, f.display, 150, 80, inner);
+  else ctx.font = `500 64px ${f.display}`;
   ctx.fillText(clip(ctx, m.sub, inner), PAD - 4, y);
   y += 90;
   // A reward round: who wins it and who's buying
   if (m.reward) {
     ctx.fillStyle = C.ochre;
-    fit(ctx, m.reward, 700, BODY, 48, 32, inner);
+    fit(ctx, m.reward, 700, f.body, 48, 32, inner);
     ctx.fillText(clip(ctx, m.reward, inner), PAD, y);
     y += 80;
+  }
+
+  // What the order is by, when the money's off and the scores are on
+  if (m.rankedBy) {
+    ctx.fillStyle = C.soft;
+    ctx.font = `600 30px ${f.body}`;
+    ctx.fillText(clip(ctx, m.rankedBy, inner), PAD, y);
+    y += 30;
   }
 
   // Standings
@@ -235,16 +258,16 @@ function draw(ctx, m, pics = {}) {
     ctx.fillStyle = p.place === 1 && p.sign > 0 ? C.ochre : C.faint;
     ctx.beginPath(); ctx.arc(PAD + 30, cy, 30, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = p.place === 1 && p.sign > 0 ? C.onPastel : C.ink;
-    ctx.font = `700 30px ${BODY}`;
+    ctx.font = `700 30px ${f.body}`;
     ctx.textAlign = 'center';
     ctx.fillText(String(p.place), PAD + 30, cy + 11);
     ctx.textAlign = 'left';
     ctx.fillStyle = C.ink;
-    ctx.font = `600 ${n > 6 ? 40 : 46}px ${BODY}`;
+    ctx.font = `600 ${n > 6 ? 40 : 46}px ${f.body}`;
     let amtW = 0;
     if (p.amount) {
       ctx.save();
-      ctx.font = `800 ${n > 6 ? 46 : 54}px ${DISPLAY}`;
+      ctx.font = `${f.w} ${n > 6 ? 46 : 54}px ${f.display}`;
       amtW = ctx.measureText(p.amount).width;
       ctx.fillStyle = p.sign > 0 ? C.mint : p.sign < 0 ? C.peach : C.soft;
       ctx.textAlign = 'right';
@@ -255,7 +278,7 @@ function draw(ctx, m, pics = {}) {
     let scoreW = 0;
     if (p.score) {
       ctx.save();
-      ctx.font = `600 ${n > 6 ? 32 : 36}px ${BODY}`;
+      ctx.font = `600 ${n > 6 ? 32 : 36}px ${f.body}`;
       scoreW = Math.min(ctx.measureText(p.score).width + 20, room / 2);
       ctx.restore();
     }
@@ -264,7 +287,7 @@ function draw(ctx, m, pics = {}) {
     if (p.score) {
       const nameW = ctx.measureText(name).width;
       ctx.save();
-      ctx.font = `600 ${n > 6 ? 32 : 36}px ${BODY}`;
+      ctx.font = `600 ${n > 6 ? 32 : 36}px ${f.body}`;
       ctx.fillStyle = C.soft;
       ctx.fillText(clip(ctx, p.score, scoreW - 20), PAD + 84 + nameW + 20, cy + 14);
       ctx.restore();
@@ -278,14 +301,14 @@ function draw(ctx, m, pics = {}) {
   if (bets.length) {
     y += 100;
     ctx.fillStyle = C.mint;
-    ctx.font = `700 28px ${BODY}`;
+    ctx.font = `700 28px ${f.body}`;
     spaced(ctx, m.betsTitle.toUpperCase(), PAD, y, 3);
     y += 20;
     for (const b of bets) {
       const cy = y + betRowH / 2;
       let valW = 0;
       if (b.value) {
-        ctx.font = `800 40px ${DISPLAY}`;
+        ctx.font = `${f.w} 40px ${f.display}`;
         valW = ctx.measureText(b.value).width;
         ctx.fillStyle = b.value === '–' ? C.soft : C.ink;
         ctx.textAlign = 'right';
@@ -294,13 +317,13 @@ function draw(ctx, m, pics = {}) {
       }
       const room = inner - valW - 32;
       ctx.fillStyle = C.soft;
-      ctx.font = `600 32px ${BODY}`;
+      ctx.font = `600 32px ${f.body}`;
       const label = clip(ctx, b.label, room * 0.5);
       ctx.fillText(label, PAD, cy + 12);
       const lw = ctx.measureText(label).width + 20;
       if (b.text) {
         ctx.fillStyle = C.ink;
-        ctx.font = `700 32px ${BODY}`;
+        ctx.font = `700 32px ${f.body}`;
         ctx.fillText(clip(ctx, b.text, room - lw), PAD + lw, cy + 12);
       }
       y += betRowH;
@@ -309,7 +332,7 @@ function draw(ctx, m, pics = {}) {
 
   // Footer
   ctx.fillStyle = C.soft;
-  ctx.font = `600 30px ${BODY}`;
+  ctx.font = `600 30px ${f.body}`;
   ctx.fillText(m.footer, PAD, footerY);
 }
 
@@ -320,14 +343,15 @@ export function renderShareImage(round, res, opts = {}) {
 
 /** Draw a ready results card model (shareCardModel) and return it as a PNG blob. */
 export async function renderResultsCard(model) {
-  const [, cheer, game] = await Promise.all([fontsReady(), loadImage(model.art?.cheer), loadImage(model.art?.game)]);
+  const f = cardFonts();
+  const [, cheer, game] = await Promise.all([fontsReady([`${f.w} 100px ${f.display}`, `600 40px ${f.body}`, `700 40px ${f.body}`, `800 40px ${f.body}`]), loadImage(model.art?.cheer), loadImage(model.art?.game)]);
   const paint = pics => {
     const canvas = document.createElement('canvas');
     canvas.width = IMAGE_W;
     canvas.height = IMAGE_H;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas unavailable');
-    draw(ctx, model, pics);
+    draw(ctx, model, pics, f);
     return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not make the image'))), 'image/png'));
   };
   try { return await paint({ cheer, game }); }

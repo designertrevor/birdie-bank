@@ -148,7 +148,8 @@ test('offline and loading lines never lean on the app name, and they are announc
 });
 
 test('the toast is keyed, so the same words twice in a row are read out twice', () => {
-  assert.match(read('components/ui.jsx'), /<span key=\{toast\.key\}>\{toast\.msg\}<\/span>/);
+  // The words stay in the pill while it fades out (`said`), hidden from the reader once it's going
+  assert.match(read('components/ui.jsx'), /<span key=\{said\.key\} aria-hidden=\{!toast\}>\{said\.msg\}<\/span>/);
 });
 
 test('the money strip, as a button, says everyone’s total (its label replaces what’s inside it)', () => {

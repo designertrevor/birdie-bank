@@ -6,7 +6,7 @@ import { Spot } from '../components/Spot.jsx';
 import { ArtNote } from '../components/ArtNote.jsx';
 import { Scorecard } from '../components/Scorecard.jsx';
 import { AvatarArt } from '../components/Avatar.jsx';
-import { CrownedFace, Podium } from '../components/Podium.jsx';
+import { CrownedFace, Podium, TeamPodium } from '../components/Podium.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { getState, update, useStore } from '../lib/store.js';
@@ -18,7 +18,7 @@ import { calcuttaPlace } from '../lib/calcutta.js';
 import { canEdit, keeperMe } from '../lib/keeper.js';
 import { useNav } from '../lib/nav.js';
 import { KEEP_DAYS, restoreRound, softDeleteRound } from '../lib/recently-deleted.js';
-import { bigGroupName, gameLabel, meFor, placeLabel, roundDate, roundPlayerName } from '../lib/format.js';
+import { bigGroupName, gameLabel, meFor, placeLabel, roundDate, roundPlayerName, scoreLine } from '../lib/format.js';
 import { bigRoundResults } from '../lib/big-money.js';
 import { gamesLine } from '../lib/side-games.js';
 import { betStretchLine } from '../lib/stakes.js';
@@ -31,7 +31,7 @@ import { SignInSheet } from '../components/Account.jsx';
 import { HowWasIt, NiceRound, Reveal, RewardCard, SettleUp, ShareCard } from '../components/Finale.jsx';
 import { cardFromLine, justPlayingNote, niceRound } from '../lib/just-playing.js';
 import { TripRoundNote } from '../components/Trips.jsx';
-import { countsMoney, playForOf, tabResults, unitFmt } from '../lib/play-for.js';
+import { countsMoney, playForOf, rewardOutcome, tabResults, unitFmt } from '../lib/play-for.js';
 import { SaveUsualButton } from '../components/Usuals.jsx';
 import { DrivesShortfall } from '../components/ScrambleDrives.jsx';
 import { BetsBreakdown } from '../components/PairBets.jsx';
@@ -123,6 +123,8 @@ export default function RoundDetail({ id, celebrate }) {
   // Trash talk on a finished round, its settle-up lines and its side bets (talk.js)
   const talk = round.status === 'done' ? roundTalk(round, state) : null;
   const payTitle = t => `${roundPlayerName(round, t.from).split(' ')[0]} pays ${roundPlayerName(round, t.to).split(' ')[0]}`;
+  // On your own phone you're "You" in the payments and standings, as everywhere else in the app
+  const payName = pid => (pid === meId ? 'You' : roundPlayerName(round, pid));
 
   // A deleted round waits in Settings, Recently deleted, for 30 days (recently-deleted.js), and the
   // toast puts it straight back
@@ -139,17 +141,23 @@ export default function RoundDetail({ id, celebrate }) {
     nav.reset('upnext', ['play', { id }]);
   };
 
-  let heroTitle, heroAmt;
+  let heroTitle, heroAmt, winningSide = false;
   if (res.big && !res.big.final) { heroTitle = 'Waiting on the other groups'; heroAmt = fmt(0); }
   else if (allSquare) { heroTitle = 'All square'; heroAmt = fmt(0); }
   else if (tie) {
     // Partners who won together are one winning side, not a tie (same as the reveal)
     const leaders = res.standings.filter(p => p.amount === top.amount);
     const side = round.teams?.find(tm => tm.players.length === leaders.length && tm.players.every(pid => leaders.some(p => p.id === pid)));
-    heroTitle = side ? `${side.name} win the day` : `${listNames(leaders.map(p => p.name.split(' ')[0]))} tie for top`;
+    // The pair's names stay on one line ("Trevor and Dev" / "tie for top"), never split at "and"
+    heroTitle = side ? `${side.name} win the day` : `${listNames(leaders.map(p => p.name.split(' ')[0])).replace(/ /g, '\u00a0')} tie for top`;
+    winningSide = !!side;
     heroAmt = fmt(top.amount, { sign: true });
   }
   else { heroTitle = `${top.name} wins the day`; heroAmt = fmt(top.amount, { sign: true }); }
+  // A round played for a reward leads with the reward, the thing everyone played for ("Sam wins lunch",
+  // who's buying under it), not a points total nobody played for. The points stay in Standings
+  const prize = playForOf(round).kind === 'reward' ? rewardOutcome(round, res) : null;
+  if (prize?.winners.length && !(res.big && !res.big.final)) { heroTitle = prize.win.replace(/\.$/, ''); heroAmt = null; }
   // For a tie or all square: the people at the top (everyone, when it's square) as buddies
   const heroBuddies = res.standings.filter(p => allSquare || p.amount === top.amount).slice(0, 5)
     .map((p, i) => (faces.get(p.id)?.kind === 'buddy' ? faces.get(p.id).buddy : ['visor', 'snapback', 'bucket', 'flatcap', 'beanie'][i]));
@@ -162,8 +170,18 @@ export default function RoundDetail({ id, celebrate }) {
     </button>
   );
   const done = () => { finaleStage.delete(id); nav.reset('history'); };
+  // The end of the finale (Share's Done) lands on this round's results, with History under it, so the
+  // celebration ends on the round just played rather than the top of a list
+  const doneToRound = () => { finaleStage.delete(id); nav.reset('history', ['roundDetail', { id }]); };
+  // Two sides that won and lost together (a 2 v 2): the two teams on two steps, not three people,
+  // so nobody's partner goes missing. Only when everyone on a side came out the same
+  const amountOf = pid => res.standings.find(p => p.id === pid)?.amount;
+  const teamSides = round.teams?.length === 2 && res.standings.every(p => round.teams.some(t => t.players.includes(p.id)))
+    && round.teams.every(t => t.players.length && t.players.every(pid => amountOf(pid) === amountOf(t.players[0])))
+    ? round.teams.map(t => ({ id: t.id, name: t.name, players: t.players, amount: amountOf(t.players[0]) ?? 0 })).sort((a, b) => b.amount - a.amount)
+    : null;
   // Three or more with a winner: the top three on a podium, in the winner's block
-  const podium = !solo && res.standings.length >= 3 && !allSquare && !(res.big && !res.big.final);
+  const podium = !solo && (res.standings.length >= 3 || teamSides) && !allSquare && !(res.big && !res.big.final);
   // Who left and which holes didn't count, said plainly so nobody wonders where the money went
   const notes = [...roundNotes(round), ...(justPlayingNote(round) ? [{ kind: 'casual', text: justPlayingNote(round) }] : [])];
   const notesEl = notes.length > 0 && (
@@ -181,11 +199,11 @@ export default function RoundDetail({ id, celebrate }) {
         {stage === 'reveal' && casualMe && <NiceRound round={round} me={meId} onDetail={() => { setRevealSeen(true); setStage('detail'); }} onDone={done} />}
         {stage === 'reveal' && !casualMe && <Reveal round={round} res={res} instant={revealSeen} onNext={() => { setRevealSeen(true); setStage(ownSettle ? 'settle' : 'share'); }} onDetail={() => { setRevealSeen(true); setStage('detail'); }} extra={<>{round.trip?.id && <div style={{ marginTop: 12 }}><TripRoundNote round={round} /></div>}{notesEl}{saveRow && <div style={{ marginTop: 12 }}>{saveRow}</div>}</>} />}
         {stage === 'settle' && (settleFrom === 'detail'
-          ? <SettleUp round={round} res={tab} onBack={() => setStage('detail')} onNext={() => { setShareFrom('detail'); setStage('share'); }} />
+          ? <SettleUp round={round} res={tab} fromResults onBack={() => setStage('detail')} onNext={() => setStage('detail')} />
           : <SettleUp round={round} res={tab} onBack={() => setStage('reveal')} onNext={() => setStage('share')} />)}
         {stage === 'share' && (shareFrom === 'detail'
           ? <ShareCard round={round} res={res} onBack={() => setStage('detail')} onDone={() => setStage('detail')} doneLabel="Done" />
-          : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={done} />)}
+          : <ShareCard round={round} res={res} onBack={() => setStage(ownSettle ? 'settle' : 'reveal')} onDone={doneToRound} />)}
         {signingIn && <SignInSheet open source="save_tab" onClose={() => setSigningIn(false)} />}
       </Screen>
       </Stage>
@@ -225,13 +243,16 @@ export default function RoundDetail({ id, celebrate }) {
               ? <Spot kind={allSquare ? 'handshake' : 'crowd'} ids={heroBuddies} size={120} className="hero-spot" plate={false} />
               // Nobody to crown yet (a Big Game waiting on its other groups): the trophy still up for grabs
               : <Spot kind={res.big && !res.big.final ? 'podium' : 'crown'} size={88} className="ra-spot" />)}
-          {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie ? 'Top of the table' : 'Winner'}</div>}
+          {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie && !winningSide ? 'Top of the table' : winningSide ? 'Winners' : 'Winner'}</div>}
           <h1 className="ra-title d">{heroTitle}</h1>
-          <div className={`ra-amt ${allSquare || (res.big && !res.big.final) ? 'zero' : ''}`}>{heroAmt}</div>
+          {heroAmt != null && <div className={`ra-amt ${allSquare || (res.big && !res.big.final) ? 'zero' : ''}`}>{heroAmt}</div>}
           <div className="ra-sub">{round.course.name} · {roundDate(round)} · {gameLabel(round)} · {played === round.holes.length ? `${played} holes` : `${played} of ${round.holes.length} holes`}</div>
-          {meRow && meRow.id !== top.id && !allSquare && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
+          {meRow && meRow.id !== top.id && !allSquare && heroAmt != null && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
           {nice && <div className="me-line">You were just playing: {nice.score} ({nice.toPar})</div>}
-          {podium && <Podium standings={res.standings} faces={faces} fmt={fmt} tint={gameTheme(round.game).tint} />}
+          {/* The podium carries the faces and places; each amount is in the hero and Standings */}
+          {podium && (teamSides
+            ? <TeamPodium teams={teamSides} faces={faces} fmt={fmt} amounts={false} />
+            : <Podium standings={res.standings} faces={faces} fmt={fmt} amounts={false} />)}
         </div>
         )}
 
@@ -241,7 +262,7 @@ export default function RoundDetail({ id, celebrate }) {
             <h2 className="sec-label">{playForOf(round).kind === 'reward' ? 'The reward' : 'Bragging rights'}</h2>
             <div style={{ padding: '0 16px' }}>
               {playForOf(round).kind === 'reward'
-                ? <RewardCard round={round} res={res} />
+                ? <RewardCard round={round} res={res} lead={!prize?.winners.length} />
                 : <ArtNote spot="bragging" className="flush">Played for points, so nothing goes on the Tab. Just bragging rights.</ArtNote>}
             </div>
           </>
@@ -254,7 +275,7 @@ export default function RoundDetail({ id, celebrate }) {
           {tab.transfers.length > 0 && <div className="ra-pays">{tab.transfers.map(t => (
             <div key={t.from + t.to} className="talk-pay">
               <div className="pay-row">
-                <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
+                <span className="pf">{payName(t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{payName(t.to)}</span>
                 <span className="pm">{money(t.amount)}</span>
               </div>
               {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
@@ -272,7 +293,7 @@ export default function RoundDetail({ id, celebrate }) {
           {res.transfers.length > 0 && <div className="ra-pays">{res.transfers.map(t => (
             <div key={t.from + t.to} className="talk-pay">
               <div className="pay-row" data-testid="payment">
-                <span className="pf">{roundPlayerName(round, t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{roundPlayerName(round, t.to)}</span>
+                <span className="pf">{payName(t.from)}</span><span className="pa"><Icon name="arrow-right" /></span><span className="pt">{payName(t.to)}</span>
                 <span className="pm">{money(t.amount)}</span>
               </div>
               {talk && <TalkBar ctx={talk} on={payTarget(t.from, t.to)} title={payTitle(t)} />}
@@ -306,7 +327,8 @@ export default function RoundDetail({ id, celebrate }) {
               {/* Everyone level on top gets the gold disc, so a tie never reads as a ranking */}
               <div className={`sr ${p.amount === top.amount ? 'gold' : ''}`}>{placeLabel(res.standings, i)}</div>
               {faces.get(p.id) && <AvatarArt model={faces.get(p.id)} size="sm" />}
-              <div className="sn">{p.name}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
+              {/* Stroke play: the score is the game, so each line says it ("73 (+1)") beside the money */}
+              <div className="sn">{p.id === meId ? 'You' : p.name}{round.game === 'stroke' && scoreLine(round, p.id) && <span className="li-sub"> · {scoreLine(round, p.id)}</span>}{strokesNote(p)}{res.detail.byGame && <span className="rv-games">{gamesLine(res.detail.byGame, p.id, fmt)}</span>}</div>
               <div className={`sa ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</div>
             </div>
           ))}

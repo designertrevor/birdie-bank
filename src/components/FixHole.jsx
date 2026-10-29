@@ -108,7 +108,7 @@ export function FixHoleSheet({ round, holeNo, me = null, onClose }) {
       <SendSwitch on={send} onChange={setSend} />
       {course && <p className="field-help pad">Also saved to {round.course.name} on this phone, so your next round there starts right.</p>}
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!changed} onClick={apply}>{changed ? <>Fix for this round <Icon name="check" /></> : 'No change yet'}</button>
+        <button className="full-btn" disabled={!changed} onClick={apply}>{changed ? <>Fix for this round <Icon name="check" /></> : 'No changes yet'}</button>
       </div>
     </Sheet>
   );
@@ -190,7 +190,7 @@ export function CourseTeeSheet({ round, me = null, onClose }) {
       {after && round.useHandicaps && !strokes && <p className="field-help pad">No one’s strokes change.</p>}
       {course && <SendSwitch on={send} onChange={setSend} />}
       <div className="cta-wrap">
-        <button className="full-btn" disabled={!after} onClick={apply}>{changed && !bad ? <>Fix for this round <Icon name="check" /></> : 'No change yet'}</button>
+        <button className="full-btn" disabled={!after} onClick={apply}>{changed && !bad ? <>Fix for this round <Icon name="check" /></> : 'No changes yet'}</button>
       </div>
     </Sheet>
   );

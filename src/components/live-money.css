@@ -18,11 +18,13 @@
 .lm-left > i { right: 0; background: var(--loss); }
 .lm-right > i { left: 0; background: var(--win); }
 
-.lm-next { display: flex; align-items: center; gap: 10px; margin: 10px 16px 0; padding: 12px 14px; border-radius: var(--r-card); background: var(--ink); color: var(--on-ink); }
+/* Information, not a button: a hairline card (an ink slab read as the primary action) */
+.lm-next { display: flex; align-items: center; gap: 10px; margin: 10px 16px 0; padding: 12px 14px; border-radius: var(--r-card); background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+.lm-synced { margin: 6px 20px 0; font-size: 12.5px; color: var(--mute); }
 .lm-next-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lm-next-l { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
+.lm-next-l { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--body); }
 .lm-next-v { font-family: var(--display); font-weight: var(--display-weight); font-size: 20px; line-height: 1.2; }
-.lm-next-c { flex: none; font-size: 13px; font-weight: 700; opacity: .8; }
+.lm-next-c { flex: none; font-size: 13px; font-weight: 700; color: var(--body); }
 
 .lm-actions { display: flex; gap: 8px; margin: 10px 16px 0; }
 .lm-btn {

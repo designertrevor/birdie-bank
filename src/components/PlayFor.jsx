@@ -10,7 +10,7 @@ import { REWARDS, REWARD_MAX, cleanReward, playForOf, storedPlayFor } from '../l
  * `value` is the stored playFor (null for money), `onChange` gets the new one (null for money).
  * `planning`: the words fit a plan the group answers later.
  */
-export default function PlayForPicker({ value, onChange, planning = false }) {
+export default function PlayForPicker({ value, onChange, planning = false, label = true }) {
   const pf = playForOf({ playFor: value });
   // The custom reward being typed, kept while switching chips so it isn't lost
   const [custom, setCustom] = useState(() => (pf.kind === 'reward' && !REWARDS.includes(pf.reward) ? pf.reward : ''));
@@ -39,7 +39,8 @@ export default function PlayForPicker({ value, onChange, planning = false }) {
 
   return (
     <div className="block play-for">
-      <div className="eyebrow" style={{ marginBottom: 10 }}>Play for</div>
+      {/* Under a sheet already titled Play for, the label would say it twice */}
+      {label && <div className="eyebrow" style={{ marginBottom: 10 }}>Play for</div>}
       <Segmented label="Play for" className="press-mode-row" btn="pm-btn" value={pf.kind} onChange={pickKind} options={kinds} />
       {pf.kind === 'reward' && (
         <>
