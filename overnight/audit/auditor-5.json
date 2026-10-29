@@ -1,0 +1,926 @@
+[
+ {
+  "id": "history-1",
+  "area": "history",
+  "screen": "Hall of fame, Records: Longest win streak badge",
+  "files": [
+   "audit-shots-4/history/hall-of-fame-scrolled-dark.png",
+   "audit-shots-4/history/hall-of-fame-bottom-dark.png",
+   "audit-shots-4/history/hall-of-fame-bottom-light.png"
+  ],
+  "theme": "both",
+  "severity": "broken",
+  "issue": "The fireball badge is not a die-cut sticker: it sits on a white disc with a black ring (a plate behind the art), and inside that disc two crescents above and below the ball are see-through, so in dark they show as dark half-moons inside the white plate. Every other record badge (skins stack, pencil, tally) is a clean silhouette sticker.",
+  "fix": "Re-export the streak badge as a silhouette sticker: drop the disc and its black ring, run the white border round the flame and ball only, and fill the two crescent holes (or remove them) so nothing inside the border is transparent.",
+  "owner": "art"
+ },
+ {
+  "id": "plan-1",
+  "area": "plan",
+  "screen": "Friend's view of a plan (Riley, from Trevor's link)",
+  "files": [
+   "audit-shots-4/plan/friend-view-no-answer-light.png",
+   "audit-shots-4/plan/friend-view-answered-dark.png",
+   "audit-shots-4/plan/friend-view-answering-light.png"
+  ],
+  "theme": "both",
+  "severity": "broken",
+  "issue": "Avatars are swapped on the friend's view: the row for Riley (you) wears Trevor's red-cap buddy on lavender, and Trevor's row shows a different buddy. Elsewhere (Players, Hall of fame) Riley is the pink-glasses buddy and Trevor the red cap, so the people list says the wrong face for both.",
+  "fix": "In the friend view, resolve each row's avatar by player id (canonicalOf) not by 'you'; the viewer's own row should use the viewer's buddy (Riley's glasses), and the organizer's row Trevor's red cap.",
+  "owner": "plan"
+ },
+ {
+  "id": "history-2",
+  "area": "history",
+  "screen": "Hall of fame hero trophy",
+  "files": [
+   "audit-shots-4/history/hall-of-fame-light.png",
+   "audit-shots-4/history/hall-of-fame-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The trophy's two handle loops are filled with white islands instead of showing the background, so in dark the hero reads as a cup glued to a white card at the handles. The brief asks for no leftover white between handles.",
+  "fix": "Knock out the inside of both handle loops in the trophy drawing (transparent), and redraw the sticker border round the outside of the handles only.",
+  "owner": "art"
+ },
+ {
+  "id": "history-3",
+  "area": "history",
+  "screen": "Round cards and Up next recap: overlapping avatar stack",
+  "files": [
+   "audit-shots-4/history/history-3-rounds-scrolled-dark.png",
+   "audit-shots-4/history/history-20-rounds-scrolled-dark.png",
+   "audit-shots-4/history/history-20-rounds-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "In the face stacks on every round card, each plate overlaps the previous face by about half, so the first faces are mostly hidden. Light mode has a thin cut-out ring; in dark there is none, so the plates fuse into one lumpy shape and hats read as clipped.",
+  "fix": "On the stacked avatar (ui.jsx AvatarStack), give each item a 2px ring in the card surface colour (box-shadow: 0 0 0 2px var(--card)) in both themes, and reduce overlap to about 30% (margin-left: -8px at 28px).",
+  "owner": "shared"
+ },
+ {
+  "id": "tab-1",
+  "area": "tab",
+  "screen": "The Tab summary and Square band: avatar stacks",
+  "files": [
+   "audit-shots-4/tab/tab-both-sides-light.png",
+   "audit-shots-4/tab/tab-both-sides-dark.png",
+   "audit-shots-4/tab/tab-with-crew-scrolled-dark.png",
+   "audit-shots-4/tab/tab-with-crew-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The summary's five faces and the Square band's faces overlap so much that heads and hats are cut by the next plate; in dark the faces merge. On the mint Square band, Cody's mint plate vanishes into the band so his face floats.",
+  "fix": "Same AvatarStack ring fix (2px ring in the surface colour behind each plate). On tinted bands, use the band colour as the ring so mint plates keep an edge.",
+  "owner": "shared"
+ },
+ {
+  "id": "tab-2",
+  "area": "tab",
+  "screen": "Avatar plate edge across lists",
+  "files": [
+   "audit-shots-4/players/players-25-scrolled-dark.png",
+   "audit-shots-4/tab/tab-person-sam-dark.png",
+   "audit-shots-4/players/players-8-dark.png",
+   "audit-shots-4/players/player-merge-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "Avatar plates have no consistent edge: in dark, only the dark-teal plates (Sam, Eli, Hunter) get a grey ring while every other plate has none; in light all plates have a faint white ring. Sam's 72px hero avatar has a visible grey halo nobody else has.",
+  "fix": "Pick one rule in the Avatar component: no ring on any plate in either theme, or the same 1px hairline (var(--hairline)) on all. Remove the dark-only grey ring added for the dark-teal backdrop and instead lighten that backdrop in dark (see the dark-teal plate finding).",
+  "owner": "art"
+ },
+ {
+  "id": "players-1",
+  "area": "players",
+  "screen": "Avatar picker: dark-teal backdrop in dark",
+  "files": [
+   "audit-shots-4/players/avatar-picker-critters-dark.png",
+   "audit-shots-4/players/avatar-picker-critters-scrolled-dark.png",
+   "audit-shots-4/players/avatar-picker-initials-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The darkest backdrop (deep teal) sits almost on the dark sheet colour: the banana critter's plate edge disappears so the banana floats, the eagle's plate merges, and the last backdrop swatch is barely visible.",
+  "fix": "In dark, map the deep-teal backdrop to a lifted teal (about #2A5A54) or give that one swatch and plate a 1px var(--hairline) ring so it still reads as a disc.",
+  "owner": "art"
+ },
+ {
+  "id": "players-2",
+  "area": "players",
+  "screen": "Avatar picker: critters cropped and off centre",
+  "files": [
+   "audit-shots-4/players/avatar-picker-critters-light.png",
+   "audit-shots-4/players/avatar-picker-critters-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Several critters are cut by the round plate: the eagle's body is chopped at the bottom right and sits low-left (not centred), the gopher's hole runs off both sides, the worm's ball and the snowman's base touch the edge. The brief asks for the birdie and eagle centred.",
+  "fix": "In the critter art (or the critter Avatar viewBox), scale critters to about 78% of the plate and centre the eagle on its head and chest; crop the gopher hole inside the circle with a margin.",
+  "owner": "art"
+ },
+ {
+  "id": "players-3",
+  "area": "players",
+  "screen": "Avatar picker: selected buddy in dark",
+  "files": [
+   "audit-shots-4/players/avatar-picker-buddies-dark.png",
+   "audit-shots-4/players/avatar-picker-buddies-light.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "In light the picked buddy has an ink ring plus a check; in dark the ring is ink on the dark sheet so it disappears and only the small check shows, so the pick is hard to see.",
+  "fix": "Use var(--ink-inverse) or var(--text) for the selected ring colour (2px, 3px offset) so it is cream in dark.",
+  "owner": "onb"
+ },
+ {
+  "id": "history-4",
+  "area": "history",
+  "screen": "Round detail podium in dark",
+  "files": [
+   "audit-shots-4/history/round-detail-dark.png",
+   "audit-shots-4/history/hall-of-fame-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "In dark the 2nd and 3rd podium steps are a warm grey-brown (about #3C342A) next to a gold 1st, so the podium reads muddy brown, the colour band the brief flags. Light uses the gold, butter and cream steps.",
+  "fix": "In Podium.jsx dark tokens, use the dark card surface lifted (var(--surface-2)) with a 1px gold hairline for steps 2 and 3, or a desaturated butter at 30% opacity, so there is no brown.",
+  "owner": "play"
+ },
+ {
+  "id": "home-1",
+  "area": "home",
+  "screen": "Up next: the Tab tile",
+  "files": [
+   "audit-shots-4/home/upnext-one-round-open-plan-scrolled-light.png",
+   "audit-shots-4/home/upnext-one-round-open-plan-scrolled-dark.png",
+   "audit-shots-4/home/upnext-many-rounds-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The tinted Tab tile among Your golf tiles has no hairline edge while the tiles beside it and every other card on Up next do, so in light its mint fill looks soft and in dark it sinks into the canvas.",
+  "fix": "Give the Tab tile the same 1px var(--hairline) border as the other tiles (keep the tint).",
+  "owner": "home"
+ },
+ {
+  "id": "plan-2",
+  "area": "plan",
+  "screen": "Plan page: Lock in nudge with days voted",
+  "files": [
+   "audit-shots-4/plan/plan-days-voted-light.png",
+   "audit-shots-4/plan/plan-days-voted-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Two pink buttons on one screen: 'Lock in Sat Nov 7' on the nudge and the pinned 'Invite the group'. Pink should be the one thing to tap.",
+  "fix": "Make the pinned Invite the group a secondary (ink outline) while a Lock in nudge is showing, or move Invite into the plan card as a link.",
+  "owner": "plan"
+ },
+ {
+  "id": "players-4",
+  "area": "players",
+  "screen": "Edit player",
+  "files": [
+   "audit-shots-4/players/player-edit-light.png",
+   "audit-shots-4/players/player-edit-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Edit player has no avatar at all: no way to see or change a friend's buddy, though everyone 'gets a Ball buddy' and the picker exists for yourself.",
+  "fix": "Add the player's avatar (72px) at the top of Edit player with a small edit badge that opens the same avatar picker sheet.",
+  "owner": "home"
+ },
+ {
+  "id": "history-5",
+  "area": "history",
+  "screen": "History Month and Custom: Your net card",
+  "files": [
+   "audit-shots-4/history/history-month-light.png",
+   "audit-shots-4/history/history-custom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Without the chart, the Your net card's eyebrow sits about 8px from the top edge (Season gives it 20px), so YOUR NET and '1 round' look jammed against the border.",
+  "fix": "Keep the card's top padding at 20px when the chart is hidden (padding-top on the net card, not on the chart wrapper).",
+  "owner": "home"
+ },
+ {
+  "id": "home-2",
+  "area": "home",
+  "screen": "Up next: buddies on matching plates",
+  "files": [
+   "audit-shots-4/home/upnext-many-rounds-light.png",
+   "audit-shots-4/home/upnext-trip-on-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Some buddies are drawn on a plate the same colour as their hat (Tyler's lavender cowboy hat on lavender, Jackson's mint bucket on mint), so the hat loses its shape, and the hat brims touch or run past the plate edge.",
+  "fix": "In the buddy default backdrop map, never pair a hat colour with the same backdrop (pick the next backdrop in the list), and scale buddies so brims sit 2px inside the plate.",
+  "owner": "art"
+ },
+ {
+  "id": "tab-3",
+  "area": "tab",
+  "screen": "Ben's buddy scale",
+  "files": [
+   "audit-shots-4/tab/tab-person-ben-light.png",
+   "audit-shots-4/plan/plan-days-voted-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Ben's buddy is drawn larger than the others: his head and cap fill the plate to the rim and the cap is clipped, while every other buddy is inset with a margin. It shows at hero size on Ben's story and in every list.",
+  "fix": "Fix Ben's buddy artwork bounds (or its scale in the Avatar sprite map) to match the others' inset.",
+  "owner": "art"
+ },
+ {
+  "id": "history-6",
+  "area": "history",
+  "screen": "Round detail: Talk tab reactions",
+  "files": [
+   "audit-shots-4/history/round-detail-talk-dark.png",
+   "audit-shots-4/history/round-detail-talk-light.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The fifth reaction (money with wings) renders washed out grey in dark next to bright emoji, reading as disabled.",
+  "fix": "Swap that emoji or render it at full opacity; check the reaction button's dark style isn't dimming the last item.",
+  "owner": "play"
+ },
+ {
+  "id": "plan-3",
+  "area": "plan",
+  "screen": "Plan page dark chips",
+  "files": [
+   "audit-shots-4/plan/plan-days-voted-scrolled-dark.png",
+   "audit-shots-4/plan/plan-dated-ticket-scrolled-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "should",
+  "issue": "The butter 'leads' and Maybe chips (Sat Nov 7 leads, Nassau leads, $5 a side leads) turn into a brown/olive fill in dark, the colour band the brief says to avoid.",
+  "fix": "Dark token for the butter chip: transparent fill with a 1px gold border and gold text, or the neutral --pick-tint.",
+  "owner": "plan"
+ },
+ {
+  "id": "tab-4",
+  "area": "tab",
+  "screen": "Crew tab: Mark paid chips",
+  "files": [
+   "audit-shots-4/tab/tab-crew-saturday-light.png",
+   "audit-shots-4/tab/tab-crew-saturday-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "The crew tab's per-line Mark paid chips are about 30px tall, under the 44px target, and sit tight to the amount.",
+  "fix": "Make the chip min-height 44px (or extend the hit area with a ::before inset -7px).",
+  "owner": "home"
+ },
+ {
+  "id": "players-5",
+  "area": "players",
+  "screen": "Players empty state",
+  "files": [
+   "audit-shots-4/players/players-empty-light.png",
+   "audit-shots-4/players/players-empty-dark.png"
+  ],
+  "theme": "both",
+  "severity": "should",
+  "issue": "Players is the only empty state with no drawing: four grey outline person icons stand in for art, unlike Tab, History, Stats and Hall of fame, which all use stickers.",
+  "fix": "Use the crowd or Ball buddies spot (ART_USES spots/crowd) centred above Add the people you play with, at the size the other empty states use.",
+  "owner": "home"
+ },
+ {
+  "id": "home-3",
+  "area": "home",
+  "screen": "Up next new user: hero card",
+  "files": [
+   "audit-shots-4/home/upnext-new-user-light.png",
+   "audit-shots-4/home/upnext-new-user-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The ball-on-tee drawing crowds the card's top-right corner (about 12px from the edge) and its grass runs to the card edge, while the title sits beside it; little breathing room around the focal art.",
+  "fix": "Give the hero art 20px inset from the card's top and right, or move it above the title centred, at about 96px.",
+  "owner": "home"
+ },
+ {
+  "id": "home-4",
+  "area": "home",
+  "screen": "Up next: Three steps to get going",
+  "files": [
+   "audit-shots-4/home/upnext-new-user-light.png",
+   "audit-shots-4/home/upnext-new-user-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Steps 1 and 3 have chevrons but step 2 (Start a round) has none, so it reads disabled or done.",
+  "fix": "Show the chevron on step 2 too (it can scroll to the Start a round button), or style it explicitly as done.",
+  "owner": "home"
+ },
+ {
+  "id": "home-5",
+  "area": "home",
+  "screen": "Up next: two show-more styles",
+  "files": [
+   "audit-shots-4/home/upnext-many-rounds-light.png",
+   "audit-shots-4/home/upnext-many-rounds-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "One screen uses two different show-more controls: a small '2 more' pill under Heads up and a full-width 'See all 9' bar under Lately.",
+  "fix": "Use one control for both: the centred pill style, or the full-width quiet bar.",
+  "owner": "home"
+ },
+ {
+  "id": "home-6",
+  "area": "home",
+  "screen": "Up next: round in progress card",
+  "files": [
+   "audit-shots-4/home/upnext-round-in-progress-light.png",
+   "audit-shots-4/home/upnext-two-rounds-live-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The live card's eyebrow 'Round in progress' is small sentence case with a dot, while every other card eyebrow on Up next is the tracked caps teal eyebrow.",
+  "fix": "Use the shared card eyebrow style (caps, tracked, --eyebrow-ink) with the live dot.",
+  "owner": "home"
+ },
+ {
+  "id": "home-7",
+  "area": "home",
+  "screen": "Up next: trip card",
+  "files": [
+   "audit-shots-4/home/upnext-trip-on-light.png",
+   "audit-shots-4/home/upnext-trip-on-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The trip card has a close X at top right and a chevron floating mid-right just below it, two affordances stacked in one corner.",
+  "fix": "Drop the chevron (the whole card opens the trip) or move the X into the overflow.",
+  "owner": "home"
+ },
+ {
+  "id": "home-8",
+  "area": "home",
+  "screen": "Up next: reminder titles",
+  "files": [
+   "audit-shots-4/home/upnext-trip-on-scrolled-light.png",
+   "audit-shots-4/home/upnext-many-rounds-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Reminder titles break badly: 'from / Aug 29' splits the date, and 'one / tap away.' leaves an orphan.",
+  "fix": "text-wrap: pretty on card body and titles, and a non-breaking space inside dates (Aug&nbsp;29).",
+  "owner": "home"
+ },
+ {
+  "id": "home-9",
+  "area": "home",
+  "screen": "Rounds in progress sheet",
+  "files": [
+   "audit-shots-4/home/rounds-in-progress-sheet-light.png",
+   "audit-shots-4/home/rounds-in-progress-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Round names in the sheet rows are the sans body face, while the same rounds on Up next cards use the serif title, and the hint leaves 'start another.' as an orphan.",
+  "fix": "Use the card title style for the round name in sheet rows, and text-wrap: pretty on the hint.",
+  "owner": "home"
+ },
+ {
+  "id": "home-10",
+  "area": "home",
+  "screen": "Sheet scrim in light",
+  "files": [
+   "audit-shots-4/home/join-sheet-light.png",
+   "audit-shots-4/home/rounds-in-progress-sheet-light.png",
+   "audit-shots-4/players/player-merge-light.png"
+  ],
+  "theme": "light",
+  "severity": "polish",
+  "issue": "The light scrim turns the warm cream canvas a green-grey (about #8E938E), so the page behind every sheet looks murky sage rather than dimmed.",
+  "fix": "Use a warm ink scrim, rgba(26,22,18,0.35), instead of the current grey-green.",
+  "owner": "shared"
+ },
+ {
+  "id": "home-11",
+  "area": "home",
+  "screen": "Up next recap eyebrow",
+  "files": [
+   "audit-shots-4/home/upnext-one-round-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The recap eyebrow truncates the course: 'BANKER AT LOGAN RI...'.",
+  "fix": "Let the eyebrow wrap to two lines or drop the game from it (the title already names it).",
+  "owner": "home"
+ },
+ {
+  "id": "home-12",
+  "area": "home",
+  "screen": "Up next first card copy",
+  "files": [
+   "audit-shots-4/home/upnext-one-round-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The start card body leaves 'a link.' alone on the last line.",
+  "fix": "text-wrap: pretty on card body copy.",
+  "owner": "home"
+ },
+ {
+  "id": "plan-4",
+  "area": "plan",
+  "screen": "When sheet: day chips",
+  "files": [
+   "audit-shots-4/plan/ask-when-few-options-light.png",
+   "audit-shots-4/plan/ask-when-few-options-picked-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Eight day chips plus the Pick a day tile leave the Pick a day tile alone on a third row.",
+  "fix": "Show seven days (one week) so Pick a day completes the second row, or make Pick a day a full-width row under the grid.",
+  "owner": "plan"
+ },
+ {
+  "id": "plan-5",
+  "area": "plan",
+  "screen": "Plan dates wrap",
+  "files": [
+   "audit-shots-4/plan/plan-days-voted-scrolled-light.png",
+   "audit-shots-4/plan/friend-view-answered-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Lists of days break inside a date: 'Sun / Nov 8'.",
+  "fix": "Join day and date with non-breaking spaces when building the 'Can make' string.",
+  "owner": "plan"
+ },
+ {
+  "id": "plan-6",
+  "area": "plan",
+  "screen": "Trash talk sheet: Quick jabs icon",
+  "files": [
+   "audit-shots-4/plan/plan-trash-talk-sheet-light.png",
+   "audit-shots-4/plan/plan-trash-talk-sheet-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The Quick jabs flag drawing sits on a mint plate, a colour plate behind art that the sticker rule says to drop.",
+  "fix": "Show the flag as a plain sticker (no plate) at 24px, as on History's Nassau rows.",
+  "owner": "art"
+ },
+ {
+  "id": "plan-7",
+  "area": "plan",
+  "screen": "Dated plan ticket: In / Maybe / Out",
+  "files": [
+   "audit-shots-4/plan/plan-dated-ticket-light.png",
+   "audit-shots-4/plan/plan-dated-ticket-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The pinned footer's fade starts over the In / Maybe / Out answer row, tinting the lower half of the buttons, so the main decision looks disabled.",
+  "fix": "Start the fade below the answer row, or give the ticket bottom padding equal to the footer height plus 24px.",
+  "owner": "plan"
+ },
+ {
+  "id": "plan-8",
+  "area": "plan",
+  "screen": "Dated plan ticket: Sam's avatar",
+  "files": [
+   "audit-shots-4/plan/plan-dated-ticket-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "Sam's black beanie and pom on the deep-teal plate melt into the dark ticket.",
+  "fix": "Covered by the deep-teal backdrop fix; at minimum give the beanie's top an outline against dark.",
+  "owner": "art"
+ },
+ {
+  "id": "plan-9",
+  "area": "plan",
+  "screen": "Roll call",
+  "files": [
+   "audit-shots-4/plan/roll-call-light.png",
+   "audit-shots-4/plan/roll-call-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Roll call lists people with no avatars, as separate stacked cards, while every other people list is one hairline card with faces. In dark the top card gets a gold top edge that light doesn't have.",
+  "fix": "One hairline card of rows with 32px avatars; drop the dark-only gold top edge.",
+  "owner": "plan"
+ },
+ {
+  "id": "plan-10",
+  "area": "plan",
+  "screen": "Friend's view headings",
+  "files": [
+   "audit-shots-4/plan/friend-view-answering-light.png",
+   "audit-shots-4/plan/friend-view-answering-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Which days work?' is set in the serif display face while the plan page's section labels are sans sentence case.",
+  "fix": "Use the section label style (h2, sans) for Which days work?",
+  "owner": "plan"
+ },
+ {
+  "id": "plan-11",
+  "area": "plan",
+  "screen": "Edit plan: day strip",
+  "files": [
+   "audit-shots-4/plan/plan-edit-light.png",
+   "audit-shots-4/plan/plan-edit-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The day strip starts with a half chip ('8') cut by the left edge with no fade, and Add a course has a gold plus where every other add row uses an ink plus.",
+  "fix": "Scroll the strip so the first chip sits on the 16px gutter (scroll-padding-inline: 16px) with an edge fade, and use the ink plus.",
+  "owner": "plan"
+ },
+ {
+  "id": "plan-12",
+  "area": "plan",
+  "screen": "Ask: hint copy",
+  "files": [
+   "audit-shots-4/plan/ask-light.png",
+   "audit-shots-4/plan/ask-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The ask's hint leaves 'it out.' as an orphan line.",
+  "fix": "text-wrap: pretty on hint text.",
+  "owner": "plan"
+ },
+ {
+  "id": "plan-13",
+  "area": "plan",
+  "screen": "Saturday preview: Head to head pairs",
+  "files": [
+   "audit-shots-4/plan/plan-preview-from-home-scrolled-light.png",
+   "audit-shots-4/plan/plan-preview-from-home-scrolled-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Each pair's second avatar covers half of the first face, so Trevor's and Jackson's faces are cut in half.",
+  "fix": "Overlap the pair by 25% with a 2px surface-colour ring (same AvatarStack fix).",
+  "owner": "shared"
+ },
+ {
+  "id": "tab-5",
+  "area": "tab",
+  "screen": "Tab tools card",
+  "files": [
+   "audit-shots-4/tab/tab-both-sides-bottom-light.png",
+   "audit-shots-4/tab/tab-all-square-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The tools card (Season, Close the books, Start a trip) has no section label, tiny 12px icons, and its third row is grey sans with no chevron while the first two are bold with chevrons, so it reads like three unrelated things.",
+  "fix": "Add a 'More' section label, make the trip row match the other two (bold title, chevron) and use 20px icons.",
+  "owner": "home"
+ },
+ {
+  "id": "tab-6",
+  "area": "tab",
+  "screen": "Payments list",
+  "files": [
+   "audit-shots-4/tab/tab-all-square-bottom-light.png",
+   "audit-shots-4/tab/tab-all-square-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Every payment, even two months old, carries its own round undo button; six identical circles down the right edge feel heavy.",
+  "fix": "Show undo only on payments from the last 24 hours; older rows get a chevron to the person's story.",
+  "owner": "home"
+ },
+ {
+  "id": "tab-7",
+  "area": "tab",
+  "screen": "Season and Close the books: losing bars in dark",
+  "files": [
+   "audit-shots-4/tab/season-scrolled-dark.png",
+   "audit-shots-4/tab/close-the-books-dark.png"
+  ],
+  "theme": "dark",
+  "severity": "polish",
+  "issue": "Losing bars in dark are a dull brick (about #A35F57) next to bright mint winning bars; they read muddy rather than red.",
+  "fix": "Use the dark --money-down token (the coral used for -$ amounts) at 70% for losing bars.",
+  "owner": "home"
+ },
+ {
+  "id": "tab-8",
+  "area": "tab",
+  "screen": "Tab empty state",
+  "files": [
+   "audit-shots-4/tab/tab-empty-light.png",
+   "audit-shots-4/tab/tab-empty-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Going on a golf trip? Start a trip' floats on its own about 90px below the Start a round button, disconnected from the empty state.",
+  "fix": "Bring it 24px under the button as a quiet link, or move it to the foot of the screen.",
+  "owner": "home"
+ },
+ {
+  "id": "tab-9",
+  "area": "tab",
+  "screen": "All square art",
+  "files": [
+   "audit-shots-4/tab/tab-all-square-light.png",
+   "audit-shots-4/tab/tab-all-square-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "In the 'You're all square' drawing the two clinking balls at the top have a soft grey outline instead of ink, so they look faded and see-through compared with the faces.",
+  "fix": "Redraw the clinking balls with the ink outline used on the faces.",
+  "owner": "art"
+ },
+ {
+  "id": "tab-10",
+  "area": "tab",
+  "screen": "Close the books header",
+  "files": [
+   "audit-shots-4/tab/close-the-books-light.png",
+   "audit-shots-4/tab/close-the-books-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The first eyebrow sits about 10px under the header rule, tighter than the 24px top air on other pushed screens.",
+  "fix": "Top padding 24px on the screen body.",
+  "owner": "home"
+ },
+ {
+  "id": "history-7",
+  "area": "history",
+  "screen": "Head to head chips",
+  "files": [
+   "audit-shots-4/history/history-20-rounds-light.png",
+   "audit-shots-4/history/history-3-rounds-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The head-to-head chip row is cut at the right edge mid-name ('Tyler +$30.') with no fade, so it looks clipped rather than scrollable.",
+  "fix": "Add a right edge fade (mask-image) on the scroller and let the strip bleed to the screen edge with scroll-padding 16px.",
+  "owner": "home"
+ },
+ {
+  "id": "history-8",
+  "area": "history",
+  "screen": "Your stats: empty",
+  "files": [
+   "audit-shots-4/history/stats-empty-light.png",
+   "audit-shots-4/history/stats-empty-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Every round you've played' sits about 10px under the segmented control, bold and centred, crowding it.",
+  "fix": "16px gap and the muted caption style, left aligned like the 2026 season stepper.",
+  "owner": "home"
+ },
+ {
+  "id": "history-9",
+  "area": "history",
+  "screen": "Your stats: By course",
+  "files": [
+   "audit-shots-4/history/stats-scrolled-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'Birch Creek GC · Smithfield, ...' truncates the town.",
+  "fix": "Put the town on the second line with the rounds count.",
+  "owner": "home"
+ },
+ {
+  "id": "history-10",
+  "area": "history",
+  "screen": "Hall of fame records grid",
+  "files": [
+   "audit-shots-4/history/hall-of-fame-bottom-light.png",
+   "audit-shots-4/history/hall-of-fame-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Record badges vary in size (pencil about 44px, tally about 28px), and the two lower cards leave an empty line so 'You' and the value sit lower than in the top cards. Two eyebrows wrap to two lines.",
+  "fix": "Size badges to one 40px box (object-fit: contain), align card rows on a grid (eyebrow, name, value, note) and shorten eyebrows (WIN STREAK, MOST SKINS).",
+  "owner": "home"
+ },
+ {
+  "id": "history-11",
+  "area": "history",
+  "screen": "Round detail: podium avatars",
+  "files": [
+   "audit-shots-4/history/round-detail-light.png",
+   "audit-shots-4/history/round-detail-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The winner's avatar on the podium has a thick cream halo while 2nd and 3rd have a thin ring; the crown floats with a gap above the halo.",
+  "fix": "Same ring on all three podium avatars, and seat the crown so it overlaps the plate top by 4px.",
+  "owner": "play"
+ },
+ {
+  "id": "history-12",
+  "area": "history",
+  "screen": "Round detail: Who pays who",
+  "files": [
+   "audit-shots-4/history/round-detail-light.png",
+   "audit-shots-4/history/round-detail-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Each payment row carries two reaction buttons (about 36px tall), so the money is crowded by six grey chips.",
+  "fix": "Move reactions behind a single overflow per row or into the Talk tab; keep amount and one action.",
+  "owner": "play"
+ },
+ {
+  "id": "history-13",
+  "area": "history",
+  "screen": "Round detail: action stack",
+  "files": [
+   "audit-shots-4/history/round-detail-bottom-light.png",
+   "audit-shots-4/history/round-detail-talk-bottom-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Run it back, Save as our usual and Edit scores are three full-width 56px buttons stacked, then Delete round: a heavy foot.",
+  "fix": "Keep Run it back full width; put Save as our usual and Edit scores as a two-up row of quiet buttons.",
+  "owner": "play"
+ },
+ {
+  "id": "history-14",
+  "area": "history",
+  "screen": "Round detail mid-entrance",
+  "files": [
+   "audit-shots-4/history/round-detail-mid-light.png",
+   "audit-shots-4/history/round-detail-mid-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "During the push, History's header and tab bar show through the new screen (double exposure), and Ben's podium avatar overlaps its own name.",
+  "fix": "Fade the outgoing screen out (Stage.jsx exit) while the new one enters, rather than layering at 40%.",
+  "owner": "shared"
+ },
+ {
+  "id": "history-15",
+  "area": "history",
+  "screen": "Lately rows",
+  "files": [
+   "audit-shots-4/history/lately-light.png",
+   "audit-shots-4/players/friends-feed-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Feed titles leave 'took it' and 'Dev split it' as orphans, and a feed about people shows calendar and flag icons instead of their faces.",
+  "fix": "text-wrap: pretty on titles; lead each row with the person's 32px avatar (game art for round rows).",
+  "owner": "home"
+ },
+ {
+  "id": "history-16",
+  "area": "history",
+  "screen": "Season 20 rounds tiles",
+  "files": [
+   "audit-shots-4/history/season-20-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "'10 rounds / together' leaves an orphan in the You vs Jackson tile.",
+  "fix": "Shorten to '10 rounds' or text-wrap: pretty.",
+  "owner": "home"
+ },
+ {
+  "id": "history-17",
+  "area": "history",
+  "screen": "Year in review card",
+  "files": [
+   "audit-shots-4/history/share-wrapped-light.png",
+   "audit-shots-4/history/share-wrapped-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The share card leaves 'Birdies' alone in a half row of the 2-column grid, puts a pink corner blob behind the avatar plate, and uses a heavy grotesque instead of the app's serif and sans.",
+  "fix": "Make the stats grid even (6 tiles or a 3-up row), drop the pink corner shape, and set numbers in the serif.",
+  "owner": "home"
+ },
+ {
+  "id": "players-6",
+  "area": "players",
+  "screen": "Played with most",
+  "files": [
+   "audit-shots-4/players/players-8-light.png",
+   "audit-shots-4/players/players-25-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Five 56px avatars fill the whole width with about 4px between them, edge to edge; no breathing room.",
+  "fix": "Show four with 16px gaps (or 48px avatars with 20px gaps) and let the row scroll.",
+  "owner": "home"
+ },
+ {
+  "id": "players-7",
+  "area": "players",
+  "screen": "Merge sheet",
+  "files": [
+   "audit-shots-4/players/player-merge-light.png",
+   "audit-shots-4/players/player-merge-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Merge rows are separate cream filled tiles, unlike every other people list (one white card of hairline rows).",
+  "fix": "Use the hairline list card inside the sheet.",
+  "owner": "home"
+ },
+ {
+  "id": "players-8",
+  "area": "players",
+  "screen": "Friends list names",
+  "files": [
+   "audit-shots-4/players/friends-list-light.png",
+   "audit-shots-4/players/friends-list-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "Names on Friends are the sans body face, while the same people on Players and person cards use the serif.",
+  "fix": "Use the Players row name style.",
+  "owner": "home"
+ },
+ {
+  "id": "players-9",
+  "area": "players",
+  "screen": "Avatar picker tabs",
+  "files": [
+   "audit-shots-4/players/avatar-picker-critters-light.png",
+   "audit-shots-4/players/avatar-picker-critters-dark.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "With Critters picked, the Ball buddies chip shows a small pink dot with no meaning.",
+  "fix": "Drop the dot, or explain it (it may mark the current avatar's set; if so use a check).",
+  "owner": "onb"
+ },
+ {
+  "id": "players-10",
+  "area": "players",
+  "screen": "Avatar picker Photo tab",
+  "files": [
+   "audit-shots-4/players/avatar-picker-photo-light.png"
+  ],
+  "theme": "both",
+  "severity": "polish",
+  "issue": "The Photo tab's main button says Done (disabled) while the other tabs say Save.",
+  "fix": "Call it Save on every tab.",
+  "owner": "onb"
+ },
+ {
+  "id": "classic-1",
+  "area": "classic",
+  "screen": "Classic Up next",
+  "files": [
+   "audit-shots-4/classic/classic-upnext-light.png"
+  ],
+  "theme": "light",
+  "severity": "polish",
+  "issue": "In the classic look, 'Nassau · Logan / River GC' and 'Tyler still owes you $11 from / Sep 5' wrap badly beside the You're in chip.",
+  "fix": "text-wrap: balance on card titles and a non-breaking space in dates.",
+  "owner": "home"
+ },
+ {
+  "id": "classic-2",
+  "area": "classic",
+  "screen": "Classic Players nemesis",
+  "files": [
+   "audit-shots-4/classic/classic-players-scrolled-light.png"
+  ],
+  "theme": "light",
+  "severity": "polish",
+  "issue": "'Every group has one. Yours / is Marcus.' breaks into an orphan.",
+  "fix": "text-wrap: pretty on the nemesis line.",
+  "owner": "home"
+ },
+ {
+  "id": "classic-3",
+  "area": "classic",
+  "screen": "Classic History moments",
+  "files": [
+   "audit-shots-4/classic/classic-history-bottom-light.png"
+  ],
+  "theme": "light",
+  "severity": "polish",
+  "issue": "'Trevor & Riley win / the match' wraps and pushes 'Hole 17' to the far right, misaligned with other rows.",
+  "fix": "Let the hole sit after the text inline (not right aligned), or truncate the moment to one line.",
+  "owner": "home"
+ },
+ {
+  "id": "classic-4",
+  "area": "classic",
+  "screen": "Classic Tab square band",
+  "files": [
+   "audit-shots-4/classic/classic-tab-scrolled-light.png"
+  ],
+  "theme": "light",
+  "severity": "polish",
+  "issue": "Cody's mint plate vanishes into the mint Square band, as in the new look.",
+  "fix": "Ring each avatar in the band colour (AvatarStack fix).",
+  "owner": "shared"
+ }
+]
