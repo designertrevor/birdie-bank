@@ -22,6 +22,7 @@
 .ov-head { padding: 2px 20px 16px; }
 .ov-title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1.1; letter-spacing: -.02em; color: var(--ink); }
 .ov-lede { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--mute); }
+.ov-title.second { font-size: 22px; line-height: 1.2; }
 
 /* The choices: one card, hairlines between rows */
 .ov-list { margin: 0 16px 14px; border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); overflow: hidden; }
@@ -32,7 +33,8 @@
 .ov-row + .ov-row { border-top: 1px solid var(--line-soft); }
 .ov-row:active:not(:disabled) { background: var(--surface); }
 .ov-row:disabled { cursor: default; }
-.ov-row:disabled .ov-main, .ov-row:disabled .ov-change { opacity: .45; }
+/* A row that can't open yet stays readable in the sun (3:1 and up), its sub line saying what it waits on */
+.ov-row:disabled .ov-main, .ov-row:disabled .ov-change { opacity: .72; }
 .ov-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .ov-label { font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--mute); }
 .ov-value { font-family: var(--display); font-weight: var(--display-weight); font-size: 18px; line-height: 1.25; color: var(--ink); overflow-wrap: anywhere; }
@@ -51,6 +53,11 @@
 .step.tappable, .gt-info { position: relative; }
 .step.tappable::before, .gt-info::before { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%); }
 
+/* The grid's game tiles wear the same hairline edge as the list's game cards above them */
+.setup .game-tile:not(.selected) { box-shadow: var(--hair); }
+/* A picked player's ⋯ button is a chip, so it reads as a button on the card */
+.setup .player-pick.on .player-more { background: var(--surface); }
+
 /* Picked rows in setup (a game, a course, a player): one quiet style, an ink edge and an ink check on
    the card, so a picked foursome isn't a wall of pink and pink stays on the one button to tap */
 .setup :is(.game-row.selected, .game-tile.selected, .list-item.pick.on) { background: var(--card); box-shadow: inset 0 0 0 2px var(--ink); }
@@ -60,8 +67,38 @@
 /* An empty ring that shows in the sun: 3:1 or more against the card */
 .setup .li-check:not(.on) { border-color: var(--mute); }
 
-/* Run it back in the dark: the card with an ochre edge, not a brown band */
-:root[data-theme="dark"] .ov-again { background: var(--card); box-shadow: var(--hair), inset 0 3px 0 var(--ochre); }
+/* Run it back in the dark: the card with an ochre bar straight across its top, not a brown band */
+:root[data-theme="dark"] .ov-again { background: var(--card); box-shadow: var(--hair); position: relative; overflow: hidden; }
+:root[data-theme="dark"] .ov-again::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--ochre); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ov-again { background: var(--card); box-shadow: var(--hair), inset 0 3px 0 var(--ochre); }
+  :root:not([data-theme="light"]) .ov-again { background: var(--card); box-shadow: var(--hair); position: relative; overflow: hidden; }
+  :root:not([data-theme="light"]) .ov-again::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--ochre); }
 }
+
+/* Soft edges on every setup step: the list scrolling under the title block and over the footer meets a
+   short fade, not a hard cut, and only once there's something under it (scroll-driven; a step that
+   doesn't scroll, or a browser without it, shows none) */
+@supports (animation-timeline: scroll()) {
+  .setup { timeline-scope: --setup-scroll; }
+  .setup > .scroll { scroll-timeline: --setup-scroll block; }
+  .setup > .scroll::before {
+    content: ''; position: sticky; top: 0; z-index: 3; display: block; height: 16px; margin-bottom: -16px; pointer-events: none;
+    background: linear-gradient(var(--canvas), transparent); opacity: 0;
+    animation: edgeFadeIn linear both; animation-timeline: --setup-scroll; animation-range: 0 16px;
+  }
+  .setup > .cta-wrap { position: relative; }
+  .setup > .cta-wrap::before {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 24px; pointer-events: none;
+    background: linear-gradient(transparent, var(--canvas)); opacity: 0;
+    animation: edgeFadeOut linear both; animation-timeline: --setup-scroll; animation-range: calc(100% - 24px) 100%;
+  }
+}
+@keyframes edgeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes edgeFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* Under a step's question: what the game needs ("Wolf takes exactly 4") */
+.step-sub { margin: -6px 20px 10px; font-size: 14px; color: var(--body); flex-shrink: 0; }
+.pk-in { margin-top: -4px; margin-bottom: 8px; }
+/* A link inside a help line keeps the line's size, with an invisible pad for a 44px tap */
+.setup .field-help .link-btn.inline { position: relative; min-height: 0; padding: 0; font-size: inherit; vertical-align: baseline; }
+.setup .field-help .link-btn.inline::before { content: ''; position: absolute; left: -6px; right: -6px; top: 50%; height: 44px; transform: translateY(-50%); }

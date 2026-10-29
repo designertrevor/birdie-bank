@@ -96,7 +96,7 @@ export function SaveUsualButton({ round, className = 'full-btn outline' }) {
   if (saved) return <p className="field-help pad usual-saved"><Icon name="check-circle" fill /> Saved as a usual: {saved.name}</p>;
   return (
     <>
-      <button className={className} onClick={() => setOpen(true)}><Icon name="bookmark-simple" /> Save as a usual</button>
+      <button className={className} onClick={() => setOpen(true)}><Icon name="bookmark-simple" /> Save as our usual</button>
       {open && <SaveUsualSheet round={round} onClose={() => setOpen(false)} />}
     </>
   );
@@ -116,7 +116,7 @@ function SaveUsualSheet({ round, onClose }) {
     showToast(result === 'saved' ? `Saved. ${u.name} is one tap away in setup.` : result === 'same' ? 'That one’s already a usual' : `You have ${MAX_USUALS} usuals. Delete one to save another.`);
   };
   return (
-    <Sheet open onClose={onClose} title="Save as a usual">
+    <Sheet open onClose={onClose} title="Save as our usual">
       <div style={{ padding: '0 20px' }}>
         <label className="field-label" htmlFor="usual-name">Name</label>
         <input id="usual-name" className="text-input" value={name} maxLength={40} onChange={e => setName(e.target.value)}

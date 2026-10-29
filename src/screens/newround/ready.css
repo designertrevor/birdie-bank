@@ -29,3 +29,12 @@
 
 /* Invite the group is the second action: an outline, so Tee off is the one filled button */
 .ready-invite { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+
+/* In the dark the game's colour is a straight bar across the card's top, clipped by its corners
+   (an inset shadow bent down round the corners and read as a rendering slip) */
+:root[data-theme="dark"] .ready-card.themed { position: relative; overflow: hidden; box-shadow: var(--card-shadow); }
+:root[data-theme="dark"] .ready-card.themed::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--gt); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ready-card.themed { position: relative; overflow: hidden; box-shadow: var(--card-shadow); }
+  :root:not([data-theme="light"]) .ready-card.themed::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--gt); }
+}

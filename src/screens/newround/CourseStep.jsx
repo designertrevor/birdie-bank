@@ -44,16 +44,13 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
   const rest = (needle ? sections.all : sections.all.filter(c => !nearMiles.has(c.id))).filter(notPicked);
   const matches = needle ? rest : courses;
   // Picking a course clears the search, so the typed letters don't sit in a box that's gone quiet,
-  // and brings the search and "Your course" back into view
+  // and goes back to the top: the holes and where you tee off whole, then the search and "Your course"
+  // (scrolling the search to the top cut the tee-off choice in half under the title)
   const pick = id => {
     setCourseId(id);
     if (!id) return;
     setQ('');
-    requestAnimationFrame(() => searchRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
-  };
-  const toSearch = () => {
-    searchRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    searchRef.current?.focus({ preventScroll: true });
+    requestAnimationFrame(() => searchRef.current?.closest('.scroll')?.scrollTo({ top: 0, behavior: 'smooth' }));
   };
   // Starring moves the row to another section, so a short toast says where it went
   const star = c => {
@@ -151,7 +148,8 @@ export function CourseStep({ editor, openEditor, closeEditor, courseId, setCours
       <div className="cta-wrap">
         {course
           ? <button className="full-btn" onClick={onNext}>{nextLabel} <Icon name={nextIcon} /></button>
-          : <button className="full-btn" onClick={toSearch}>Pick a course <Icon name="magnifying-glass" /></button>}
+          // Waiting on a course, like the game step's Pick a game: the search is right there above
+          : <button className="full-btn" disabled>Pick a course</button>}
         {!course && onSkip && <button className="text-link centered" onClick={onSkip}><Icon name="calendar-check" /> {skipLabel}</button>}
       </div>
       {editor && (

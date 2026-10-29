@@ -20,6 +20,8 @@ const NEXT = ['Pick a game', 'Pick a course', 'Pick the players', 'Set the bets'
  */
 export function OverviewStep({ rows, passDone, next, ready, again = null, onAgain, onOpen, onNext, onCreate, onLater = null, laterOk = false, hints = null, tripRow = null }) {
   const u = again?.round;
+  // A row that can't open yet says what it waits on ("Pick the game first"), instead of fading out unexplained
+  const waitOn = rows.find(r => r.open && r.state === 'todo');
   return (
     <>
       <div className="scroll">
@@ -34,9 +36,11 @@ export function OverviewStep({ rows, passDone, next, ready, again = null, onAgai
             <GameArt game={u.game} className="ov-again-art" />
           </button>
         )}
+        {/* Under Run it back, starting fresh is the second way in, a section heading rather than the page's
+            biggest line. Look it over needs no lede: every row carries its own Change */}
         <div className="ov-head">
-          <h2 className="ov-title">{passDone ? 'Look it over' : u ? 'Or start fresh' : 'Set up a round'}</h2>
-          <p className="ov-lede">{passDone ? 'Tap any line to change it.' : 'Pick the game first. The rest follows in order, then comes back here.'}</p>
+          <h2 className={`ov-title ${u && !passDone ? 'second' : ''}`}>{passDone ? 'Look it over' : u ? 'Or start fresh' : 'Set up a round'}</h2>
+          {!passDone && <p className="ov-lede">Pick the game first. The rest follows in order, then comes back here.</p>}
         </div>
         {hints}
         <div className="ov-list">
@@ -46,7 +50,9 @@ export function OverviewStep({ rows, passDone, next, ready, again = null, onAgai
               <span className="ov-main">
                 <span className="ov-label">{r.label}</span>
                 <span className="ov-value">{r.value || <span className="ov-empty">Not set yet</span>}</span>
-                {r.note ? <span className="ov-note"><Icon name="warning-circle" fill /> {r.note}</span> : r.sub && <span className="ov-sub">{r.sub}</span>}
+                {r.note ? <span className="ov-note"><Icon name="warning-circle" fill /> {r.note}</span>
+                  : !r.open && waitOn ? <span className="ov-sub">Pick the {waitOn.label.toLowerCase()} first</span>
+                  : r.sub && <span className="ov-sub">{r.sub}</span>}
               </span>
               <span className="ov-change">{r.state === 'todo' ? 'Pick' : r.state === 'fix' ? 'Fix' : 'Change'}</span>
             </button>
@@ -58,14 +64,15 @@ export function OverviewStep({ rows, passDone, next, ready, again = null, onAgai
         {passDone
           ? <button className="full-btn" disabled={!ready} onClick={onCreate}>Create round <Icon name="arrow-right" /></button>
           : <button className="full-btn" onClick={onNext}>{NEXT[next ?? 3]} <Icon name="arrow-right" /></button>}
-        {onLater && <button className="text-link cta-link" disabled={!laterOk} onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
+        {/* Once there's a game to schedule; before that it was a faded link that read as broken */}
+        {onLater && laterOk && <button className="text-link cta-link" onClick={onLater}><Icon name="calendar-plus" /> Schedule for later</button>}
       </div>
     </>
   );
 }
 
 /** Handicaps on their own, from the overview's Handicaps row: on or off, and the strokes given. */
-export function HandicapsStep({ game, teams, players, opts, setOpts, useHc, setUseHc, sideGames, setSideGames, onDone }) {
+export function HandicapsStep({ game, teams, players, opts, setOpts, useHc, setUseHc, sideGames, setSideGames, onDone, onPlayers = null }) {
   // The same path setter as the Bets step's (SetupStep.jsx), so the strokes read and save the same
   const set = (path, v) => setOpts(o => { const n = structuredClone(o); const k = path.split('.'); let t = n; for (const x of k.slice(0, -1)) t = t[x]; t[k.at(-1)] = v; return n; });
   return (
@@ -76,7 +83,8 @@ export function HandicapsStep({ game, teams, players, opts, setOpts, useHc, setU
           <Toggle on={useHc} onChange={setUseHc} labelledBy="ov-hc-lbl" />
         </div>
         {useHc && <StrokesSetup game={game} teams={teams} players={players} opts={opts} set={set} sideGames={sideGames} setSideGames={setSideGames} />}
-        <p className="field-help pad">Each player’s handicap and tees are on Players.</p>
+        {/* A way there, not just a mention, once there's a course for the players' tees */}
+        <p className="field-help pad">Each player’s handicap and tees are on {onPlayers ? <button type="button" className="link-btn inline" onClick={onPlayers}>Players</button> : 'Players'}.</p>
       </div>
       <div className="cta-wrap">
         <button className="full-btn" onClick={onDone}>Done <Icon name="check" /></button>
