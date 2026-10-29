@@ -1,7 +1,6 @@
 // The gross scorecard, one column per hole: on a round's results, in the halfway sheet and the
 // round menu while playing, and on a friend's round you're following. Its own file, so the play
 // screen loads it without the whole results screen.
-import { BuddyArt } from './BuddyArt.jsx';
 import { bettingRound, cardOnly, holeComplete, isJustPlaying, isTeamGame, netFor, oneBall, playsHole, popsFor, scoreSummary, scorers, teamTable } from '../lib/round.js';
 import { halfStrokesOn, netText, strokesWords } from '../lib/allowances.js';
 import { strokeKey } from '../lib/stroke-key.js';
@@ -118,9 +117,10 @@ export function Scorecard({ round, current, onHole, holes = null }) {
         </tbody>
       </table>
       <div className="sc-legend">
-        {/* Each mark stays on the same line as its words */}
-        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie <span className="key-critter"><BuddyArt id="birdie" bg="mint" /></span></span>
-        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle <span className="key-critter"><BuddyArt id="eagle" bg="teal" /></span></span>
+        {/* Each mark stays on the same line as its words. No birdie or eagle drawings here: they pop up
+            as a moment when someone makes one (Moments.jsx), not sit on the card all round */}
+        <span className="sc-key"><span className="sc-mark birdie">3</span> birdie</span>
+        <span className="sc-key"><span className="sc-mark eagle">2</span> eagle</span>
         <span className="sc-key"><span className="sc-mark bogey">5</span> bogey</span>
         <span className="sc-key"><span className="sc-mark pu">X</span> picked up</span>
         {anyStrokes && <span className="sc-key"><span className="sc-strokes inline"><i /></span> {half ? 'half stroke' : 'gets a stroke'}</span>}

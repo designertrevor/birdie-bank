@@ -26,6 +26,7 @@ import { TEMPLATE_SIZES, plansByDay, ryderTemplate, scheduleProblem, scheduledPl
 import { FLIGHT_NAMES, flightsOf } from '../lib/flights.js';
 import { startDraft } from '../lib/draft-sync.js';
 import { ScheduleEditor, TemplatePick } from './TripMode.jsx';
+import '../screens/trip.css';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 
@@ -36,18 +37,32 @@ function ordinal(n) {
 }
 
 /**
+ * Your place in the trip's standings, or null when you're not in them: `words` is "2nd" or "tied for
+ * 2nd", `short` is "2nd" or "Tied 2nd" for a card's corner. A trip leads with your place, then your
+ * trip money (Trevor's pick, 2026-10-29), on its page, its Tab card and its Up next card alike.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function myTripPlace(state, st) {
+  const me = canonicalOf(state)(state.me);
+  const i = st.standings.findIndex(p => p.id === me);
+  if (i < 0) return null;
+  const v = st.standings[i].amount;
+  const n = ordinal(placeOf(st.standings, i));
+  const tied = st.standings.filter(p => p.amount === v).length > 1;
+  return { words: `${tied ? 'tied for ' : ''}${n}`, short: tied ? `Tied ${n}` : n, amount: v };
+}
+
+/**
  * Where you stand on the trip in a few words: "You’re 2nd, up $12". When you're in its expenses,
  * the money is your whole trip, all in, as the trip itself and the Tab's trip card say it: "You’re
  * 2nd. All in, you’re owed $62.66".
  */
 function standingLine(state, st) {
   const me = canonicalOf(state)(state.me);
-  const i = st.standings.findIndex(p => p.id === me);
-  if (i < 0) return null;
-  const v = st.standings[i].amount;
-  const place = placeOf(st.standings, i);
-  const tied = st.standings.filter(p => p.amount === v).length > 1;
-  const where = `You’re ${tied ? 'tied for ' : ''}${ordinal(place)}`;
+  const place = myTripPlace(state, st);
+  if (!place) return null;
+  const v = place.amount;
+  const where = `You’re ${place.words}`;
   if (st.spending.has(me)) return `${where}. All in, ${allInText(myTripAllIn(state, st))}`;
   const upOrDown = v > 0 ? `up ${money(v)}` : v < 0 ? `down ${money(-v)}` : 'even';
   return `${where}, ${upOrDown}`;
@@ -111,11 +126,13 @@ function MoneyTripTabCard({ status: st }) {
     : `${roundsLine(st.done.length)}${spent} so far · settle after the last round`;
   const played = st.standings.some(p => p.id === me);
   const showAmt = (played && st.hasMoney) || inExpenses;
+  // Your place leads the corner, then the money (only on a money trip you've played on)
+  const place = played && st.hasMoney ? myTripPlace(state, st) : null;
   const said = inExpenses ? (net > 0 ? `The trip owes you ${money(net)}` : net < 0 ? `You owe ${money(-net)} on the trip` : 'You’re square on the trip') : upDown(net);
   const cupOn = st.cup && (st.cup.score.done > 0 || st.cup.score.live.length > 0);
   return (
     <div className="trip-card-wrap">
-      <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${cupOn ? `. ${cupHeadline(st.cup)}` : ''}${showAmt ? `. ${said}` : ''}. See the trip`}>
+      <button className="trip-card on-tab" onClick={() => nav.push('trip', { id: st.trip.id })} aria-label={`${st.trip.name}. ${sub}${cupOn ? `. ${cupHeadline(st.cup)}` : ''}${place ? `. You’re ${place.words}` : ''}${showAmt ? `. ${said}` : ''}. See the trip`}>
         <div className="row-main">
           <div className="eyebrow">{tripEyebrow(st)} <Updated st={st} /></div>
           <div className="trip-name d">{st.trip.name}</div>
@@ -124,6 +141,7 @@ function MoneyTripTabCard({ status: st }) {
         </div>
         {showAmt && (
           <div className="trip-amt-col">
+            {place && <div className="trip-place d">{place.short}</div>}
             <div className={`trip-amt d ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`}>{money(net, { sign: true })}</div>
             <div className="trip-amt-sub">{inExpenses ? 'all in' : st.phase === 'square' ? (net > 0 ? 'won' : net < 0 ? 'lost' : 'even') : 'so far'}</div>
           </div>

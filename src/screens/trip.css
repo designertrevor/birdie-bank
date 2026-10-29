@@ -1,0 +1,17 @@
+/* A trip leads with your place, then your trip money (Trevor's pick, 2026-10-29): the page's hero
+   (Trip.jsx) and the corner of its Tab card (Trips.jsx). */
+
+/* The page: the place is the headline in ink, the money right under it in its own colour, a size
+   down so the two read in order and never as two headlines */
+.trip-hero .trip-money {
+  margin-top: 4px; font-family: var(--display); font-weight: var(--money-weight); font-size: 24px; line-height: 1.15;
+  letter-spacing: -.01em; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.trip-hero .trip-money + .trip-allin { margin-top: 2px; font-weight: 600; color: var(--mute); }
+
+/* The Tab card's corner: the place on top in ink, the amount under it, then "so far" or "all in" */
+.trip-amt-col .trip-place {
+  font-family: var(--display); font-weight: var(--display-weight); font-size: 20px; line-height: 1.15; color: var(--ink);
+  white-space: nowrap;
+}
+.trip-amt-col .trip-place + .trip-amt { font-size: 16px; line-height: 1.3; }

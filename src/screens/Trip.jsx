@@ -7,6 +7,7 @@
 // Up next. See trips.js, trip-plan.js and trip-expenses.js for how it's all worked out.
 import { useEffect, useState } from 'react';
 import '../components/tab-card.css';
+import './trip.css';
 import { Empty, Header, Icon, PickRow, Screen, Segmented, Sheet, useUI } from '../components/ui.jsx';
 import { Gone } from '../components/Gone.jsx';
 import { Scene } from '../components/Scenes.jsx';
@@ -14,7 +15,7 @@ import { ArtNote } from '../components/ArtNote.jsx';
 import { daysUntil } from '../lib/plan-basics.js';
 import { Avatar, PayButton, RequestButton } from '../components/Pay.jsx';
 import { RoundRow } from '../components/RoundRow.jsx';
-import { SquareFaces, TripDays, TripSheet } from '../components/Trips.jsx';
+import { SquareFaces, TripDays, TripSheet, myTripPlace } from '../components/Trips.jsx';
 import { TripExpensesView } from '../components/TripExpenses.jsx';
 import { getState, useStore } from '../lib/store.js';
 import { useNav } from '../lib/nav.js';
@@ -37,7 +38,7 @@ import { buzz } from '../lib/delight.js';
 import { sound } from '../lib/sound-play.js';
 import { allTripPays } from '../lib/trip-expenses.js';
 import { markTripPayment, undoPayments, usePaymentsOff, useTabSync } from '../lib/tab-sync.js';
-import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, doneAsk, myTripAllIn, myTripNet, partPlan, roundsInDates, startsLine, tripByGame, tripDates, tripHidden, tripOf, tripStatus, upDown } from '../lib/trips.js';
+import { TRIP_FORMATS, canDeleteTrip, canMarkLine, canRecount, doneAsk, myTripAllIn, myTripNet, partPlan, roundsInDates, startsLine, tripByGame, tripDates, tripHidden, tripOf, tripStatus } from '../lib/trips.js';
 import { deleteTrip, endTrip, hideTrip, seenTripPlan, setRoundTrip } from '../lib/trip-store.js';
 import { plansOn, useTripPlans } from '../lib/trip-plan-sync.js';
 import { CupBoard, CupMatches, CupScore, StakeLines } from '../components/Cup.jsx';
@@ -135,18 +136,29 @@ function TripPage({ id, view: firstView = null, add = false }) {
     : st.phase === 'square' ? 'All square'
     : `${st.day ? `Day ${st.day} of ${st.days} · ` : ''}${st.done.length} round${st.done.length === 1 ? '' : 's'} done`;
   const cupOn = cup && (cup.score.done > 0 || cup.score.live.length > 0);
+  // A money trip you've played on leads with your place, then your trip money under it (Trevor's
+  // pick, 2026-10-29). With expenses that money is the whole trip, all in, and the golf alone goes
+  // under it, so the two never read as two headlines that disagree. On a cup trip the place says
+  // it's the money's, so it never reads as the cup's
+  const place = st.hasMoney && played ? myTripPlace(state, st) : null;
+  const over = st.phase === 'ready' || st.phase === 'square';
+  const placeLine = place && `${over ? 'You finished' : 'You’re'} ${place.words}${cup ? ' on the money' : ''}`;
+  const tripMoney = !place ? null
+    : inExpenses ? `All in, ${owedLine(allIn).replace(/^You/, 'you')}`
+    : `${net > 0 ? `Up ${money(net)}` : net < 0 ? `Down ${money(-net)}` : 'Even'} on the trip`;
+  const moneySign = !place ? '' : inExpenses ? sign(allIn) : sign(net);
   // A cup or a trip played for points keeps its score up top, with the expenses' dollars under it
-  const big = st.hasMoney && played ? upDown(net)
+  const big = place ? placeLine
     : cupOn ? cupHeadline(cup)
     : myPoints != null ? `You’re on ${points(myPoints, { sign: true })}`
     : inExpenses ? owedLine(allIn)
     : startsLater ? countdownBig(trip.start)
     : st.phase === 'soon' ? 'First tee today' : st.done.length ? 'No money on it yet' : 'First round coming up';
   const scoreUp = cupOn || myPoints != null;
-  const bigSign = st.hasMoney && played ? sign(net) : scoreUp ? '' : inExpenses ? sign(allIn) : '';
-  // With expenses too, the whole trip under the rounds' money (or the expenses under the score)
+  const bigSign = place || scoreUp ? '' : inExpenses ? sign(allIn) : '';
+  // Under the place with expenses, the golf alone; under a score, the expenses' dollars
   const allInLine = !inExpenses ? null
-    : st.hasMoney && played ? `All in with expenses, ${owedLine(allIn).replace(/^You/, 'you')}`
+    : place ? `${net > 0 ? `Up ${money(net)}` : net < 0 ? `Down ${money(-net)}` : 'Even'} on the golf`
     : scoreUp ? `For the expenses, ${owedLine(allIn).replace(/^You/, 'you')}` : null;
   const settles = st.expenses.length ? 'the rounds and the expenses' : 'the whole trip';
   const askExpenses = !st.expenses.length ? ' Add gas, dinner and the house under Expenses and they settle with it.' : '';
@@ -196,7 +208,8 @@ function TripPage({ id, view: firstView = null, add = false }) {
         <div className="trip-hero">
           <div className="eyebrow pink">{eyebrow}{st.published.updated && <> <span className="trip-updated">Updated</span></>}</div>
           <div className={`tab-big d ${bigSign}`}>{big}</div>
-          {allInLine && <div className={`trip-allin ${sign(allIn)}`}>{allInLine}</div>}
+          {tripMoney && <div className={`trip-money d ${moneySign}`}>{tripMoney}</div>}
+          {allInLine && <div className="trip-allin">{allInLine}</div>}
           {/* The dates once, so not here when the eyebrow already has them */}
           {(st.phase !== 'soon' || trip.where) && <div className="trip-sub">{[st.phase === 'soon' ? null : tripDates(trip), trip.where].filter(Boolean).join(' · ')}</div>}
           <TripDays status={st} />

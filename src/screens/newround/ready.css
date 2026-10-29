@@ -3,18 +3,8 @@
    short "What we agreed" (Layout Lab C) closing the card. */
 .ready-hero { padding-bottom: 10px; }
 .ready-hero .ready-crew { width: 150px; height: 150px; margin: -30px 0 -26px; position: relative; }
-/* The ground under the crew: an oval of the game's colour (mint with no game), strong enough that a
-   white hat reads on it in the light and a black brim in the dark */
+/* The crew on the page itself, centred, with the room the oval used to take kept around it */
 .ready-ground { position: relative; display: grid; place-items: center; margin: 8px auto 12px; }
-.ready-ground::before {
-  content: ''; position: absolute; left: 50%; top: 50%; width: 196px; height: 104px; transform: translate(-50%, -48%);
-  border-radius: 50%; background: color-mix(in srgb, var(--gt, var(--mint)) 55%, var(--canvas));
-}
-/* In the dark the clear game colour: mixed toward the canvas it went a muddy mustard */
-:root[data-theme="dark"] .ready-ground::before { background: var(--gt, var(--mint)); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ready-ground::before { background: var(--gt, var(--mint)); }
-}
 .ready-hero .ready-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 26px; }
 .ready-card { border-radius: var(--r-card); padding-top: 14px; }
 .ready-head { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }

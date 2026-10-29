@@ -9,7 +9,7 @@ import './play.css';
 
 /**
  * One box's chips. `v` is the score shown, `touched` whether it's been entered (an untouched box
- * shows Par as the quiet default, the same muted par the stepper showed), `onScore` sets it, `onPad`
+ * shows Par outlined as the quiet default, filled once it's tapped), `onScore` sets it, `onPad`
  * opens the pad. `name` is the player's or team's full name, for the buttons' labels.
  */
 export function ParChipRow({ name, v, par, touched, onScore, onPad }) {
