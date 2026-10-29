@@ -174,7 +174,7 @@ function StartCard({ last, fresh, planned = false, quiet = false, onJoin = null 
   }
   return (
     <div className="un-start">
-      <Spot kind="tee" size={104} className="un-start-art" plate={false} />
+      <Spot kind="tee" size={96} className="un-start-art" plate={false} />
       <span className="un-eyebrow">{fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
       <h2 className="un-start-title">{fresh ? 'Your first round' : 'Play a round'}</h2>
       <div className="un-start-sub">{fresh
@@ -226,8 +226,8 @@ function FirstSteps() {
   const active = roundsInProgress(state)[0] || null;
   const steps = [
     { done: people > 0, title: 'Add your group', sub: 'The people you play with', go: () => nav.setTab('people') },
-    // Start a round is the big button above, so this step says so rather than being a second one
-    { done: rounds.length > 0, title: 'Start a round', sub: 'With the Start a round button above', go: null },
+    // The same as the big button above, but tappable like its neighbours: a step with no chevron read as done or off (home-4)
+    { done: rounds.length > 0, title: 'Start a round', sub: 'Pick the game, the course and who’s in', go: () => nav.push('newRound') },
     { done: rounds.some(r => r.shared), title: 'Send the group the link', sub: active ? 'Invite the group from the round menu' : 'They follow the money live', go: () => (active ? nav.push('play', { id: active.id }) : nav.push('newRound')) },
   ];
   if (steps.every(x => x.done)) return null;

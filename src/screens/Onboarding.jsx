@@ -66,6 +66,9 @@ function artFor(step, a) {
  * outline in the dark theme like every other drawing. A spot stands on its own. Decorative: screen
  * readers skip it.
  */
+/** Room round a scene for its sticker border: 3x the border ArtImage draws (2.2% of the short side) */
+const SCENE_PAD = Math.round(1024 * 0.022 * 3);
+
 function StepArt({ art }) {
   if (!art) return null;
   if (art.scene) {
@@ -73,7 +76,9 @@ function StepArt({ art }) {
     return (
       <div className="ob-art ob-art-scene">
         {file ? (
-          <svg viewBox="0 0 1792 1024" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
+          // The viewBox has room round the drawing (three times its sticker border), so the white border
+          // shows whole on every side instead of the box cropping the ground into a mint plate (art-1)
+          <svg viewBox={`${-SCENE_PAD} ${-SCENE_PAD} ${1792 + 2 * SCENE_PAD} ${1024 + 2 * SCENE_PAD}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
             <ArtImage file={file} w={1792} h={1024} />
           </svg>
         ) : <Scene kind={art.scene} />}
@@ -368,10 +373,10 @@ export default function Onboarding({ onDone, play = null }) {
               <div className="li-sub">Runs the group{index != null ? ` · ${formatIndex(index)} index` : ''}</div>
             </div>
           </div>
+          {/* A plain summary of the answers: no ticks, so "Settling up: Mostly don't" isn't a thumbs-up (onboarding-5) */}
           {rows.map(([k, v], i) => (
             <div key={k} className="ob-review-row" style={{ '--i': i }}>
               <div className="row-main"><div className="ob-review-k">{k}</div><div className="ob-review-v">{v || '–'}</div></div>
-              <Icon name="check-circle" fill className="ob-review-tick" />
             </div>
           ))}
         </div>

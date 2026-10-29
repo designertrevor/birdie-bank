@@ -43,3 +43,37 @@ overnight/n4-shots/screens/after/<area>/ (untracked), shot with scripts/audit-sh
 - history-14, setup-27 (shared, mid-transition double exposure): fixed. The screen underneath a push fades out over 150ms while the new one comes in, so the two never read through each other.
 - history-7: the fade was there but 32px; it's 56px now, so a tile cut mid-name reads as fading off.
 - plan-5: fixed. Days in "Can make" and your own days never break inside a date (non-breaking spaces).
+
+## Polish (auditor-5)
+
+- home-3: fixed. The first round card's tee sticker is 96px, 20px in from the right and 18px down, its grass clear of the card edge.
+- home-4: fixed. Step 2 Start a round is tappable with a chevron like its neighbours (it opens setup, as the big button does), with its own line instead of "the button above". (onboarding-12 the same.)
+- home-5: fixed. "See all 9" under Lately is the same centred pill as the card stack's "2 more", both 36px with a 44px hit area (also on Friends, Roadmap and What's new, which share the class).
+- home-6: fixed. The round in progress card's eyebrow is the tracked caps eyebrow with its live dot.
+- home-7: fixed. A trip card with its close X drops the chevron under it (CSS in upnext.css, so Trips.jsx is untouched).
+- home-8: fixed. The reminder line's date never breaks ("from Aug 29" stays whole); body text already has text-wrap: pretty.
+- home-9: fixed. Rounds in progress names each round in the card title face. The hint's orphan is the app-wide pretty wrap's call.
+- home-10, more-2 (shared): fixed. The light scrim is a warm ink at 40% (was a blue-green that turned the cream sage); a secondary button in a sheet sits on the sheet's white with the hairline, like on a page.
+- home-11: fixed. The recap eyebrow wraps to a second line instead of cutting the course off.
+- home-12: fixed. The start card's line is balanced.
+- plan-12: fixed. The ask's hint is balanced.
+
+## auditor-4
+
+- art-1 (broken, onboarding's slot): fixed. The welcome, settle and math scenes were cropped to a rounded rectangle (overflow hidden + radius), so the ground ran to the box edges as a mint plate. Now each scene draws whole in a viewBox with room for three times its sticker border on every side, overflow visible, centred: the white border shows all round. The ground's own shape (a slab) is the art fixer's.
+- onboarding-2: fixed with players-3 (the same .av-pick ring).
+- onboarding-3 (shared): fixed in the new look. --check is the eyebrow teal (both themes), not kelly green: the paywall's lists, What's new's Shipped, every check that used it.
+- onboarding-4: fixed. All set's eyebrow and title are centred under the crowd, which is 168px.
+- onboarding-5: fixed. All set's rows are a plain summary with no ticks, so "Mostly don't" isn't a thumbs-up.
+- onboarding-6: fixed. The age answers are an even pair at 56px filling the row.
+- onboarding-8: fixed. The IOU payoff's two numbers sit on one line however their captions wrap.
+- onboarding-9: fixed. The struck "You" is body colour at 15px and fades to .75, not .5.
+- onboarding-10: fixed. The join invite leads with the game's sticker (GameArt, 40px) instead of the welcome's glyph.
+- onboarding-14: fixed. "($4.17 a month)" stays whole; the timeline lines are balanced, so "Two taps." isn't alone.
+- onboarding-15 (shared): fixed in the new look. Onboarding's answers and the paywall's plans pick in ink (ring and check), like the sheets' lists, so a question screen's only pink is Continue. This changes last night's "onboarding keeps the pink pick"; Trevor marked ink selection as right in his review.
+- more-1: fixed. Privacy's unpicked rows are the plain card with a hollow ring; sheets' and onboarding's unpicked radios are the same hollow ring (more-19 too, the radio half; the Home course search magnifier isn't done).
+- more-3 (shared): fixed. The paywall's Save 40% uses the vote chip tokens: butter in light, a gold outline in dark. The plan link's chips were fixed with plan-3.
+- more-4: fixed. "Your next round is set up" only right after onboarding; from Settings, Season or a record it says "Everything in Pro, starting now."
+- more-5: fixed. A public roadmap title cut at a word ends in an ellipsis (still 60 characters at most, the test's cap).
+- more-6: fixed. Every tee swatch has an ink ring at 25% (black reads on a dark card), and Silver is a swatch.
+- more-12, plan-11 (add rows): the plus is ink in a quiet circle in the new look, not a gold disc. The dashed tile stays. Course name vs City sizes: kept (the name field is the big name input everywhere, Edit player too).

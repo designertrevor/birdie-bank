@@ -24,7 +24,8 @@
   position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
   margin: 8px 16px 12px; padding: 22px 20px 18px; border-radius: var(--r-card); background: var(--band-mint); box-shadow: var(--hair); color: var(--ink);
 }
-.un-start-art { position: absolute; right: 12px; top: 8px; transform: rotate(-6deg); pointer-events: none; }
+/* Inset from the corner with air round it, its grass clear of the card edge (home-3) */
+.un-start-art { position: absolute; right: 20px; top: 18px; transform: rotate(-6deg); pointer-events: none; }
 .un-start-title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1.05; letter-spacing: -.02em; max-width: 72%; }
 .un-start-sub { font-size: 15px; line-height: 1.4; color: var(--body); max-width: 74%; }
 .un-start-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
@@ -123,11 +124,12 @@
 /* A long number on a tile (a trip's +$1,075.87) comes down a size */
 .un-tile-big.long { font-size: 22px; }
 
-/* The recap: its actions on one line (Share as an icon), the eyebrow one line with an ellipsis */
+/* The recap: its actions on one line (Share as an icon) */
 .recap-actions { flex-wrap: nowrap; }
 .recap-actions .recap-btn { flex: 1 1 auto; justify-content: center; min-width: 0; white-space: nowrap; }
 .recap-actions .recap-btn.icon { flex: 0 0 44px; width: 44px; padding: 0; }
-.recap-head .eyebrow { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 36px); }
+/* The eyebrow wraps to a second line rather than cutting the course off (home-11), clear of the X */
+.recap-head .eyebrow { display: block; max-width: calc(100% - 36px); }
 /* A callout card has the same hairline as every card, its bubble at the top rather than floating mid-card */
 .callout-list.bubbles .callout-row { box-shadow: var(--hair); align-items: start; }
 .callout-off { margin-top: 0; }
@@ -153,3 +155,13 @@
 .remind-card:has(> .rc-head:first-child + .rc-acts:last-child) > .rc-acts { grid-column: 2; }
 /* What's new's button is a quiet one: a filled button is for the screen's main action */
 .rc-btn.soft { background: var(--surface); color: var(--ink); }
+
+/* A trip card with its close X keeps one affordance in the corner: the whole card opens the trip, so
+   the chevron under the X goes (home-7) */
+.trip-card-wrap:has(> .trip-hide) .trip-card > .chevron { display: none; }
+
+/* Rounds in progress: each round named in the same title face as its card on Up next (home-9) */
+.sheet-item .rip-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 18px; letter-spacing: -.01em; }
+
+/* Short card copy breaks evenly, never leaving "a link." alone on its last line (home-12) */
+.un-start-sub { text-wrap: balance; }

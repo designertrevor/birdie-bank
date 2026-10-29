@@ -429,9 +429,10 @@ function sourceLabel(s) {
   try { return /^https?:\/\//i.test(s) ? new URL(s).hostname.replace(/^www\./, '') : s; } catch { return s; }
 }
 
-const TEE_COLORS = ['#1a1a1a', '#2f6fd6', '#f2f2f2', '#e8b94a', '#d64545', '#2c8c66'];
+const TEE_COLORS = ['#1a1a1a', '#2f6fd6', '#f2f2f2', '#b8bcc2', '#e8b94a', '#d64545', '#2c8c66'];
 // What a screen reader says for each swatch, never the color code
-const TEE_COLOR_NAMES = { '#1a1a1a': 'Black', '#2f6fd6': 'Blue', '#f2f2f2': 'White', '#e8b94a': 'Gold', '#d64545': 'Red', '#2c8c66': 'Green' };
+// Silver too, a common set of tees (more-6)
+const TEE_COLOR_NAMES = { '#1a1a1a': 'Black', '#2f6fd6': 'Blue', '#f2f2f2': 'White', '#b8bcc2': 'Silver', '#e8b94a': 'Gold', '#d64545': 'Red', '#2c8c66': 'Green' };
 
 function blankCourse(n = 18) {
   return {

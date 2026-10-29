@@ -268,11 +268,16 @@ export function friendlyTitle(text) {
   s = s.replace(/^New games?:\s+/i, '');
   s = s.split(/:\s|\.\s|;\s|\.$/)[0];
   s = s.replace(/^["“]([^"”]+)["”]$/, '$1').replace(/\s+/g, ' ').trim();
+  // A long one stops at a comma; with none it stops at a word and says so with an ellipsis, so it never
+  // reads as a sentence cut off mid-thought (more-5). Still 60 characters at most, the ellipsis included
+  let clipped = false;
   if (s.length > 60) {
     const cut = s.slice(0, 60).lastIndexOf(', ');
-    s = cut > 20 ? s.slice(0, cut) : s.slice(0, s.slice(0, 60).lastIndexOf(' '));
+    if (cut > 20) s = s.slice(0, cut);
+    else { s = s.slice(0, s.slice(0, 59).lastIndexOf(' ')); clipped = true; }
   }
   s = s.replace(/[,.;:\s]+$/, '');
+  if (clipped && s) s += '…';
   return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 

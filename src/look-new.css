@@ -176,6 +176,8 @@
 :root[data-look="new"] .resume-card .resume-go { background: var(--pink-fill); color: #fff; }
 :root[data-look="new"] .resume-card .resume-pulse { background: var(--pink); }
 :root[data-look="new"] .resume-card .resume-eyebrow { color: var(--eyebrow-ink); font-weight: 600; }
+/* The same tracked caps eyebrow as every other card on Up next, with its live dot (home-6) */
+:root[data-look="new"] .resume-card .resume-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 :root[data-look="new"] .resume-card .resume-sub { color: var(--mute); }
 :root[data-look="new"] .winner-hero { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
 :root[data-look="new"] .winner-hero .wa { color: var(--pink-text); }
@@ -190,13 +192,36 @@
 
 /* One of a list in a sheet or a setting (Where, who sees your profile, the banker): an ink ring and
    an ink check with no tint, like the When sheet's picked chip and the segmented controls (plan-12,
-   more-9). Picking people and onboarding's answers keep the pink pick */
+   more-9). Onboarding's answers and the paywall's plans too, so a question screen's only pink is its
+   button (onboarding-15). Picking people keeps the pink pick */
 :root[data-look="new"] .sheet .list-item.pick[role="radio"].on,
+:root[data-look="new"] .ob-choices .list-item.pick[role="radio"].on,
+:root[data-look="new"] .list-item.pick.pw-plan.on,
 :root[data-look="new"] .pp-choices .list-item.pick[role="radio"].on { background: var(--card); box-shadow: inset 0 0 0 2px var(--ink); }
 :root[data-look="new"] .sheet .list-item.pick[role="radio"].on .li-check.on,
+:root[data-look="new"] .ob-choices .list-item.pick[role="radio"].on .li-check.on,
+:root[data-look="new"] .list-item.pick.pw-plan.on .li-check.on,
 :root[data-look="new"] .pp-choices .list-item.pick[role="radio"].on .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+/* ...and the ones not picked are the plain card with a hollow ring, so they never look "on" next to the
+   picked one (more-1), the same radio as the Home course sheet's (more-19) */
+:root[data-look="new"] .pp-choices .list-item.pick[role="radio"]:not(.on) { background: var(--card); box-shadow: var(--hair); }
+:root[data-look="new"] .pp-choices .list-item.pick[role="radio"]:not(.on) .li-check,
+:root[data-look="new"] .sheet .list-item.pick[role="radio"]:not(.on) .li-check,
+:root[data-look="new"] .ob-choices .list-item.pick[role="radio"]:not(.on) .li-check { background: transparent; border: 1.5px solid var(--mute); }
 
 /* First tee's labels (Strokes, Bets, Gimmes) are the same tracked eyebrow as every in-card label,
    not a heavier untracked cap of their own (setup-16) */
 :root[data-look="new"] .ft-h,
 :root[data-look="new"] .screen.play .ft-h { font-weight: 600; letter-spacing: .1em; }
+
+/* Check marks in the new look: the eyebrow teal, a calm brand colour, not a kelly green louder than the
+   button (onboarding-3: the paywall's lists, What's new's Shipped) */
+:root[data-look="new"] { --check: var(--eyebrow-ink); }
+
+/* A secondary button in a sheet sits on the sheet's own white with the hairline, as it does on a page,
+   not cream-filled (the confirms' Cancel, more-2) */
+:root[data-look="new"] .sheet .full-btn.outline:not(:disabled) { background: var(--canvas); }
+
+/* Add rows (Add a course, Add tee, Edit plan's Add a course): an ink plus in a quiet circle like Add a
+   player, not a gold disc (more-12, plan-11) */
+:root[data-look="new"] .add-ci { background: var(--surface); color: var(--ink); }

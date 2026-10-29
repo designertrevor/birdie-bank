@@ -178,5 +178,6 @@ export function sinceDay(at, now = Date.now()) {
 /** The card's line, friendly and never about how late it is: "Mike still owes you $18 from Saturday". */
 export function nudgeLine(name, amount, since, { now = Date.now(), fmt = v => `$${v}` } = {}) {
   const first = String(name || '').trim().split(/\s+/)[0] || 'A friend';
-  return `${first} still owes you ${fmt(amount)} from ${sinceDay(since, now)}`;
+  // The date never breaks inside itself ("from / Aug 29", home-8)
+  return `${first} still owes you ${fmt(amount)} from ${sinceDay(since, now).replace(/ /g, '\u00a0')}`;
 }

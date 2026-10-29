@@ -33,8 +33,10 @@
 
 /* The drawing at the top of a step: centred, with the page's widest margin under it */
 .ob-art { display: flex; justify-content: center; align-items: flex-end; margin: 8px 0 24px; }
-.ob-art-scene { overflow: hidden; border-radius: var(--r-card); background: var(--ob-art-bg); aspect-ratio: 1792 / 1024; }
-.ob-art-scene > svg { display: block; width: 100%; height: 100%; }
+/* A scene whole, uncropped, as a sticker: no box clipping it to a rounded rectangle (that read as a mint
+   plate, art-1); the svg's own viewBox leaves room for the border on every side (Onboarding.jsx) */
+.ob-art-scene { background: none; aspect-ratio: 1928 / 1160; }
+.ob-art-scene > svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .ob-art-spot { height: 176px; }
 .ob-art .ob-spot { width: 160px; height: 160px; }
 
@@ -50,8 +52,10 @@
 .ob-payoff .ob-art-spot { height: 148px; margin-bottom: 16px; }
 .ob-payoff .ob-art .ob-spot { width: 136px; height: 136px; }
 /* All set's group: the payoff size, so the review card still fits under it */
-.ob-done .ob-art-spot { height: 148px; margin-bottom: 16px; }
-.ob-done .ob-art .ob-spot { width: 136px; height: 136px; }
+.ob-done .ob-art-spot { height: 176px; margin-bottom: 16px; }
+.ob-done .ob-art .ob-spot { width: 168px; height: 168px; }
+/* Centred under the centred crowd, like every payoff (onboarding-4) */
+.ob-done > .eyebrow, .ob-done > .ob-q { text-align: center; }
 .ob-payoff .eyebrow { margin: 0 0 8px; }
 .ob-payoff .ob-sub { max-width: 340px; margin: 0 auto 20px; text-wrap: balance; }
 .ob-payoff .ob-jobs { text-align: left; }
@@ -91,3 +95,15 @@
   .ob-stage .stage > .ob-page { animation: none; }
   .ob-flow .ob-progress i { transition: none; }
 }
+
+/* The age answers: an even pair filling the row at a choice's height, not two chips of different widths (onboarding-6) */
+.ob-age .chip-row { display: grid; grid-template-columns: 1fr 1fr; }
+.ob-age .pill-btn { min-height: 56px; justify-content: center; text-align: center; white-space: normal; line-height: 1.2; }
+
+/* Payoff 3: both numbers on one line whatever their captions wrap to (onboarding-8) */
+.ob-iou { align-items: flex-start; }
+.ob-iou-arrow { align-self: center; }
+/* Payoff 4: the struck "You" reads, the before half of the joke (onboarding-9) */
+.ob-flow .ob-job-you { color: var(--body); font-size: 15px; }
+.ob-flow .ob-job-you { animation-name: obJobFade; }
+@keyframes obJobFade { to { opacity: .75; } }

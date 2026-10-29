@@ -121,7 +121,7 @@ button.pd-seat:active { background: var(--surface); }
 .pa-msg { display: block; width: 100%; margin: 0; padding: 0; border: none; background: transparent; color: var(--ink); font: inherit; font-size: 18px; line-height: 1.35; resize: none; outline: none; }
 .pa-foot { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; color: var(--mute); }
 .pa-foot i { font-size: 14px; }
-.pa-hint { margin: 10px 20px 0; font-size: 14px; line-height: 1.4; color: var(--mute); text-wrap: pretty; }
+.pa-hint { margin: 10px 20px 0; font-size: 14px; line-height: 1.4; color: var(--mute); text-wrap: balance; } /* two even lines, no "it out." alone (plan-12) */
 .pa-people { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px; }
 .pa-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: none; border-radius: var(--r-chip); background: var(--card); box-shadow: var(--hair); color: var(--ink); font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
 .pa-chip.on { background: var(--ink); color: var(--on-ink); box-shadow: none; }

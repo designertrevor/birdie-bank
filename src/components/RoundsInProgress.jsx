@@ -23,7 +23,7 @@ export function RoundsInProgressSheet({ open, onClose, currentId = null }) {
         <button key={r.id} className={`sheet-item ${r.id === currentId ? 'selected' : ''}`} onClick={() => go(r.id)} aria-current={r.id === currentId || undefined}>
           <div className="row-main">
             {/* The list row title like every other row's (home-23) */}
-            <div className="set-name">{gameLabel(r) || 'Round'} · {r.course.name}</div>
+            <div className="set-name d rip-title">{gameLabel(r) || 'Round'} · {r.course.name}</div>
             <span className="set-sub" style={{ display: 'block' }}>
               {r.id === currentId ? 'Playing now · ' : ''}{holesScored(r)} of {r.holes.length} holes · {r.players.map(p => p.name.split(' ')[0]).join(', ')}
             </span>
