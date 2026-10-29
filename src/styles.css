@@ -3722,15 +3722,16 @@ a.header-btn.rm-open { text-decoration: none; }
 .pod-2 .pod-step { height: 56px; background: var(--mint); }
 .pod-3 .pod-step { height: 42px; background: var(--peach); }
 .pod-1 .pod-face { min-height: 82px; }
-/* In the dark the pastel steps glared: the same colours sunk into the card, first place strongest,
-   with light numbers on the two lower steps */
-:root[data-theme="dark"] .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--ochre)) 72%, var(--card)); }
-:root[data-theme="dark"] .podium .pod-2 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--mint)) 42%, var(--card)); color: var(--ink); }
-:root[data-theme="dark"] .podium .pod-3 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--peach)) 28%, var(--card)); color: var(--ink); }
+/* One podium everywhere: gold first, butter second, cream third (Podium.jsx). In the dark the gold
+   stays the winner's, sunk a little into the card, and the lower steps are warm greys with light
+   numbers, never an olive or brown wash of the gold */
+:root[data-theme="dark"] .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--ochre) 82%, var(--card)); }
+:root[data-theme="dark"] .podium .pod-2 .pod-step { background: #3b352c; color: var(--ink); }
+:root[data-theme="dark"] .podium .pod-3 .pod-step { background: #2e2a25; color: var(--ink); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--ochre)) 72%, var(--card)); }
-  :root:not([data-theme="light"]) .podium .pod-2 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--mint)) 42%, var(--card)); color: var(--ink); }
-  :root:not([data-theme="light"]) .podium .pod-3 .pod-step { background: color-mix(in srgb, var(--pod-tint, var(--peach)) 28%, var(--card)); color: var(--ink); }
+  :root:not([data-theme="light"]) .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--ochre) 82%, var(--card)); }
+  :root:not([data-theme="light"]) .podium .pod-2 .pod-step { background: #3b352c; color: var(--ink); }
+  :root:not([data-theme="light"]) .podium .pod-3 .pod-step { background: #2e2a25; color: var(--ink); }
 }
 .stand-group { margin: 0 16px 8px; background: var(--card); border-radius: 20px; overflow: hidden; }
 .stand-line { display: flex; align-items: center; gap: 10px; padding: 10px 16px; position: relative; }

@@ -251,8 +251,8 @@ export default function RoundDetail({ id, celebrate }) {
           {nice && <div className="me-line">You were just playing: {nice.score} ({nice.toPar})</div>}
           {/* The podium carries the faces and places; each amount is in the hero and Standings */}
           {podium && (teamSides
-            ? <TeamPodium teams={teamSides} faces={faces} fmt={fmt} tint={gameTheme(round.game).tint} amounts={false} />
-            : <Podium standings={res.standings} faces={faces} fmt={fmt} tint={gameTheme(round.game).tint} amounts={false} />)}
+            ? <TeamPodium teams={teamSides} faces={faces} fmt={fmt} amounts={false} />
+            : <Podium standings={res.standings} faces={faces} fmt={fmt} amounts={false} />)}
         </div>
         )}
 
