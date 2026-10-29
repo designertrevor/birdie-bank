@@ -4,6 +4,7 @@
 // walls) come from --sc-* tokens, so the dark theme gets dusk instead of a pasted-on day.
 import { BuddyFigure } from './BuddyArt.jsx';
 import { ArtImage } from './ArtFile.jsx';
+import { stickerUnits } from '../lib/sticker.js';
 import { PULLED_SCENES, artFile } from '../lib/art-files.js';
 import { INK, BALL, PINK, DEEP, OCHRE, GOLD, TEAL, CORAL } from '../lib/art-palette.js';
 
@@ -167,7 +168,8 @@ export function Scene({ kind = 'course', ids = DEFAULT_IDS, className = '' }) {
   if (!file && PULLED_SCENES.has(kind)) return null;
   return (
     <svg className={`scene ${className}`.trim()} viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-      {file ? <ArtImage file={file} w={400} h={240} slice /> : <SceneArt kind={kind} ids={ids} />}
+      {/* A scene shows about 360px wide on a phone: its sticker border is sized for that */}
+      {file ? <ArtImage file={file} w={400} h={240} slice sticker={stickerUnits(400, 360)} /> : <SceneArt kind={kind} ids={ids} />}
     </svg>
   );
 }

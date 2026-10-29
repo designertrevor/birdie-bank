@@ -55,11 +55,9 @@ peach `#ffb084`, blush `#ffd6e5` (the values live in `src/lib/art-palette.js`; t
 Every drawing in the manifest plus 30 new spots, 16 new hats and 14 new critters came in as SVGs from
 Recraft (the raw exports are in `overnight/illustration-raw-svg/`, the review pages in `overnight/`).
 Each file has its canvas fill stripped, its sheet split, its colours snapped to the palette and its
-box cropped square (scenes keep the full canvas). In the dark theme a scene or spot gets a thin cream
-outline from the app (`.art-outline` in `styles.css`); buddies, critters and game art sit on their
-backdrop and skip it. The overhaul placed the new spots on 2026-10-26 (each one's screens are
-in `art-manifest.js`); agreed, piggy and mostrounds still say "not placed yet". bragging and buying
-sit on a cream disc (`.art-plate`) with no dark outline, since their ball is cut out to the sky.
+box cropped square (scenes keep the full canvas). The app sets every scene, spot and game sticker on
+the page with a white sticker border (see Stickers, 2026-10-29, below). The overhaul placed the new spots on 2026-10-26 (each one's screens are
+in `art-manifest.js`); agreed, piggy and mostrounds still say "not placed yet".
 
 ## Fix pass, 2026-10-28
 
@@ -75,5 +73,25 @@ region up to its ink, recolour the inside of thick ink, brush strokes):
   three fingers across the other hand and lavender and coral sleeves inside its ink line.
 - mostrounds is a ball and a tally of five; face-great has closed happy eyes; the punch card is
   ochre; goldcrown is new, the round 4 crown on its own for the podium.
-- Buddies and critters carry their own thin line (`.buddy-ring` in styles.css): ink on a light card
-  or pastel backdrop, cream on a dark card or the teal backdrop.
+- Buddies and critters carried a thin CSS line (`.buddy-ring`); replaced on 2026-10-29 by the ink
+  outline in their files (below).
+
+## Stickers, 2026-10-29
+
+Trevor: every illustration sits on any background like a die-cut sticker, and no colour shapes behind
+the drawings.
+
+- The app draws an even white border round each drawing's silhouette in both themes (an SVG filter in
+  `src/components/ArtFile.jsx`: the shape blurred and cut, filled white, with a faint hairline outside
+  it in the light theme so it reads on a white card). Its width follows the size the drawing shows at
+  (`src/lib/sticker.js`): about 3 to 4px on cards, 1.5px on a 28px critter. Gaps between arms and
+  legs narrower than twice the border fill white, as on a real sticker; wider ones must be cut out
+  of the file to show the background.
+- Game art has no rounded backdrop and spots no colour blob or cream plate. The birdie and eagle
+  popping up on a score sit on the card as stickers, no circle behind them.
+- Buddies and critters keep the backdrop circle the player picked (it's their avatar), and each file
+  now has an ink outline round the whole silhouette plus an ink edge on every colour region big
+  enough to be a hat, a band, glasses or the head (scripted: a stroked copy of every shape behind the
+  drawing, and a stroke on each large colour region).
+- wizard: the round 4 file again with the whole hat, its cone shortened so the ball is the set's size.
+- birdie: the golf ball it stood on is gone and the bird is centred in its box, like the eagle.

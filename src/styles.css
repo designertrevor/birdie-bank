@@ -824,8 +824,10 @@ button:disabled { cursor: not-allowed; }
 /* Play: each player's face beside their name, and a critter when the score is a birdie or better */
 .score-row > .avatar { margin-right: 0; width: 38px; height: 38px; align-self: flex-start; margin-top: 2px; }
 .sc-num { position: relative; }
-/* The birdie critter pops in beside the tapped score, holds a beat and floats off (2.4s, the same as CRITTER_MS in play/HoleScores.jsx) */
-.sc-critter { position: absolute; top: -12px; left: -14px; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px var(--card); animation: critterPop 2.4s ease-out both; }
+/* The birdie critter pops in beside the tapped score, holds a beat and floats off (2.4s, the same as CRITTER_MS in play/HoleScores.jsx).
+   It's a sticker on the card, no colour circle behind it */
+.sc-critter { position: absolute; top: -12px; left: -14px; width: 28px; height: 28px; animation: critterPop 2.4s ease-out both; }
+.sc-critter .buddy-art { overflow: visible; }
 .sc-critter .buddy-art { width: 100%; height: 100%; display: block; }
 @keyframes critterPop {
   0% { opacity: 0; transform: scale(.3) rotate(-14deg); }
@@ -3890,19 +3892,17 @@ a.header-btn.rm-open { text-decoration: none; }
   :root:not([data-theme="light"]):not([data-theme="dark"]) .art-dark { display: inline; }
 }
 .art-icon { width: 1em; height: 1em; display: inline-block; vertical-align: -0.125em; }
-/* Scenes and spots keep one file: in the dark theme the app draws a thin cream outline around the drawing, like a sticker (Trevor, 2026-10-11). Buddies, critters and game art sit on a colour backdrop and skip it. */
-:root[data-theme="dark"] .art-outline { filter: drop-shadow(0 1.5px 0 #fbf7ec) drop-shadow(0 -1.5px 0 #fbf7ec) drop-shadow(1.5px 0 0 #fbf7ec) drop-shadow(-1.5px 0 0 #fbf7ec); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .art-outline { filter: drop-shadow(0 1.5px 0 #fbf7ec) drop-shadow(0 -1.5px 0 #fbf7ec) drop-shadow(1.5px 0 0 #fbf7ec) drop-shadow(-1.5px 0 0 #fbf7ec); }
-}
-/* A Ball buddy's own line (Trevor, 2026-10-28: a white hat vanished on a light card, a black brim on a dark one). On its
-   backdrop the line follows the backdrop: ink on the pastels, cream on teal. Standing on the page (the crew on the tee,
-   the high five) it follows the theme. In units of the buddy's 64 box. */
-.buddy-ring-ink, .buddy-ring { filter: drop-shadow(0 1.2px 0 #0a0a0a) drop-shadow(0 -1.2px 0 #0a0a0a) drop-shadow(1.2px 0 0 #0a0a0a) drop-shadow(-1.2px 0 0 #0a0a0a); }
-.buddy-ring-cream, :root[data-theme="dark"] .buddy-ring { filter: drop-shadow(0 1.2px 0 #fbf7ec) drop-shadow(0 -1.2px 0 #fbf7ec) drop-shadow(1.2px 0 0 #fbf7ec) drop-shadow(-1.2px 0 0 #fbf7ec); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .buddy-ring { filter: drop-shadow(0 1.2px 0 #fbf7ec) drop-shadow(0 -1.2px 0 #fbf7ec) drop-shadow(1.2px 0 0 #fbf7ec) drop-shadow(-1.2px 0 0 #fbf7ec); }
-}
+/* Every illustration is a die-cut sticker: a white border follows its silhouette (the filter is in ArtFile.jsx,
+   Trevor 2026-10-29). In the light theme a hairline just outside the white keeps the edge on a white card;
+   in the dark theme the white alone carries it. Ball buddy and critter avatars sit on their backdrop instead,
+   with the ink outline in their own files. */
+:root { --stk-edge: #ffffff; --stk-hair: rgba(10,10,10,.14); }
+:root[data-theme="dark"] { --stk-hair: rgba(10,10,10,0); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --stk-hair: rgba(10,10,10,0); } }
+.stk-edge { flood-color: var(--stk-edge); }
+.stk-hair { flood-color: var(--stk-hair); }
+/* A sticker's border reaches a few px past its box, so the box doesn't clip it */
+svg.spot, svg.game-art { overflow: visible; }
 
 /* The art sheet (?art): every drawing, labelled, in both themes */
 .art-sheet { max-width: 1120px; margin: 0 auto; padding: 0 20px 80px; color: var(--ink); }

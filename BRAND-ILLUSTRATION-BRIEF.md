@@ -31,7 +31,7 @@ What ties them together: the same brush line at the same weight, the same palett
 6. **Marks stay small.** Dots, pins and dimples are a hint, never a blob.
 7. Palette only: ink #0a0a0a, ball #fbf7ec, pink #ff4d8b (one pop per image at most), deep pink #d42a6b, ochre #e8b94a, gold #c99a30, coin #ffd45c, teal #1a3a3a, mint #a4d4c5, coral #ff6b5a, lavender #b8a4ed, peach #ffb084, blush #ffd6e5. The model's lime is snapped on export: mint for grass, cream for balls, ochre for coins and cups.
 8. Transparent background, SVG. The sky is cut out completely, including the pockets between arms and legs, so the dark theme's outline hugs the drawing. Gaps over grass or another object stay filled. Never flood-fill.
-9. One file for both themes. In the dark theme the app draws a thin cream outline around scenes and spots, like a sticker (a CSS drop-shadow filter, `.art-outline` in `styles.css`). Buddies, critters and game art sit on a colour backdrop and skip it. No dusk files, no recolouring.
+9. One file for both themes. The app sets every scene, spot and game sticker on the page as a die-cut sticker: an even white border round its silhouette in both themes (an SVG filter in `src/components/ArtFile.jsx`, decided 2026-10-29). No colour plate or blob behind a drawing. Buddies and critters are avatars: they keep the backdrop circle the player picked and carry their own ink outline round the head, the glasses and every hat. No dusk files, no recolouring.
 10. No text, no logos, no "Birdie Bank". The name is changing.
 11. Warm and a little retro in the look (old golf), modern buddies in the content (bucket hats, snapbacks, a cooler, a cart). No blazers, no country-club wealth.
 12. Funny like a friend. A losing face is rueful, never crushed. Jokes live in heroes and empty states, never on the Tab or on results where someone just lost money.
@@ -48,7 +48,7 @@ The point of the first batch is to lock the family before making 60 drawings. Ap
 1. `scenes/course`, the first tee: four golfers, one bent over a tee, one checking a phone, one stretching badly, one with a cooler. Day version.
 2. `spots/wallet`: the empty wallet, 120 box, goofy enough to be funny at 150px, still clear at 84px.
 3. `spots/face-great`, `spots/face-ok`, `spots/face-off`: the ball's three faces, since they set the face style for every buddy.
-4. `games/wolf`, `games/skins`, `games/nassau`, `games/banker`: four Classics stickers on nothing (the app draws the ochre backdrop), to lock the small tier.
+4. `games/wolf`, `games/skins`, `games/nassau`, `games/banker`: four Classics stickers on nothing (the app adds the white sticker border), to lock the small tier.
 5. `buddies/bucket` and `critters/birdie`: one of each, the birdie checked at 28px.
 6. `scenes/course` dusk version, to lock dark mode.
 

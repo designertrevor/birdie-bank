@@ -2,7 +2,8 @@
 // on a backdrop, and the critters shelf (birdie, eagle, goose and friends) in the same palette. Drawn on a 64 by 64 square; the avatar circle around it does the clipping.
 // The list and the names live in lib/avatars.js.
 import { backdropOf } from '../lib/avatars.js';
-import { ArtImage } from './ArtFile.jsx';
+import { ArtImage, Sticker } from './ArtFile.jsx';
+import { stickerUnits } from '../lib/sticker.js';
 import { artFile } from '../lib/art-files.js';
 import { INK, BALL, PINK, DEEP, OCHRE, GOLD, TEAL, MINT, CORAL, PEACH, BLUSH } from '../lib/art-palette.js';
 
@@ -340,29 +341,42 @@ const CRITTERS = {
 
 /**
  * A buddy with no backdrop, as a group to place inside a bigger drawing (the spot illustrations).
- * `x` and `y` are its top left and `size` its width, in the parent drawing's units.
+ * `x` and `y` are its top left and `size` its width, in the parent drawing's units. The drawing it
+ * stands in is the sticker (one white border round the whole group), so it has none of its own; its
+ * ink outline is in its file (Trevor, 2026-10-29: round the head, the glasses and every hat).
  */
 export function BuddyFigure({ id, x = 0, y = 0, size = 64 }) {
   const Critter = CRITTERS[id];
   const Hat = ART[id] || ART.bucket;
   const file = fileFor(id);
-  // Standing on the page with no backdrop, a buddy carries its own line: ink in the light theme, cream in the dark, so a white hat or a black brim never melts into the card
-  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{file ? <ArtImage file={file} w={64} h={64} outline={false} ring="buddy-ring" /> : Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
+  return <g transform={`translate(${x} ${y}) scale(${size / 64})`}>{file ? <ArtImage file={file} w={64} h={64} sticker={false} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}</g>;
 }
 
 /** The outside drawing for a buddy (src/art/buddies/<id>.svg) or a critter (src/art/critters/<id>.svg), if one has landed. */
 const fileFor = id => artFile(CRITTERS[id] ? 'critters' : 'buddies', id);
 
-/** One Ball buddy (or critter) on its backdrop, as an SVG that fills its box. */
-export function BuddyArt({ id, bg, className = '' }) {
+/**
+ * One Ball buddy (or critter) on its backdrop, as an SVG that fills its box: the avatar. `bg={null}`
+ * draws it with no backdrop, as a sticker on the page instead (a critter popping up on a score);
+ * `px` is how wide it shows, for the sticker border's width.
+ */
+export function BuddyArt({ id, bg, px = 28, className = '' }) {
   const Critter = CRITTERS[id];
   const Hat = ART[id] || ART.bucket;
   const file = fileFor(id);
+  const art = file ? <ArtImage file={file} w={64} h={64} sticker={false} /> : Critter ? <Critter /> : <><Ball /><Hat /></>;
+  if (bg === null) {
+    return (
+      <svg className={`buddy-art bare ${className}`.trim()} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <Sticker r={stickerUnits(64, px)} box={[0, 0, 64, 64]}>{art}</Sticker>
+      </svg>
+    );
+  }
   return (
-    <svg className={`buddy-art ${className}`} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+    <svg className={`buddy-art ${className}`.trim()} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <rect width="64" height="64" fill={backdropOf(bg).hex} />
-      {/* On its backdrop a buddy's (or critter's) line follows the backdrop, not the theme: ink on the pastels, cream on teal */}
-      {file ? <ArtImage file={file} w={64} h={64} outline={false} ring={backdropOf(bg).ink === '#ffffff' ? 'buddy-ring-cream' : 'buddy-ring-ink'} /> : Critter ? <Critter /> : <><Ball /><Hat /></>}
+      {/* The ink line round the head, the glasses and the hat is in the file, so it holds on every backdrop and on the white page */}
+      {art}
       {/* The teal backdrop is as dark as a dark card: a cream rim keeps the circle there (styles.css .bd-rim; an avatar draws its own) */}
       {backdropOf(bg).ink === '#ffffff' && <circle className="bd-rim" cx="32" cy="32" r="31.2" fill="none" stroke={BALL} strokeOpacity=".6" strokeWidth="1.6" />}
     </svg>
