@@ -14,6 +14,7 @@ import { BET_LADDER, MAX_BALLOT_GAMES, betChoices, betLabel, betOf, betUnitLabel
 import { sideBetLine } from '../../lib/stakes.js';
 import { inUnits, playForLine } from '../../lib/play-for.js';
 import { nearbyBets } from '../../lib/setup-screen.js';
+import { gameTheme } from '../../lib/game-theme.js';
 
 /** Who gets asked. Optional: anyone with the group link can answer too. */
 export function InviteStep({ invited, setInvited, onNext }) {
@@ -88,7 +89,8 @@ export function VoteStep({ game, holesCount = 18, opts, onPlan, ballot = [], ini
   return (
     <>
       <div className="scroll">
-        <div className="block summary-card">
+        {/* The game's pale wash, as Round ready's card wears it, not a saturated ochre slab: it isn't the thing to tap */}
+        <div className="block summary-card themed" style={{ '--gt-soft': gameTheme(game).soft }}>
           <div className="li-sub">You suggest</div>
           <div className="d stake-big">{GAMES[game].name} · {inUnits({ playFor }, betLabel(game, opts, bet, holesCount))}</div>
           {playForLine({ playFor }) && <div className="li-sub">{playForLine({ playFor })}</div>}

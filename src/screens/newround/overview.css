@@ -34,10 +34,12 @@
 .ov-row:active:not(:disabled) { background: var(--surface); }
 .ov-row:disabled { cursor: default; }
 /* A row that can't open yet stays readable in the sun (3:1 and up), its sub line saying what it waits on */
-.ov-row:disabled .ov-main, .ov-row:disabled .ov-change { opacity: .72; }
+.ov-row:disabled .ov-main { opacity: .72; }
 .ov-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .ov-label { font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--mute); }
-.ov-value { font-family: var(--display); font-weight: var(--display-weight); font-size: 18px; line-height: 1.25; color: var(--ink); overflow-wrap: anywhere; }
+/* The values in the body face (the serif stays the title's), so the type doesn't switch row to row
+   against Not set yet, and a list of players breaks evenly */
+.ov-value { font-family: var(--body-font); font-weight: 600; font-size: 17px; line-height: 1.3; color: var(--ink); overflow-wrap: anywhere; text-wrap: balance; }
 .ov-empty { font-family: var(--body-font); font-weight: 500; font-size: 16px; color: var(--mute-soft); }
 .ov-sub { font-size: 13px; line-height: 1.4; color: var(--mute); }
 .ov-note { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--state-vote-ink); }
@@ -60,7 +62,9 @@
 
 /* Picked rows in setup (a game, a course, a player): one quiet style, an ink edge and an ink check on
    the card, so a picked foursome isn't a wall of pink and pink stays on the one button to tap */
-.setup :is(.game-row.selected, .game-tile.selected, .list-item.pick.on) { background: var(--card); box-shadow: inset 0 0 0 2px var(--ink); }
+/* ...a 1.5px ink hairline, not a 2px frame: four picked players read as picked, not four heavy black boxes
+   fighting the black Next button; the check disc carries the rest */
+.setup :is(.game-row.selected, .game-tile.selected, .list-item.pick.on) { background: var(--card); box-shadow: inset 0 0 0 1.5px var(--ink); }
 .setup .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
 .setup .game-row.selected .rules-chip,
 .setup .player-pick.on .pick-extra .hc-chip:not(.missing) { box-shadow: none; background: var(--surface); }
@@ -102,3 +106,11 @@
 /* A link inside a help line keeps the line's size, with an invisible pad for a 44px tap */
 .setup .field-help .link-btn.inline { position: relative; min-height: 0; padding: 0; font-size: inherit; vertical-align: baseline; }
 .setup .field-help .link-btn.inline::before { content: ''; position: absolute; left: -6px; right: -6px; top: 50%; height: 44px; transform: translateY(-50%); }
+
+/* Setup's "what's on the line" card: the game's pale wash in the light, like Round ready's card (the
+   ochre slab was the loudest block in setup); the dark keeps the card with its edge on top */
+.block.summary-card.themed { background: var(--gt-soft, color-mix(in srgb, var(--ochre) 30%, var(--card))); }
+
+/* Handicaps and Play for opened from the overview: one card, then a drawing centred in the room under
+   it, so the step reads calm rather than unfinished */
+.ov-step-spot { display: block; margin: 28px auto 0; }

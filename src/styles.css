@@ -753,9 +753,11 @@ button:disabled { cursor: not-allowed; }
   font-size: 20px; color: var(--mute-soft); cursor: pointer; transition: transform .25s var(--spring), color .15s;
 }
 .course-star:active { transform: scale(.85); }
-.course-star.on { color: #a87200; animation: pop .35s var(--spring); } /* gold that keeps 3:1 on a white card */
-:root[data-theme="dark"] .course-star.on { color: #f2c14e; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .course-star.on { color: #f2c14e; } }
+/* The filled star in the brand's gold with a hairline ink edge (the edge keeps it 3:1 on a white card,
+   where the darker mustard read brown), the same gold as the dark theme's */
+.course-star.on { color: var(--ochre); -webkit-text-stroke: 1px var(--ink); animation: pop .35s var(--spring); }
+:root[data-theme="dark"] .course-star.on { color: #f2c14e; -webkit-text-stroke: 0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .course-star.on { color: #f2c14e; -webkit-text-stroke: 0; } }
 .course-row:has(.course-star:active) { transform: none; }
 .course-star-hint { display: flex; align-items: center; gap: 6px; margin: 0 16px 10px; font-size: 13px; color: var(--mute); }
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px 10px; }
@@ -1344,6 +1346,9 @@ button:disabled { cursor: not-allowed; }
 .seat-req .sr-text { flex: 1; font-size: 15px; line-height: 1.35; min-width: 0; }
 .seat-req .pill-btn { padding: 8px 14px; min-height: 44px; }
 .ap-hole { min-width: 44px; min-height: 44px; justify-content: center; }
+/* The holes to start on fill the sheet's width in sixes, lined up with the name field over them */
+.chip-row.ap-holes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.ap-holes .ap-hole { min-width: 0; width: 100%; margin: 0; }
 .seat-req .pill-btn.ghost { background: transparent; color: var(--on-pastel); box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.35); }
 .seat-req.keeper-bar { background: var(--mint); }
 .seat-req .sr-sub { display: block; margin-top: 2px; font-size: 13px; opacity: .8; }
@@ -1544,6 +1549,11 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .side-choice-wrap { position: relative; }
 .side-choice-wrap .sheet-item.side-choice { padding-bottom: 50px; }
 .side-choice-wrap .side-choice-rules { position: absolute; left: 92px; bottom: 22px; }
+/* Each side game's drawing at a size that reads, in its own column, no plate behind it */
+.side-choice .set-icon.sgc-art { width: 48px; height: 48px; margin-right: 0; align-self: flex-start; }
+/* The add rows (a side game, a side bet): the round add button with its line of what's in it under the label */
+.add-row.add-side .row-main { display: flex; flex-direction: column; min-width: 0; }
+.add-row.add-side .set-sub { margin-top: 2px; }
 .side-game .sg-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .money-bar.mb-tap { display: block; width: calc(100% - 32px); border: none; font: inherit; color: inherit; text-align: inherit; cursor: pointer; }
 .money-bar.mb-tap:active { transform: scale(.98); }
@@ -1820,8 +1830,9 @@ button.lately-row:active { background: var(--surface); }
 
 /* Overnight 5: courses near you in the course picker */
 .near-ask { padding: 4px 16px 6px; }
-.near-btn { background: var(--surface); }
-.near-btn i { color: var(--pink); }
+/* A secondary control: its arrow in ink, not pink (pink is for the one thing to tap), and a full 44px tall */
+.near-btn { background: var(--surface); min-height: 44px; }
+.near-btn i { color: var(--ink); }
 .near-btn:disabled { opacity: .8; }
 .near-btn:disabled i { color: var(--mute); }
 .near-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 16px 4px; font-size: 13px; color: var(--mute); min-height: 32px; }
@@ -2206,7 +2217,7 @@ button.trip-card:active { transform: scale(.97); }
 /* The padding folds too, or the row would stop 20px short of nothing */
 .bp-wrap.out > .bet-prompt { animation: bp-out 200ms ease-in both; padding-top: 0; padding-bottom: 0; }
 @keyframes bp-out { to { opacity: 0; transform: translateY(-6px); } }
-.bp-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); color: var(--pink-text); font-size: 19px; }
+.bp-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface); color: var(--icon); font-size: 19px; }
 .bp-main { min-width: 0; flex: 1; }
 .bp-title { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.3; }
 .bp-text { margin-top: 2px; font-size: 14px; color: var(--body); line-height: 1.4; }
@@ -3677,6 +3688,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .pf-ring { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: conic-gradient(var(--win) var(--deg), var(--surface-strong) 0); }
 .pf-ring span { width: 32px; height: 32px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: 11px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The reward chips (Lunch, A drink, Custom) take a full 44px tap */
+.pf-chips > .pill-btn.pick-chip.sm { min-height: 44px; }
 .pf-chip { border: none; border-radius: 999px; padding: 7px 11px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 .pf-chip i { color: var(--icon); font-size: 12px; }
 .co-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -3723,15 +3736,15 @@ a.header-btn.rm-open { text-decoration: none; }
 .pod-3 .pod-step { height: 42px; background: var(--peach); }
 .pod-1 .pod-face { min-height: 82px; }
 /* One podium everywhere: gold first, butter second, cream third (Podium.jsx). In the dark the gold
-   stays the winner's, sunk a little into the card, and the lower steps are warm greys with light
-   numbers, never an olive or brown wash of the gold */
-:root[data-theme="dark"] .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--ochre) 82%, var(--card)); }
-:root[data-theme="dark"] .podium .pod-2 .pod-step { background: #3b352c; color: var(--ink); }
-:root[data-theme="dark"] .podium .pod-3 .pod-step { background: #2e2a25; color: var(--ink); }
+   stays the winner's at full strength, and the lower steps are two warm greys a notch apart (no brown
+   or olive wash of the gold), each with a gold hairline on top so the three still read as one podium */
+:root[data-theme="dark"] .podium .pod-1 .pod-step { background: var(--ochre); }
+:root[data-theme="dark"] .podium .pod-2 .pod-step { background: #3c3b38; color: var(--ink); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ochre) 45%, transparent); }
+:root[data-theme="dark"] .podium .pod-3 .pod-step { background: #302f2d; color: var(--ink); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ochre) 45%, transparent); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .podium .pod-1 .pod-step { background: color-mix(in srgb, var(--ochre) 82%, var(--card)); }
-  :root:not([data-theme="light"]) .podium .pod-2 .pod-step { background: #3b352c; color: var(--ink); }
-  :root:not([data-theme="light"]) .podium .pod-3 .pod-step { background: #2e2a25; color: var(--ink); }
+  :root:not([data-theme="light"]) .podium .pod-1 .pod-step { background: var(--ochre); }
+  :root:not([data-theme="light"]) .podium .pod-2 .pod-step { background: #3c3b38; color: var(--ink); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ochre) 45%, transparent); }
+  :root:not([data-theme="light"]) .podium .pod-3 .pod-step { background: #302f2d; color: var(--ink); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ochre) 45%, transparent); }
 }
 .stand-group { margin: 0 16px 8px; background: var(--card); border-radius: 20px; overflow: hidden; }
 .stand-line { display: flex; align-items: center; gap: 10px; padding: 10px 16px; position: relative; }
@@ -4205,7 +4218,8 @@ svg.spot, svg.game-art { overflow: visible; }
 .money-bar.themed .mb-item.lead { background: var(--gt-soft); }
 .money-bar.themed .mb-item.lead .mb-p, .money-bar.themed .mb-item.lead .mb-d { color: var(--body); }
 /* A game panel's art, where an icon used to stand in for the game */
-.bn-art { width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px; outline: 2px solid rgba(255,255,255,.6); }
+/* No plate or frame behind it: the drawing's own sticker edge is its only edge, big enough to read */
+.bn-art { width: 34px; height: 34px; flex-shrink: 0; margin: -7px 0; }
 /* Moments: the game's art stuck on the banner's corner like a sticker. It comes and goes with the banner */
 .moment-banner.stuck { padding-right: 52px; }
 .mo-sticker {

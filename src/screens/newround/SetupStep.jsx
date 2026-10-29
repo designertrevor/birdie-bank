@@ -22,6 +22,7 @@ import { countsMoney, inUnits, padUnit, playForLine } from '../../lib/play-for.j
 import { challengeIdOfBet } from '../../lib/challenges.js';
 import { challengeNote } from '../../lib/setup-screen.js';
 import { HolePicker } from './Pickers.jsx';
+import { gameTheme } from '../../lib/game-theme.js';
 
 export function SetupStep({ game, course, holesCount, nine, picked, setPicked, casual = [], opts, setOpts, useHc, setUseHc, startHole, setStartHole, onStart, onLater = null, teams, setTeams, sideGames = [], setSideGames, playFor = null, setPlayFor,
   tees = {}, hcOverride = {}, defaultTee = null, pairBets = [], setPairBets, tripRow = null, tripLink = null, startLabel = 'Create round', startIcon = 'arrow-right' }) {
@@ -69,7 +70,8 @@ export function SetupStep({ game, course, holesCount, nine, picked, setPicked, c
   return (
     <>
       <div className="scroll">
-        <div className="block summary-card">
+        {/* The game's pale wash, as Round ready's card wears it, not a saturated ochre slab: it isn't the thing to tap */}
+        <div className="block summary-card themed" style={{ '--gt-soft': gameTheme(game).soft }}>
           <div className="li-sub">{gameLabel({ game, sideGames })} · {holesCount} holes</div>
           <div className="d stake-big">{inUnits({ playFor }, stakeSummary(game, shownOpts, holesCount))}</div>
           {sideGames.length > 0 && <div className="li-sub">{roundStakeLines({ game, settings: shownOpts, sideGames, playFor }).slice(1).map(l => l.line).join(' + ')}</div>}

@@ -30,10 +30,15 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
   // One worked line under a bet, so "a point" means the same thing to everyone before the first tee
   const example = t => <p className="field-help pad">{t}</p>;
   const pct = w => w.map(x => Math.round(x * 100)).join('/');
-  const amount = (path, title, { min = 1, max = 500, label } = {}) => (
-    <div className="nassau-bet-row" key={path}>
-      <div className="nassau-bet-lbl">{label || title}</div>
-      <button className="nassau-bet-btn" aria-label={`${label || title}: ${money(get(path))}. Change`} onClick={() => onAmount(path, title, { min, max })}>{money(get(path))}<Icon name="pencil-simple" className="amt-pen" /></button>
+  // An amount's card: its label as the card's eyebrow (like Payout and Scores below it), and what it
+  // means (`ex`, "Win a skin: up $6") inside the card under the amount, as the other helpers sit in theirs
+  const amount = (path, title, { min = 1, max = 500, label, ex = null } = {}) => (
+    <div className={`nassau-bet-row go-amount ${ex ? 'with-ex' : ''}`.trim()} key={path}>
+      <div className="go-amount-top">
+        <div className="nassau-bet-lbl">{label || title}</div>
+        <button className="nassau-bet-btn" aria-label={`${label || title}: ${money(get(path))}. Change`} onClick={() => onAmount(path, title, { min, max })}>{money(get(path))}<Icon name="pencil-simple" className="amt-pen" /></button>
+      </div>
+      {ex && <p className="field-help go-ex">{ex}</p>}
     </div>
   );
   const seg = (path, options, eyebrow, first = false) => (
@@ -127,11 +132,9 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       return <>
         {label('Skins')}
         {pot
-          ? amount('skins.stake', both ? 'Each player puts in, per pot' : 'Each player puts in', { label: both ? 'Each puts in, per pot' : 'Each player puts in' })
-          : amount('skins.value', 'Per skin', { label: 'Value per skin' })}
-        {example(pot
-          ? `With ${n} players the pot is ${money(stake * n)}${both ? ' for net and again for gross' : ''}. Win 2 of 8 skins and you take a quarter of it, ${money(stake * n / 4)}.`
-          : `Win a skin: up ${money(get('skins.value') * others)}, ${each(get('skins.value'))}.`)}
+          ? amount('skins.stake', both ? 'Each player puts in, per pot' : 'Each player puts in', { label: both ? 'Each puts in, per pot' : 'Each player puts in',
+            ex: `With ${n} players the pot is ${money(stake * n)}${both ? ' for net and again for gross' : ''}. Win 2 of 8 skins and you take a quarter of it, ${money(stake * n / 4)}.` })
+          : amount('skins.value', 'Per skin', { label: 'Value per skin', ex: `Win a skin: up ${money(get('skins.value') * others)}, ${each(get('skins.value'))}.` })}
         <div className="block">
           {seg('skins.payout', [{ value: 'per', label: 'Per skin' }, { value: 'pot', label: 'Pot' }], 'Payout', true)}
           {help(pot ? 'Everyone puts in, and the pot is split by skins won. No skins won, everyone gets theirs back.' : 'Every other player pays the winner for each skin.')}
@@ -155,8 +158,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'wolf':
       return <>
         {label('Points')}
-        {amount('wolf.point', 'Per point', { label: 'Value per point' })}
-        {example(`Every loser pays every winner a point. Win with a partner: up ${money(get('wolf.point') * 2)} each. Lone wolf win: up ${money(get('wolf.point') * (get('wolf.loneMultiplier') || 2) * 3)}.${get('wolf.blind') ? ` Blind wolf win: up ${money(get('wolf.point') * blindMultiplierOf(get('wolf')) * 3)}.` : ''}`)}
+        {amount('wolf.point', 'Per point', { ex: `Every loser pays every winner a point. Win with a partner: up ${money(get('wolf.point') * 2)} each. Lone wolf win: up ${money(get('wolf.point') * (get('wolf.loneMultiplier') || 2) * 3)}.${get('wolf.blind') ? ` Blind wolf win: up ${money(get('wolf.point') * blindMultiplierOf(get('wolf')) * 3)}.` : ''}`, label: 'Value per point' })}
         <div className="block">
           {seg('wolf.loneMultiplier', [2, 3].map(n => ({ value: n, label: `${n}×` })), 'Lone wolf pays or wins', true)}
         </div>
@@ -192,8 +194,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       const max = get('hammer.max') ?? 3;
       return <>
         {label('Bets')}
-        {amount('hammer.stake', 'Per hole', { label: 'Each hole starts at' })}
-        {example(`Win a ${money(get('hammer.stake'))} hole after one hammer and you’re up ${money(get('hammer.stake') * 2)}. Fold after a hammer and you’re down ${money(get('hammer.stake'))}.`)}
+        {amount('hammer.stake', 'Per hole', { ex: `Win a ${money(get('hammer.stake'))} hole after one hammer and you’re up ${money(get('hammer.stake') * 2)}. Fold after a hammer and you’re down ${money(get('hammer.stake'))}.`, label: 'Each hole starts at' })}
         <div className="block">
           {seg('hammer.max', [{ value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }, { value: 0, label: 'No limit' }], 'Most hammers on a hole', true)}
           {help(max ? `A hole can go up to ${money(get('hammer.stake') * 2 ** max)}.` : 'Hammer back and forth as long as you like. Brave.')}
@@ -208,8 +209,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'vegas':
       return <>
         {label('Bets')}
-        {amount('vegas.point', 'Per point', { label: 'Per point' })}
-        {example(`Win a hole 45 to 47: up ${money(get('vegas.point') * 2)} each.`)}
+        {amount('vegas.point', 'Per point', { ex: `Win a hole 45 to 47: up ${money(get('vegas.point') * 2)} each.`, label: 'Per point' })}
         {toggle('vegas.birdieFlip', 'Birdies flip', 'A birdie flips the other team’s number (45 becomes 54)')}
         {toggle('vegas.birdieDouble', 'Birdies double', 'One team alone makes a real birdie? The hole’s points double. An eagle triples them')}
         {toggle('vegas.daytona', 'Daytona', 'A team with no real par or better puts its high number first: 5 and 6 make 65')}
@@ -234,8 +234,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'scramble':
       return <>
         {label('Bets')}
-        {amount('scramble.stake', 'Each player puts in', { label: 'Each player puts in' })}
-        {example(`With ${n} players the pot is ${money(get('scramble.stake') * n)}, and the winning team splits it.`)}
+        {amount('scramble.stake', 'Each player puts in', { ex: `With ${n} players the pot is ${money(get('scramble.stake') * n)}, and the winning team splits it.`, label: 'Each player puts in' })}
         <div className="block">
           {seg('scramble.drives', [{ value: 0, label: 'Off' }, { value: 2, label: '2' }, { value: 3, label: '3' }, { value: 4, label: '4' }], 'Minimum drives each', true)}
           {help(get('scramble.drives') ? `Every player’s drive gets used at least ${get('scramble.drives')} times. Tap whose drive you took on each hole and we’ll keep count.` : 'Use whichever drive you like, every hole. Even if it’s always the big hitter’s.')}
@@ -246,8 +245,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'stroke':
       return <>
         {label('Bets')}
-        {amount('stroke.stake', get('stroke.payout') === 'pot' ? 'Each player puts in' : 'Per stroke', { label: get('stroke.payout') === 'pot' ? 'Each player puts in' : 'Per stroke' })}
-        {example(get('stroke.payout') === 'pot' ? potExample('stroke.stake') : perExample('stroke.stake', 'stroke'))}
+        {amount('stroke.stake', get('stroke.payout') === 'pot' ? 'Each player puts in' : 'Per stroke', { ex: get('stroke.payout') === 'pot' ? potExample('stroke.stake') : perExample('stroke.stake', 'stroke'), label: get('stroke.payout') === 'pot' ? 'Each player puts in' : 'Per stroke' })}
         <div className="block">
           {payout('stroke.payout', 'stroke')}
           {help(get('stroke.payout') === 'pot' ? 'Lowest net total takes the pot; ties split it.' : 'Every pair settles the difference in their net totals.')}
@@ -260,8 +258,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       const stablefordTable = get('stableford.table') === 'chicago' ? 'chicago' : get('stableford.modified') ? 'modified' : 'standard';
       return <>
         {label('Bets')}
-        {amount('stableford.stake', get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point', { label: get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point' })}
-        {example(get('stableford.payout') === 'pot' ? potExample('stableford.stake') : perExample('stableford.stake', 'point'))}
+        {amount('stableford.stake', get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point', { ex: get('stableford.payout') === 'pot' ? potExample('stableford.stake') : perExample('stableford.stake', 'point'), label: get('stableford.payout') === 'pot' ? 'Each player puts in' : 'Per point' })}
         <div className="block">
           {payout('stableford.payout', 'point')}
           {/* Big birdies (2026-10-05) is a third table: `table` 'chicago', with `modified` off */}
@@ -281,8 +278,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
       const adjust = get('quota.adjust') || 'off';
       return <>
         {label('Bets')}
-        {amount('quota.stake', pot ? 'Each player puts in' : 'Per point', { label: pot ? 'Each player puts in' : 'Per point' })}
-        {example(pot ? (team ? `With ${n} players the pot is ${money(get('quota.stake') * n)}, and the team furthest over its quota splits it.` : potExample('quota.stake')) : perExample('quota.stake', 'point'))}
+        {amount('quota.stake', pot ? 'Each player puts in' : 'Per point', { ex: pot ? (team ? `With ${n} players the pot is ${money(get('quota.stake') * n)}, and the team furthest over its quota splits it.` : potExample('quota.stake')) : perExample('quota.stake', 'point'), label: pot ? 'Each player puts in' : 'Per point' })}
         <div className="block">
           {payout('quota.payout', 'point')}
           {seg('quota.table', [{ value: 'chicago', label: 'Chicago' }, { value: 'stableford', label: 'Stableford' }], 'Points')}
@@ -314,8 +310,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'nines':
       return <>
         {label('Bets')}
-        {amount('nines.point', 'Per point', { label: 'Per point' })}
-        {example(`Every point above or below ${holesCount === 9 ? 27 : 54} is worth ${money(get('nines.point'))}: finish on ${(holesCount === 9 ? 27 : 54) + 6} and you’re up ${money(get('nines.point') * 6)}.`)}
+        {amount('nines.point', 'Per point', { ex: `Every point above or below ${holesCount === 9 ? 27 : 54} is worth ${money(get('nines.point'))}: finish on ${(holesCount === 9 ? 27 : 54) + 6} and you’re up ${money(get('nines.point') * 6)}.`, label: 'Per point' })}
         {toggle('nines.sweep', 'Win by 2 takes all 9', 'Beat both by two strokes or more and the hole is 9-0-0')}
         {toggle('nines.birdie', 'Birdie wins 7', 'Win a hole outright with a real birdie and it’s 7-1-1')}
         {note('Nine points a hole: 5 for low, 3 for middle, 1 for high. Ties share the points.')}
@@ -332,8 +327,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'bbb':
       return <>
         {label('Bets')}
-        {amount('bbb.value', 'Per point', { label: 'Per point' })}
-        {example(`Each point wins ${money(get('bbb.value'))} from every other player: take one and you’re up ${money(get('bbb.value') * others)}.`)}
+        {amount('bbb.value', 'Per point', { ex: `Each point wins ${money(get('bbb.value'))} from every other player: take one and you’re up ${money(get('bbb.value') * others)}.`, label: 'Per point' })}
         {toggle('bbb.sweep', 'Sweep doubles', 'Take all three points on a hole and they count six')}
         {toggle('bbb.netBongo', 'Bongo is low net', 'The third point goes to the lowest net score on the hole instead of first in, so handicaps count')}
         {toggle('bbb.bingoDrive', 'Bingo is the longest drive', 'The first point goes to the longest drive in the fairway instead of first on the green')}
@@ -342,8 +336,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'dots':
       return <>
         {label('Bets')}
-        {amount('dots.value', 'Per dot', { label: 'Per dot' })}
-        {example(`Each dot wins ${money(get('dots.value'))} from every other player: one dot and you’re up ${money(get('dots.value') * others)}.`)}
+        {amount('dots.value', 'Per dot', { ex: `Each dot wins ${money(get('dots.value'))} from every other player: one dot and you’re up ${money(get('dots.value') * others)}.`, label: 'Per dot' })}
         {toggle('dots.auto', 'Birdies count automatically', 'A birdie is a dot and an eagle is two, from the scores.')}
         <div className="block">
           <div className="eyebrow" style={{ marginBottom: 10 }}>Dots in play</div>
@@ -368,8 +361,7 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
     case 'rabbit':
       return <>
         {label('Bets')}
-        {amount('rabbit.stake', 'Per rabbit', { label: 'Per rabbit' })}
-        {example(`Hold it ${holesCount === 9 ? 'after the last hole' : get('rabbit.sixes') ? 'after hole 6' : 'at the turn'}: up ${money(get('rabbit.stake') * others)}, ${each(get('rabbit.stake'))}.`)}
+        {amount('rabbit.stake', 'Per rabbit', { ex: `Hold it ${holesCount === 9 ? 'after the last hole' : get('rabbit.sixes') ? 'after hole 6' : 'at the turn'}: up ${money(get('rabbit.stake') * others)}, ${each(get('rabbit.stake'))}.`, label: 'Per rabbit' })}
         <div className="block">
           {seg('rabbit.mode', [{ value: 'free', label: 'Set it free' }, { value: 'steal', label: 'Steal it' }], 'When someone else wins a hole', true)}
           {help((get('rabbit.mode') || 'steal') === 'free' ? 'They set the rabbit free, and the next outright winner catches it.' : 'They take the rabbit straight from the holder.')}
@@ -445,12 +437,10 @@ export function GameOptions({ game, get, set, onAmount, holesCount = 18, compact
           {example(`Win all three and you’re each up ${money((get(`${game}.front`) || 0) + (get(`${game}.back`) || 0) + (get(`${game}.total`) || 0))}. Halve a bet and nobody pays it.`)}
         </>}
         {format === 'total' && <>
-          {amount(`${game}.stake`, 'Per player', { label: 'Per player' })}
-          {example(`${stroke ? 'Finish with the lower team total' : 'Win the match'} and you’re each up ${money(get(`${game}.stake`))}. Lose and you’re each down ${money(get(`${game}.stake`))}.`)}
+          {amount(`${game}.stake`, 'Per player', { ex: `${stroke ? 'Finish with the lower team total' : 'Win the match'} and you’re each up ${money(get(`${game}.stake`))}. Lose and you’re each down ${money(get(`${game}.stake`))}.`, label: 'Per player' })}
         </>}
         {format === 'hole' && <>
-          {amount(`${game}.perHole`, 'Per hole won', { label: 'Each hole won' })}
-          {example(`Win 3 more holes than the other team and you’re each up ${money((get(`${game}.perHole`) || 0) * 3)}.`)}
+          {amount(`${game}.perHole`, 'Per hole won', { ex: `Win 3 more holes than the other team and you’re each up ${money((get(`${game}.perHole`) || 0) * 3)}.`, label: 'Each hole won' })}
           {ballGame && toggle(`${game}.lowTotal`, 'Low ball and low total', `Two points a hole: one for the best score, one for the lower team total, ${money(get(`${game}.perHole`) || 0)} each`)}
         </>}
         {format !== 'hole' && !stroke && <>

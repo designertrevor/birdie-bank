@@ -30,6 +30,8 @@ const orList = xs => {
 const amountKey = (game, s) => (game === 'calcutta' ? null : game === 'skins' ? (s?.payout === 'pot' ? 'stake' : 'value') : game === 'dots' ? 'value' : 'stake'); // Snake, Rabbit and the pots: stake
 
 /** "a Birdie pot", "a closest to the pin pot": a side game's name in the "Add a side game" line. */
+// A side game's card in the add sheet says how it plays in one sentence; its Rules chip has the rest
+const firstSentence = t => { const m = String(t || '').match(/^.+?[.!?](?=\s|$)/); return m ? m[0] : t; };
 const offerName = k => ({ birdies: 'a Birdie pot', ctp: 'a closest to the pin pot', drive: 'a long drive pot', calcutta: 'a Calcutta' }[k] || SIDE_GAMES[k].label);
 
 /**
@@ -195,10 +197,11 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
       {full ? (
         <p className="field-help pad">Up to {MAX_GAMES} games in a round.</p>
       ) : choices.length > 0 && (
-        <button className="set-row add-side" onClick={() => setAdding(true)}>
-          <div className="set-icon"><Icon name="plus" /></div>
+        // The same round add button as Add a player and Add a course, with its sub line
+        <button className="add-row add-side" onClick={() => setAdding(true)}>
+          <span className="add-ci" aria-hidden="true"><Icon name="plus" /></span>
           {/* A few by name and "and more", so the line stays short (the sheet lists them all) */}
-          <div className="row-main"><div className="set-name">Add a side game</div><div className="set-sub">{choices.length > 3 ? `${orList(choices.slice(0, 3).map(offerName)).replace(/ or /, ', ')} and more` : orList(choices.map(offerName))}</div></div>
+          <span className="row-main"><span className="add-lbl">Add a side game</span><span className="set-sub">{choices.length > 3 ? `${orList(choices.slice(0, 3).map(offerName)).replace(/ or /, ', ')} and more` : orList(choices.map(offerName))}</span></span>
         </button>
       )}
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add a side game">
@@ -209,11 +212,13 @@ export function SideGamesSetup({ game, sideGames, setSideGames, defaults, player
           return (
             <div key={k} className="side-choice-wrap">
               <button className="sheet-item side-choice" onClick={() => add(k)} aria-label={`Add ${SIDE_GAMES[k].label}, ${u(sideBetLine(k, s))}`}>
-                <GameArt game={k} className="set-icon" />
+                <GameArt game={k} className="set-icon sgc-art" />
                 <div className="row-main" style={{ textAlign: 'left' }}>
-                  {/* The name's already there, so a pot's bet is just "$5 each", not "$5 each in the birdie pot" */}
-                  <div className="set-name">{SIDE_GAMES[k].label} · {u(sideBetLine(k, s)).replace(/ each in the .+$/, ' each')}</div>
-                  <div className="set-sub">{u(sideExample(k, asPlayedWith(k, s, sideGames), players, holes))}</div>
+                  {/* The name on its own line, the bet under it ("$5 each", not "$5 each in the birdie
+                      pot"), then one sentence of how it plays: the Rules chip has the rest */}
+                  <div className="set-name">{SIDE_GAMES[k].label}</div>
+                  <div className="set-sub sc-price">{u(sideBetLine(k, s)).replace(/ each in the .+$/, ' each')}</div>
+                  <div className="set-sub">{firstSentence(u(sideExample(k, asPlayedWith(k, s, sideGames), players, holes)))}</div>
                 </div>
                 <span className="add-ci" aria-hidden="true"><Icon name="plus" /></span>
               </button>

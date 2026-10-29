@@ -29,7 +29,7 @@ export default function NearYou({ near, count, children }) {
     return (
       <div className="near-ask">
         <button className="pill-btn near-btn" onClick={near.ask} disabled={looking} aria-busy={looking}>
-          <Icon name={looking ? 'circle-notch' : 'navigation-arrow'} className={looking ? 'spin' : ''} fill={!looking} />
+          <Icon name={looking ? 'circle-notch' : 'navigation-arrow'} className={looking ? 'spin' : ''} />
           {looking ? 'Looking near you' : 'Courses near me'}
         </button>
       </div>

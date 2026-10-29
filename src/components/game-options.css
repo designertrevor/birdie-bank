@@ -1,3 +1,11 @@
 /* A bet's amount (GameOptions.jsx amount): the pencil says the tile is a field to change, like the HCP chip */
 .nassau-bet-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .nassau-bet-btn .amt-pen { font-size: 15px; color: var(--mute); }
+
+/* An amount's card: its label is the card's eyebrow (as Payout and Scores are in theirs), the amount to
+   change on the right, and what it means ("Win a skin: up $6") inside the card under them */
+.nassau-bet-row.go-amount { display: block; padding: 12px 12px 12px 16px; }
+.go-amount-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.go-amount .nassau-bet-lbl { font-family: inherit; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); min-width: 0; }
+:root[data-look="new"] .go-amount .nassau-bet-lbl { letter-spacing: .1em; }
+.go-amount .go-ex { margin: 8px 0 2px; }

@@ -19,7 +19,7 @@ export const ART_USES = {
   'scenes/scorecard': { name: 'Doing the math', used: ['Set up: Who ends up doing the math?'], px: 'whole, 16px in from each side (about 358 by 205); faces filled cream, no card in dark' },
   'scenes/roadtrip': { name: 'The road trip', used: ['Trip screen, before the first round is played'], px: 'full width, 150px tall' },
 
-  'spots/tee': { name: 'Ball on a tee', used: ['Up next, on the Start a round card when nothing is planned (104px)', 'The notifications ask (30px)'] },
+  'spots/tee': { name: 'Ball on a tee', used: ['Up next, on the Start a round card when nothing is planned (104px)', 'The notifications ask (30px)', 'Set up, the Handicaps step when playing even (120px)'] },
   'spots/megaphone': { name: 'Feedback', used: ['Round menu, the feedback row (52px)'] },
   'spots/bulb': { name: 'An idea', used: ['Suggest something (120px)', 'Settings, the Help shape Birdie Bank callout (68px)', 'Roadmap, nothing in progress (96px)'] },
   'spots/link': { name: 'Invite link', used: ['Join invite, the link step (120px)', 'Round ready, the Let the group watch live callout (68px)', 'Set up, the settle payoff for a payment app (136px)'] },
@@ -64,7 +64,7 @@ export const ART_USES = {
   'spots/lowround': { name: 'Low round', used: ['Hall of fame, the Low round badge (48px)'] },
   'spots/nobirdies': { name: 'No net birdies', used: ['Results, the Birdie pot when nobody made a net birdie (96px)'] },
   'spots/mostrounds': { name: 'Most rounds', used: ['Hall of fame, the Most rounds badge (48px; redrawn 2026-10-28 as a ball and a tally of five)'] },
-  'spots/coinstack': { name: 'The pot, as coins', used: ['The Tab with nothing owed yet (150px)'] },
+  'spots/coinstack': { name: 'The pot, as coins', used: ['The Tab with nothing owed yet (150px)', 'Set up, the Play for step (120px)'] },
   'spots/cards': { name: 'A hand of cards', used: ['Set up, the Add a side game sheet (88px)', 'Set up, the games question (160px)'] },
   'spots/ribbons': { name: 'The record book', used: ['Hall of fame with no rounds yet (150px)'] },
   'spots/punchcard': { name: 'A punch card', used: ['Season, before the rounds it needs (150px)'] },
