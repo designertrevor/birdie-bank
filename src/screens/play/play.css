@@ -10,55 +10,94 @@
 :root[data-look="new"] .play, :root[data-look="new"] .score-pad { --play-num: var(--body-font); --play-num-weight: 800; }
 .score-pad { --play-num: var(--display); --play-num-weight: 800; }
 
-/* ---------- The hole line: the number big, then par and HCP, opens the card ---------- */
-.hole-line {
-  display: flex; align-items: center; gap: 12px; margin: 10px 16px 8px; padding: 2px 4px; flex-shrink: 0;
-  background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; position: relative;
-}
-.hole-line .hl-no {
-  font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 52px; line-height: .9; letter-spacing: -.03em;
-  color: var(--ink); font-variant-numeric: tabular-nums; min-width: 34px;
-}
-.hole-line .hl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.hole-line .hl-meta { font-size: 18px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
-.hole-line .hl-strokes { font-size: 13px; color: var(--mute); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hole-line .fixed-tag { position: static; }
-.hole-line .hl-card {
-  flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 8px 12px; border-radius: var(--r-chip);
-  background: var(--card); box-shadow: var(--hair); font-size: 13px; font-weight: 700; color: var(--ink);
-}
-.hole-line:active .hl-card { transform: scale(.96); }
+/* ---------- The top of the hole, on the page (2026-10-29, trial top B with A's money row): no boxes,
+   type and hairlines on the background. The hole is the headline, the money a ruled line under it that
+   sticks once the hole scrolls away, then the game's panel set flat ---------- */
+/* Amounts in full sun: deeper red and green on light (7:1 and up), for the money and Nassau's tiles */
+.play { --play-win: #0a5440; --play-loss: #8f2219; }
+:root[data-theme="dark"] .play { --play-win: #6fd3a8; --play-loss: #ff8a7d; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .play { --play-win: #6fd3a8; --play-loss: #ff8a7d; } }
 
-/* ---------- The money strip: one line of names and amounts ---------- */
-.money-strip {
-  display: flex; align-items: center; gap: 8px; margin: 8px 16px 0; padding: 5px 8px 5px 10px; width: calc(100% - 32px);
-  background: var(--card); box-shadow: var(--hair); border: none; border-radius: var(--r-chip); flex-shrink: 0;
-  font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 40px;
+/* The hole: a headline with the scorecard as a quiet link on its line, par and HCP under it */
+.hole-head { padding: 18px 20px 4px; flex-shrink: 0; }
+.hh-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.hh-title { margin: 0; font-family: var(--display); font-weight: var(--display-weight, 500); font-size: 38px; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
+.hh-card {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 2px; background: none; border: none;
+  font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer;
 }
-.money-strip:active { transform: scale(.985); }
-.money-strip.themed { background: var(--gt-soft, var(--card)); }
-/* In the dark a tint of the game's colour went olive or brown: the plain card, with the game's colour as a
-   straight bar across its top (a background, so the corners clip it square; an inset edge bent round them) */
-:root[data-theme="dark"] .money-strip.themed { background: linear-gradient(var(--gt), var(--gt)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .money-strip.themed { background: linear-gradient(var(--gt), var(--gt)) top / 100% 3px no-repeat, var(--card); box-shadow: var(--hair); }
+/* The word is underlined, not the icon */
+.hh-card > span { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; text-decoration-color: var(--line); }
+.hh-card:active { opacity: .7; }
+.hh-meta { margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--body); display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; }
+.hh-meta .fixed-tag { position: static; margin-left: 6px; }
+.hh-strokes { color: var(--mute); }
+
+/* The money: names over big amounts straight on the page, ruled above and below, the caret at the end.
+   It rides up with the hole and then sticks to the top of the rows' scroll, on the page's own colour so
+   the rows pass under it */
+.money-line {
+  position: sticky; top: 0; z-index: 4; flex-shrink: 0;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); align-items: end; gap: 4px;
+  margin: 14px 16px 0; padding: 10px 22px 10px 4px; width: calc(100% - 32px); background: var(--canvas); border: none; border-radius: 0;
+  box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line); font: inherit; color: inherit; text-align: left; cursor: pointer;
 }
-/* Read in full sun: on the light strip the amounts take deeper red and green (7:1 and up). Set as the
-   strip's own tokens, since a colour rule on the amounts lost to the shared .neg and .pos ones */
-.money-strip { --loss: #8f2219; --win: #0a5440; }
-:root[data-theme="dark"] .money-strip { --loss: #ff8a7d; --win: #6fd3a8; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .money-strip { --loss: #ff8a7d; --win: #6fd3a8; }
+.ml-item { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.1; }
+.ml-p { font-size: 12px; font-weight: 600; color: var(--mute); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ml-item.lead .ml-p { color: var(--ink); font-weight: 800; }
+.ml-a {
+  margin-top: 2px; font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 22px; color: var(--ink);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.ms-items { flex: 1; min-width: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
-.ms-item { display: flex; flex-direction: column; align-items: center; min-width: 0; line-height: 1.15; }
-.ms-p { font-size: 11.5px; font-weight: 600; color: var(--body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.ms-item.lead .ms-p { color: var(--ink); font-weight: 800; }
-.ms-a { font-family: var(--play-num); font-weight: var(--play-num-weight); font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
-.ms-a.pos { color: var(--win); }
-.ms-a.neg { color: var(--loss); }
-.ms-a.bump { animation: pop .35s var(--spring); display: inline-block; }
-.ms-more { color: var(--mute); font-size: 14px; flex: none; }
+.ml-a.pos { color: var(--play-win); }
+.ml-a.neg { color: var(--play-loss); }
+.ml-a.bump { animation: pop .35s var(--spring); display: inline-block; }
+.ml-more { position: absolute; right: 0; bottom: 14px; color: var(--mute); font-size: 14px; }
+.money-line:active > .ml-item { opacity: .7; }
+/* A row brought into view stops below the stuck money line, not under it */
+.play > .scroll:has(> .money-line) { scroll-padding-top: 72px; }
+
+/* The game's panel, flat: each part loses its card, wash and edge bar (important, over the panels' own
+   rules and the dark theme's bars further down; .screen.play to outrank the new look's), keeps its
+   words, and sits on the page */
+.screen.play .hole-game { padding: 14px 20px 10px; flex-shrink: 0; }
+.screen.play .hole-game:empty { display: none; }
+.screen.play .hole-game > * + * { margin-top: 10px !important; }
+.screen.play .hole-game :is(.banker-bar, .wolf-panel, .press-bar, .vegas-panel, .sides-line, .worth-strip, .match-status, .press-alert) { margin: 0; }
+.screen.play .hole-game :is(.banker-bar, .wolf-panel, .press-bar, .vegas-panel, .sides-line, .worth-strip) {
+  background: none !important; box-shadow: none !important; padding-left: 0; padding-right: 0; border-radius: 0;
+}
+.screen.play .hole-game :is(.banker-bar, .wolf-panel, .vegas-panel) { padding-top: 0; padding-bottom: 0; }
+.screen.play .hole-game .sides-line { padding: 0; }
+.screen.play .hole-game .wolf-panel.folded { padding: 0; }
+/* Nassau's tiles: three columns split by hairlines, the leader's score in the win colour, no slabs */
+.screen.play .hole-game .ms-tile { background: none !important; box-shadow: none !important; border-radius: 0; padding: 2px 4px; }
+.screen.play .hole-game .ms-tile + .ms-tile { box-shadow: inset 1px 0 0 var(--line) !important; }
+.screen.play .hole-game .ms-tile.ahead .ms-val { color: var(--play-win) !important; }
+.screen.play .hole-game .ms-tile.behind .ms-val { color: var(--play-loss) !important; }
+.screen.play .hole-game .ms-tile :is(.ms-lbl, .ms-sub) { color: var(--mute) !important; }
+/* Vegas's two team tiles on the surface: the team names and "So far" in the body colour (the teal and
+   mint set for the leader's slab vanished on the surface in the dark), the numbers in win and loss */
+.screen.play .hole-game .vegas-team { background: var(--surface) !important; }
+.screen.play .hole-game .vegas-team :is(.ms-lbl, .ms-sub) { color: var(--body) !important; }
+.screen.play .hole-game .vegas-team.ahead .ms-val { color: var(--play-win) !important; }
+.screen.play .hole-game .vegas-team.behind .ms-val { color: var(--play-loss) !important; }
+/* Words that were set for a pastel read in the screen's own colours */
+.screen.play .hole-game :is(.bl, .wolf-note, .press-bar-lbl, .wp-v) { color: var(--body) !important; }
+.screen.play .hole-game :is(.bn, .wp-sides, .ws-text) { color: var(--ink) !important; }
+/* Buttons and chips that were white on a wash take the surface, so they still read as buttons */
+.screen.play .hole-game :is(.change-btn, .press-chip, .ws-change, .pill-btn:not(.on)) { background: var(--surface) !important; color: var(--ink) !important; box-shadow: none !important; }
+/* Skins: Worth as a teal label over the amount, the price a quiet link, the counts under */
+.screen.play .hole-game .worth-strip { padding: 0; }
+.screen.play .hole-game .ws-l { display: block; font-size: 11px; color: var(--eyebrow-ink); margin: 0 0 2px; letter-spacing: .08em; }
+.screen.play .hole-game .ws-text { font-size: 22px; }
+.screen.play .hole-game .ws-main { align-items: flex-end; }
+.screen.play .hole-game .worth-strip .ws-change {
+  background: none !important; padding: 0; min-height: 32px; font-size: 14px; text-decoration: underline; text-underline-offset: 4px;
+  text-decoration-thickness: 1.5px; text-decoration-color: var(--line);
+}
+.screen.play .hole-game .ws-counts { margin-top: 4px; font-size: 13px; color: var(--mute); }
+
 .money-bar.ms-detail { margin: 0 16px 12px; box-shadow: var(--hair); }
 
 /* ---------- Skins: what the hole is worth, folded to one line ---------- */
@@ -249,7 +288,7 @@
 /* Pink on the scoring rows is for what's tapped (the Birdie chip, Save): the stroke line reads in the
    body colour with its pink dot, and a score's name and an under-par number in ink, readable in the sun */
 .play .stroke-dots { color: var(--body); }
-.play .stroke-dots > [aria-hidden], .play .hl-strokes > .stroke-dots { color: var(--pink-text); }
+.play .stroke-dots > [aria-hidden], .play .hh-strokes > .stroke-dots { color: var(--pink-text); }
 .play .score-name.s-1, .play .score-name.s-2, .play .sc-num.birdie { color: var(--ink); }
 .score-pad .sp-num.under { color: var(--ink); }
 

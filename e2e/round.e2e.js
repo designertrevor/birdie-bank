@@ -256,7 +256,7 @@ async function playThrough(page, nav, step, context, problems) {
   let par = 0;
   for (let h = 0; h < 18; h++) {
     await page.getByText(`Skins · Hole ${h + 1} of 18`).waitFor();
-    const holePar = Number((await page.getByRole('button', { name: 'Open scorecard' }).textContent()).match(/Par\s*(\d)/i)[1]);
+    const holePar = Number((await page.locator('.hole-head .hh-meta').textContent()).match(/Par\s*(\d)/i)[1]);
     par += holePar;
     for (let p = 0; p < 4; p++) {
       const d = STROKES[h][p];

@@ -68,10 +68,10 @@ Every page runs on a fixed clock, Monday 26 Oct 2026 at 5:40 pm in Denver's time
 The watched round's shared copy is seeded into localStorage (`bb-live:LOGAN7`), which is what the
 dev server's local sync adapter reads, so sharing doesn't end on load.
 
-## The scoring screen's top, five ways (n5/top)
+## The scoring screen's top (n5/top, n6/top)
 
-`--top-set` shoots Play for today's top and the trial tops A to E (`?top=`, see
-`src/screens/play/top/`), for Skins, Nassau, Wolf, Banker and Vegas, light and dark, plain and
-scrolled, into `top/<variant>-<game>-<theme>[-scrolled].png`. The extra rounds come from
-`topRounds()` in `scripts/review-seed.js`, built on the seed without changing it. `--top x` sets
-localStorage `bb-top` for any other run. Notes: `overnight/overhaul-notes/n5-top.md`.
+`--top-set` shoots Play for Skins, Nassau, Wolf, Banker and Vegas, light and dark, plain and scrolled
+420px, into `top-final/<game>-<theme>[-scrolled].png` (`--games` narrows it, `--out` moves it). The
+extra rounds come from `topRounds()` in `scripts/review-seed.js`, built on the seed without changing
+it. The five trial tops in `top/` are from n5 and no longer in the app. Notes:
+`overnight/overhaul-notes/n5-top.md` and `n6-top.md`.

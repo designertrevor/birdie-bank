@@ -404,7 +404,7 @@ export const SHOTS = [
       await p.shoot('pad', 'The number pad for another score', { scroll: false });
     },
   },
-  { area: 'play', id: 'money-strip', page: ctx => ({ state: ctx.STATES.live, place: ['upnext', [['play', { id: 'r_live' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(400); clickEl('.money-strip'); await w(1200);`); await p.shoot('money-strip-sheet', 'Money so far sheet (from the money strip)'); } },
+  { area: 'play', id: 'money-strip', page: ctx => ({ state: ctx.STATES.live, place: ['upnext', [['play', { id: 'r_live' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(400); clickEl('.money-line'); await w(1200);`); await p.shoot('money-strip-sheet', 'Money so far sheet (from the money line)'); } },
   { area: 'play', id: 'scorecard', page: ctx => ({ state: ctx.STATES.live, place: ['upnext', [['play', { id: 'r_live' }]]] }), run: async p => { await p.js(`tryTap('Skip for now'); await w(400); tap('Open scorecard'); await w(1200);`); await p.shoot('scorecard-sheet', 'Scorecard sheet'); } },
   {
     area: 'play', id: 'menu', page: ctx => ({ state: ctx.STATES.live, place: ['upnext', [['play', { id: 'r_live' }]]] }),
@@ -421,7 +421,7 @@ export const SHOTS = [
           await p.shoot(id, what);
         } catch (e) { p.area && (await p.js(`return 1`)); }
         // back to the hole and open the menu again
-        await p.js(`for (let i = 0; i < 3 && !el('.menu-row'); i++) { if (el('.hole-line') && !el('.sheet, [role=dialog]')) break; const c = [...document.querySelectorAll('.sheet-close, .header-back, [aria-label=Close]')].filter(vis).pop(); if (c) c.click(); else break; await w(700); } if (!el('.menu-row')) { tryTap('Round menu'); await w(900); }`).catch(() => {});
+        await p.js(`for (let i = 0; i < 3 && !el('.menu-row'); i++) { if (el('.hole-head') && !el('.sheet, [role=dialog]')) break; const c = [...document.querySelectorAll('.sheet-close, .header-back, [aria-label=Close]')].filter(vis).pop(); if (c) c.click(); else break; await w(700); } if (!el('.menu-row')) { tryTap('Round menu'); await w(900); }`).catch(() => {});
       }
     },
   },

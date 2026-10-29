@@ -20,13 +20,6 @@ try {
   const type = (location.search.match(/[?&]type=(figtree|inter)/) || [])[1];
   if (type) localStorage.setItem('bb-type', type);
   if ((type || localStorage.getItem('bb-type')) === 'inter') document.documentElement.dataset.type = 'inter';
-  // A trial top for the scoring screen (src/screens/play/top/): ?top=a to e, kept on this phone like
-  // the look; ?top=current goes back to today's
-  const top = (location.search.match(/[?&]top=(a|b|c|d|e|current)/) || [])[1];
-  if (top === 'current') localStorage.removeItem('bb-top');
-  else if (top) localStorage.setItem('bb-top', top);
-  const kept = top === 'current' ? null : top || localStorage.getItem('bb-top');
-  if (kept && /^[a-e]$/.test(kept)) document.documentElement.dataset.top = kept;
 } catch { document.documentElement.dataset.look = 'new'; }
 // The new look's thin icons: Phosphor regular, fetched only when the new look is on (look-new.css
 // maps the bold class onto it, outside Play)

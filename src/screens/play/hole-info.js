@@ -1,5 +1,5 @@
-// What the top of the scoring screen says about the hole, shared by today's top (PlayTop.jsx,
-// HolePanels.jsx) and the trial tops in ./top/.
+// What the top of the scoring screen says about the hole (PlayTop.jsx's headline, HolePanels.jsx's
+// skins panel).
 import { isJustPlaying, skinsKinds, skinsTable, strokesFor } from '../../lib/round.js';
 import { unitFmt } from '../../lib/play-for.js';
 
@@ -15,9 +15,8 @@ export function strokesHere(round, hole, units, solo) {
 }
 
 /**
- * What a skins hole is worth, for the panel and the trial tops (src/screens/play/top/): per kind (net
- * and gross), the skins riding and the money when each skin has a price; the skins each player has won;
- * and what the bet chip says.
+ * What a skins hole is worth, for the skins panel: per kind (net and gross), the skins riding and the
+ * money when each skin has a price; the skins each player has won; and what the bet chip says.
  */
 export function skinsWorth(round, hole) {
   const money = unitFmt(round); // points in a points or reward round

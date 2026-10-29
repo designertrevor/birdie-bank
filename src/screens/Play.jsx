@@ -37,20 +37,14 @@ import { useHoleDraft } from './play/useHoleDraft.js';
 import { useBetPrompt, useFirstTee } from './play/useHoleCards.js';
 import { useKeeperCard } from './play/useKeeperCard.js';
 import { useHoleSave } from './play/useHoleSave.js';
-import { HoleMeta, PlayBanners, PlayHeader } from './play/PlayTop.jsx';
+import { HoleHead, PlayBanners, PlayHeader } from './play/PlayTop.jsx';
+import { MoneyLine } from './play/MoneyBar.jsx';
 import { BankerSheets, HolePanels } from './play/HolePanels.jsx';
 import { HoleScores } from './play/HoleScores.jsx';
 import { RoundMenu } from './play/RoundMenu.jsx';
 import { HandOffSheet, HolesSheet, LeftSheet } from './play/RoundSheets.jsx';
-import { TOPS, topVariant } from './play/top/index.js';
 
 import { BetsSheet, GamesSheet } from './play/BetsSheets.jsx';
-
-// The trial top this phone asked for, fixed for the session (main.jsx sets it before the first render)
-const TOP = TOPS[topVariant()] || {};
-const TopHeader = TOP.Header || null;
-const TopPinned = TOP.Pinned || null;
-const TopHead = TOP.Head || null;
 
 export default function Play({ id }) {
   const round = useStore(s => s.rounds[id]);
@@ -137,8 +131,8 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
   const main = useMemo(() => gameView(round, 'main'), [round]);
   // Everyone just playing (a card kept from an invite): no game, no money, no panels, just the card
   const solo = cardOnly(round);
-  // The main game's theme, carried in from Round ready: the money bar's band, the hole tile and the
-  // progress line take its colour (a card only round has none and keeps the plain look)
+  // The main game's theme, carried in from Round ready: the progress line takes its colour (a card
+  // only round has none and keeps the plain look)
   const theme = roundTheme(round);
   // Who keeps score (shared rounds): only that phone edits, the other players read (see keeper.js)
   const stateMe = useStore(s => s.me);
@@ -202,44 +196,36 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
     return livePreview(round, hole, counting ? { scores: draft, banker, wolf, marks: potMarksFor(round, hole, marks) } : null);
   }, [round, hole, phase, dirty, game, draft, banker, wolf, marks]);
 
-  // A trial top (?top=a to e, ./play/top/): the money, the hole and its panel laid out another way. A
-  // card kept with no game, a Big Game board and the live money view keep today's
-  const T = !!topVariant() && !solo && !money && !bigBoardOnly(round);
   const panels = extra => (
     <HolePanels main={main} game={game} hole={hole} editable={editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
       wolf={wolf} setWolf={setWolf} draft={draft} touched={touched} marks={marks} setMarks={setMarksDirty} results={results}
       onBankerPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} onSkinsBet={() => setBetsSheet(true)} {...extra} />
   );
-  const top = T && {
-    round, main, hole, idx, game, units, solo, holeFixed, editable, preview, banker, wolf,
-    openCard: () => setCard(true), openBets: () => setBetsSheet(true), onLive: () => setLive(true), onMenu: () => setMenu(true),
-    panels: extra => panels({ bankerPart: 'bar', ...extra }),
-  };
-  const holeHead = T ? (TopHead ? <TopHead {...top} /> : null) : (
+  // The top of the hole, on the page with no boxes: the hole as a headline with the scorecard link,
+  // everyone's money under it (it sticks once the hole scrolls away), then the game's panel set flat.
+  // A card kept with no game has no money or panel; a Big Game board shows its own money in the header.
+  // The banker's panel is split: its bar here, its bets list under the top on the bets step
+  const holeHead = (
     <>
-      <HoleMeta round={round} hole={hole} units={units} solo={solo} holeFixed={holeFixed} onOpen={() => setCard(true)} />
-      {!solo && (
-        <HolePanels main={main} game={game} hole={hole} editable={editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
-          wolf={wolf} setWolf={setWolf} draft={draft} touched={touched} marks={marks} setMarks={setMarksDirty} results={results}
-          onBankerPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} onSkinsBet={() => setBetsSheet(true)} />
-      )}
+      <HoleHead round={round} hole={hole} units={units} solo={solo} holeFixed={holeFixed} onOpen={() => setCard(true)} />
+      {!solo && !bigBoardOnly(round) && <MoneyLine round={round} hole={hole} preview={preview} />}
+      {!solo && <div className="hole-game">{panels({ bankerPart: 'bar' })}</div>}
     </>
   );
   return (
     <Screen className={`play ${theme ? 'themed' : ''}`} style={themeVars(theme)}>
-      {T && TopHeader ? <TopHeader {...top} /> : <PlayHeader round={round} idx={idx} hole={hole} solo={solo} theme={theme} preview={preview} onLive={() => setLive(true)} onMenu={() => setMenu(true)} noMoney={(money && !solo) || !!T} />}
-      {T && TopPinned && <TopPinned {...top} />}
+      <PlayHeader round={round} idx={idx} solo={solo} onLive={() => setLive(true)} onMenu={() => setMenu(true)} noBar={money && !solo} />
       <PlayBanners round={round} card={keeping} editable={editable} dirty={dirty} requests={requests} doneEditing={doneEditing} onLetIn={setAddSheet} />
       {money && (
         <LiveMoney round={round} me={me} holderName={keeping.holderName} onCard={() => setCard(true)} onThisHole={() => setWatch('hole')}
           onHole={no => { setWatch('hole'); goHole(round.holes.findIndex(h => h.no === no)); }} />
       )}
-      {/* The hole line and the game's panel. While scores go in they ride at the top of the rows' scroll,
-          so only the header and the money strip stay put and the rows (the thing to tap, one-handed on
-          the course) get the screen once you scroll; on Banker's bets step they stand alone */}
+      {/* The hole, the money and the game's panel. While scores go in they ride at the top of the rows'
+          scroll, so only the header and the money line stay put and the rows (the thing to tap,
+          one-handed on the course) get the screen once you scroll; on Banker's bets step they stand
+          alone, with the bets list under them */}
       {!money && phase !== 'scores' && holeHead}
-      {/* A trial top holds the banker's bar; the bets list comes under it */}
-      {T && !money && phase === 'bets' && panels({ bankerPart: 'bets' })}
+      {!money && phase === 'bets' && panels({ bankerPart: 'bets' })}
       {!money && phase === 'scores' && (
         <HoleScores round={round} main={main} hole={hole} game={game} solo={solo} editable={editable} sharedLive={keeping.sharedLive} holderName={keeping.holderName} me={me}
           units={units} faces={faces} shortRowNames={shortRowNames} entry={entry} banker={banker} wolf={wolf} prompt={prompt} onRunAuction={() => setGamesSheet(true)} head={holeHead} />
