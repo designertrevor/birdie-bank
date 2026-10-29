@@ -202,14 +202,14 @@ function PlayRound({ round, mount, momentUp = false, watch = 'money', setWatch }
       onBankerPick={() => setBankerPick(true)} onBet={pid => setBetPad(pid)} onSkinsBet={() => setBetsSheet(true)} {...extra} />
   );
   // The top of the hole, on the page with no boxes: the hole as a headline with the scorecard link,
-  // everyone's money under it (it sticks once the hole scrolls away), then the game's panel set flat.
+  // the game's panel set flat, then everyone's money at its foot as in A (it sticks once the rest scrolls away).
   // A card kept with no game has no money or panel; a Big Game board shows its own money in the header.
   // The banker's panel is split: its bar here, its bets list under the top on the bets step
   const holeHead = (
     <>
       <HoleHead round={round} hole={hole} units={units} solo={solo} holeFixed={holeFixed} onOpen={() => setCard(true)} />
-      {!solo && !bigBoardOnly(round) && <MoneyLine round={round} hole={hole} preview={preview} />}
       {!solo && <div className="hole-game">{panels({ bankerPart: 'bar' })}</div>}
+      {!solo && !bigBoardOnly(round) && <MoneyLine round={round} hole={hole} preview={preview} />}
     </>
   );
   return (
