@@ -7,7 +7,7 @@
 // organizer's phone: they mark who's in themselves, and the group link stays hidden.
 import { useEffect, useSyncExternalStore } from 'react';
 import { getState, update } from './store.js';
-import { shareableAvatar } from './avatars.js';
+import { stampPlanFaces } from './plan-faces.js';
 import { getSupabase, supabaseConfigured } from './supabase.js';
 import { PlansOffError, planLocalAdapter, planSupabaseAdapter } from './plan-adapters.js';
 import { newCode, stable } from './sync-model.js';
@@ -94,9 +94,8 @@ export async function sharePlan(id) {
   const adapter = await getPlanAdapter();
   if (!adapter) throw new PlansOffError();
   const code = newCode();
-  // The organizer's face goes with the plan, so friends see the same avatar the organizer has everywhere
-  const face = plan.host ? shareableAvatar(getState().profile?.avatar) : null;
-  if (face && !plan.hostAvatar) update(s => { const p = s.plans?.[id]; if (p) p.hostAvatar = face; });
+  // Everyone's face goes with the plan, so friends see the same avatars the organizer sees (plan-faces.js)
+  stampFaces(id);
   try {
     await adapter.create(code, planMeta(getState().plans[id]));
     // Every answer the organizer already has (their own, and anyone they marked) goes up too
@@ -139,6 +138,8 @@ export async function editPlan(id, fn) {
     fn(p);
     if (p.code) p.metaUnsent = true;
   });
+  // Someone added, or a face changed since it was shared: the faces go up with the change
+  if (getState().plans?.[id]?.code) stampFaces(id);
   const plan = getState().plans?.[id];
   if (!plan?.code || !plan.host) return true;
   try {
@@ -147,6 +148,16 @@ export async function editPlan(id, fn) {
     update(s => { const p = s.plans?.[id]; if (p) delete p.metaUnsent; });
     return sent;
   } catch (e) { noteError(e); return false; }
+}
+
+/** Stamp the organizer's phone's faces on its plan, worked out from the state as it is now. Only writes when they changed. */
+function stampFaces(id) {
+  const state = getState();
+  const plan = state.plans?.[id];
+  if (!plan?.host) return;
+  const next = stampPlanFaces(state, structuredClone(plan));
+  if (stable({ h: next.hostAvatar, f: next.faces }) === stable({ h: plan.hostAvatar, f: plan.faces })) return;
+  update(s => { const p = s.plans?.[id]; if (!p) return; if (next.hostAvatar) p.hostAvatar = next.hostAvatar; if (next.faces) p.faces = next.faces; else delete p.faces; });
 }
 
 /** Take a plan off this phone. The organizer's copy comes off the server too. */
