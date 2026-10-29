@@ -18,7 +18,7 @@
 
 /* The road trip scene whole, under the header (trips-8): the drawing's own shape, so its slice from the
    top never cuts the car's roof and the drivers' caps */
-.trip-screen .trip-scene { height: auto; aspect-ratio: 400 / 240; max-height: 236px; margin: 4px 0 10px; }
+.trip-screen .trip-scene { height: auto; aspect-ratio: 400 / 240; max-height: 236px; margin: 4px 16px 10px; }
 
 /* The schedule card's actions: See the rounds full width, planning again a quiet link under it (trips-32) */
 .tm-sched-acts { flex-direction: column; align-items: stretch; }

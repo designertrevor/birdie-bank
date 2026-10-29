@@ -3748,7 +3748,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .mr-value { font-size: 14px; font-weight: 500; color: var(--mute); text-align: right; max-width: 48%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mr-caret { color: var(--mute-soft); font-size: 14px; flex-shrink: 0; }
 .menu-row.danger, .menu-row.danger > i:first-child { color: var(--loss); }
-.feedback-row { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 6px 16px 8px; padding: 6px 14px 6px 6px; border: none; border-radius: 18px; background: var(--surface); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.feedback-row { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 6px 16px 8px; padding: 8px 14px 8px 8px; border: none; border-radius: 18px; background: var(--surface); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
 .feedback-row .spot { flex-shrink: 0; }
 .feedback-row .fb-words { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .feedback-row strong { font-size: 15px; }
@@ -3958,6 +3958,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .game-tile.selected { box-shadow: inset 0 0 0 2px var(--pink-fill); background: var(--pick-tint); }
 .gt-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
 .game-icon.sm { width: 40px; height: 40px; font-size: 18px; border-radius: 12px; margin-right: 0; }
+/* In the Game step's two-up grid the sticker gets room to read, closer to the list's size */
+.game-tile .game-icon.sm { width: 56px; height: 56px; }
 .gt-info { width: 32px; height: 32px; margin: -6px -6px 0 0; border: none; border-radius: 50%; background: none; color: var(--mute); font-size: 17px; cursor: pointer; display: grid; place-items: center; }
 .game-tile .gn { font-size: 16px; }
 .game-tile .gs { font-size: 12.5px; line-height: 1.3; }
