@@ -8,7 +8,7 @@ import {
 } from '../../components/GamePanels.jsx';
 import { DrivesShortfall } from '../../components/ScrambleDrives.jsx';
 import {
-  bankerPress, bankerPressAll, betPresets, blindMultiplierOf, isJustPlaying, isTeamGame, matchScored, playersOn, popsFor, posOf, settingsAt, skinsKinds, skinsTable, wolfCarryBefore,
+  bankerPress, bankerPressAll, betPresets, blindMultiplierOf, isJustPlaying, isTeamGame, matchScored, playersOn, popsFor, posOf, settingsAt, wolfCarryBefore,
 } from '../../lib/round.js';
 import { halfStrokesOn, strokesWords } from '../../lib/allowances.js';
 import { DRIVE_GAMES } from '../../lib/scramble-drives.js';
@@ -16,21 +16,24 @@ import { money } from '../../lib/golf.js';
 import { padUnit, unitFmt } from '../../lib/play-for.js';
 import { buzz } from '../../lib/delight.js';
 import { onTheLine } from '../../lib/play-screen.js';
+import { skinsWorth } from './hole-info.js';
 
 /**
  * The main game's panel for the hole on screen. `main` is the main game's own round (no one who's
  * only in the side games); `onBankerPick`, `onBet` and `onSkinsBet` open the sheets that change them.
  */
-export function HolePanels({ main, game, hole, editable, banker, setBanker, phase, setPhase, wolf, setWolf, draft, touched, marks, setMarks, results, onBankerPick, onBet, onSkinsBet }) {
+export function HolePanels({ main, game, hole, editable, banker, setBanker, phase, setPhase, wolf, setWolf, draft, touched, marks, setMarks, results, onBankerPick, onBet, onSkinsBet, bankerPart = null, noSkins = false }) {
+  // `bankerPart` ('bar' or 'bets') splits the banker's panel for a trial top that holds its bar in a card
+  // and its bets list under it (./top/); `noSkins` drops the skins strip for a top that says it itself
   return (
     <>
       {game === 'banker' && (
         <BankerPanel round={main} readOnly={!editable} banker={banker} setBanker={setBanker} phase={phase} setPhase={setPhase}
-          onPick={onBankerPick} onBet={onBet} draft={draft} hole={hole} />
+          onPick={onBankerPick} onBet={onBet} draft={draft} hole={hole} part={bankerPart} />
       )}
       {matchScored(main) && <MatchPanel round={main} hole={hole} readOnly={!editable} />}
       {isTeamGame(game) && !matchScored(main) && <TeamPanel round={main} hole={hole} />}
-      {game === 'skins' && <SkinsPanel round={main} hole={hole} onChange={editable ? onSkinsBet : null} />}
+      {game === 'skins' && !noSkins && <SkinsPanel round={main} hole={hole} onChange={editable ? onSkinsBet : null} />}
       {game === 'wolf' && <WolfPanel round={main} hole={hole} wolf={wolf} setWolf={editable ? setWolf : null} />}
       {game === 'vegas' && <VegasPanel round={main} hole={hole} draft={draft} touched={touched} />}
       {game === 'sixes' && <SixesPanel round={main} hole={hole} />}
@@ -74,7 +77,7 @@ export function BankerSheets({ round, main, hole, banker, setBanker, picking, se
 
 // --------------------------- Banker ---------------------------------------
 
-function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet, hole, readOnly = false }) {
+function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet, hole, readOnly = false, part = null }) {
   const money = unitFmt(round); // points in a points or reward round
   const b = round.players.find(p => p.id === banker.banker);
   const others = playersOn(round, hole).filter(p => p.id !== banker.banker);
@@ -91,14 +94,14 @@ function BankerPanel({ round, banker, setBanker, phase, setPhase, onPick, onBet,
   const here = p => (round.useHandicaps && !isJustPlaying(round, p.id) ? popsFor(round, p, hole) : 0);
   return (
     <>
-      <div className="banker-bar">
+      {part !== 'bets' && <div className="banker-bar">
         <div className="bb-who"><div className="bl">Banker this hole</div><div className="bn"><Icon name="bank" fill /> <span className="bn-name">{b?.name}</span></div></div>
         <div className="bb-line" aria-live="polite"><div className="bl">On the line</div><div className="bn">{money(onTheLine(banker, f, all))}</div></div>
         {readOnly ? null : phase === 'bets'
           ? canPick && <button className="change-btn" onClick={onPick} aria-label="Change the banker">Change</button>
           : <button className="change-btn" onClick={() => setPhase('bets')}><Icon name="coins" /> Bets</button>}
-      </div>
-      {phase === 'bets' && (
+      </div>}
+      {part !== 'bar' && phase === 'bets' && (
         <div className="scroll">
           <div style={{ padding: '6px 20px 8px' }}><div className="field-label">Step 1 of 2: bets and doubles</div></div>
           {others.map(p => (
@@ -155,30 +158,16 @@ function BetChips({ name, value, presets, onPick, onMore, fmt = money }) {
 // --------------------------- Skins ----------------------------------------
 
 function SkinsPanel({ round, hole, onChange }) {
-  const money = unitFmt(round); // points in a points or reward round
-  const kinds = skinsKinds(round);
-  const cfg = round.settings.skins;
-  const pot = cfg.payout === 'pot';
-  const counts = Object.fromEntries(round.players.map(p => [p.id, 0]));
-  // What this hole is worth, per kind: skins, plus the money when each skin has a price
-  const worth = kinds.map(kind => {
-    const t = skinsTable(round, kind);
-    t.rows.filter(r => r.winner).forEach(r => { counts[r.winner] += r.skins; });
-    const row = t.rows.find(r => r.hole.no === hole.no);
-    const n = row?.pot ?? 1;
-    const skins = `${n} skin${n > 1 ? 's' : ''}`;
-    const tag = kinds.length > 1 ? `${kind === 'net' ? 'Net' : 'Gross'} ` : '';
-    return pot ? `${tag}${skins}` : `${tag}${skins} · ${money(row?.purse ?? t.value * (round.players.length - 1))}`;
-  });
+  const { worth, won, price } = skinsWorth(round, hole);
   // Folded to one slim line (Layout Lab A): what the hole is worth and the price of a skin to change it,
   // with the skins each player has won so far quiet under it
   return (
     <div className="worth-strip">
       <div className="ws-main">
         <span className="ws-text"><span className="ws-l">Worth</span> {worth.join(' · ')}</span>
-        {onChange && <button className="ws-change" onClick={onChange}>{pot ? `${money(cfg.stake ?? cfg.value)} each in` : `${money(cfg.value)} a skin`}</button>}
+        {onChange && <button className="ws-change" onClick={onChange}>{price}</button>}
       </div>
-      <div className="ws-counts">Skins won: {round.players.map(p => `${p.name.split(' ')[0]} ${Math.round(counts[p.id] * 10) / 10}`).join(' · ')}</div>
+      <div className="ws-counts">Skins won: {won.map(w => `${w.name} ${w.n}`).join(' · ')}</div>
     </div>
   );
 }

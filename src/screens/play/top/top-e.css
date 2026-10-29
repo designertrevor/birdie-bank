@@ -1,0 +1,34 @@
+/* ============================================================
+   Trial top E, "Say it plainly" (TopE.jsx): the hole and the money as sentences
+   ============================================================ */
+:root[data-top="e"] .te { flex-shrink: 0; padding: 14px 20px 0; }
+:root[data-top="e"] .te p { margin: 0; }
+:root[data-top="e"] .te-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+:root[data-top="e"] .te-hole { font-family: var(--display); font-weight: var(--display-weight, 500); font-size: 30px; line-height: 1.1; letter-spacing: -.02em; color: var(--ink); }
+:root[data-top="e"] .te-card {
+  flex: none; display: inline-flex; align-items: center; gap: 5px; height: 40px; padding: 0 12px; border: none; border-radius: var(--r-chip);
+  background: var(--card); box-shadow: var(--hair); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+:root[data-top="e"] .te-card:active { transform: scale(.96); }
+:root[data-top="e"] .te-stake { margin-top: 2px !important; font-family: var(--display); font-weight: var(--display-weight, 500); font-size: 20px; line-height: 1.25; color: var(--body); text-wrap: pretty; }
+:root[data-top="e"] .te-meta { margin-top: 6px !important; font-size: 13px; font-weight: 600; color: var(--mute); }
+:root[data-top="e"] .te-meta .stroke-dots { color: var(--pink-text); }
+/* The money as one line, grouped by total, under a hairline */
+:root[data-top="e"] .te-money {
+  display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 10px 0 12px; background: none; border: none;
+  box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line); font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+:root[data-top="e"] .te-line { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--body); line-height: 1.45; }
+:root[data-top="e"] .te-group { display: inline-block; max-width: 100%; margin-right: 18px; }
+:root[data-top="e"] .te-lead { color: var(--ink); font-weight: 800; }
+:root[data-top="e"] .te-money .tp-amt { font-size: 17px; }
+:root[data-top="e"] .te-more { flex: none; color: var(--mute); font-size: 14px; }
+:root[data-top="e"] .te-money:active .te-line { opacity: .7; }
+/* The game's panel, as today, scrolling with the rows */
+:root[data-top="e"] .te-game { padding-top: 12px; flex-shrink: 0; }
+:root[data-top="e"] .te-won { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 20px 10px; font-size: 13px; font-weight: 600; color: var(--mute); }
+:root[data-top="e"] .te-won > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-top="e"] .te-price {
+  flex: none; min-height: 36px; padding: 0 10px; border: none; border-radius: var(--r-chip); background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}

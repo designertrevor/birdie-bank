@@ -1,0 +1,44 @@
+/* ============================================================
+   Shared by the trial tops (index.js): the money numerals and the "flat" game panel, a panel set
+   without its own box, inside a card (A) or on the page (B). Only under <html data-top>.
+   ============================================================ */
+
+/* Amounts: the strip's heavy numerals, in the deeper sun-proof win and loss colours on light */
+:root[data-top] .play { --tp-win: #0a5440; --tp-loss: #8f2219; }
+:root[data-top][data-theme="dark"] .play { --tp-win: #6fd3a8; --tp-loss: #ff8a7d; }
+@media (prefers-color-scheme: dark) { :root[data-top]:not([data-theme="light"]) .play { --tp-win: #6fd3a8; --tp-loss: #ff8a7d; } }
+:root[data-top] .tp-amt { font-family: var(--play-num); font-weight: var(--play-num-weight); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+:root[data-top] .tp-amt.pos { color: var(--tp-win); }
+:root[data-top] .tp-amt.neg { color: var(--tp-loss); }
+:root[data-top] .tp-amt.bump { animation: pop .35s var(--spring); display: inline-block; }
+
+/* A flat panel: the game's panel with no box of its own. Each part loses its card, wash and edge bar
+   (important, over the dark theme's bar rules), keeps its words, and sits on whatever is under it */
+:root[data-top] .top-flat:empty { display: none; }
+:root[data-top] .top-flat > * + * { margin-top: 10px !important; }
+:root[data-top] .top-flat :is(.banker-bar, .wolf-panel, .press-bar, .vegas-panel, .sides-line, .worth-strip, .match-status, .press-alert) { margin: 0; }
+:root[data-top] .top-flat :is(.banker-bar, .wolf-panel, .press-bar, .vegas-panel, .sides-line, .worth-strip) {
+  background: none !important; box-shadow: none !important; padding-left: 0; padding-right: 0; border-radius: 0;
+}
+:root[data-top] .top-flat :is(.banker-bar, .wolf-panel, .vegas-panel) { padding-top: 0; padding-bottom: 0; }
+:root[data-top] .top-flat .sides-line { padding: 0; }
+/* Nassau's tiles: three columns split by hairlines, the leader's score in the win colour, no slabs */
+:root[data-top] .top-flat .ms-tile { background: none !important; box-shadow: none !important; border-radius: 0; padding: 2px 4px; }
+:root[data-top] .top-flat .ms-tile + .ms-tile { box-shadow: inset 1px 0 0 var(--line) !important; }
+:root[data-top] .top-flat .ms-tile.ahead :is(.ms-val) { color: var(--tp-win) !important; }
+:root[data-top] .top-flat .ms-tile.behind :is(.ms-val) { color: var(--tp-loss) !important; }
+:root[data-top] .top-flat .ms-tile :is(.ms-lbl, .ms-sub) { color: var(--mute) !important; }
+:root[data-top] .top-flat .vegas-team { background: var(--surface) !important; }
+:root[data-top] .top-flat .vegas-team.ahead .ms-val { color: var(--tp-win); }
+:root[data-top] .top-flat .vegas-team.behind .ms-val { color: var(--tp-loss); }
+/* Words that were set for a pastel read in the screen's own colours */
+:root[data-top] .top-flat :is(.bl, .wolf-note, .press-bar-lbl, .wp-v) { color: var(--body) !important; }
+:root[data-top] .top-flat :is(.bn, .wp-sides, .ws-text) { color: var(--ink) !important; }
+/* Buttons and chips that were white on a wash take the surface, so they still read as buttons */
+:root[data-top] .top-flat :is(.change-btn, .press-chip, .ws-change, .pill-btn:not(.on)) { background: var(--surface) !important; color: var(--ink) !important; box-shadow: none !important; }
+:root[data-top] .top-flat .wolf-panel.folded { padding: 0; }
+/* Vegas's two team tiles on the surface: the team names and "So far" in the body colour (the teal and
+   mint set for the leader's slab vanished on the surface in the dark), the numbers in win and loss */
+:root[data-top] .top-flat .vegas-team :is(.ms-lbl, .ms-sub) { color: var(--body) !important; }
+:root[data-top] .top-flat .vegas-team.ahead .ms-val { color: var(--tp-win) !important; }
+:root[data-top] .top-flat .vegas-team.behind .ms-val { color: var(--tp-loss) !important; }
