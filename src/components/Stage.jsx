@@ -34,8 +34,9 @@ export function Stage({ id, dir = 'swap', children }) {
   const arrived = shown.id === id ? shown.dir : dir;
   // Keyed on the screen, so the one leaving keeps its mounted instance as it moves to the leaving slot
   const items = [];
-  if (leaving && leaving.dir === 'push') items.push(<div key={`s:${leaving.id}`} className="stage under">{leaving.node}</div>);
+  // The one on its way out is inert for its beat: nothing on it can be tapped, focused or found again
+  if (leaving && leaving.dir === 'push') items.push(<div key={`s:${leaving.id}`} className="stage under" inert>{leaving.node}</div>);
   items.push(<div key={`s:${id}`} className={`stage in-${arrived}`}>{children}</div>);
-  if (leaving && leaving.dir !== 'push') items.push(<div key={`s:${leaving.id}`} className={`stage out-${leaving.dir}`}>{leaving.node}</div>);
+  if (leaving && leaving.dir !== 'push') items.push(<div key={`s:${leaving.id}`} className={`stage out-${leaving.dir}`} inert>{leaving.node}</div>);
   return items;
 }

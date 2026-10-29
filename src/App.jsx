@@ -1,4 +1,4 @@
-import { Suspense, lazy, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UIProvider } from './components/ui.jsx';
 import { Stage } from './components/Stage.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
@@ -19,7 +19,7 @@ const RELOADED = 'bb-chunk-reload';
 const LOADERS = [];
 function screen(load, name = 'default') {
   LOADERS.push(load);
-  return lazy(() => load().then(m => {
+  const C = lazy(() => load().then(m => {
     try { sessionStorage.removeItem(RELOADED); } catch { /* ignore */ }
     return { default: m[name] };
   }, err => {
@@ -29,6 +29,19 @@ function screen(load, name = 'default') {
     if (again) { location.reload(); return new Promise(() => {}); }
     throw err;
   }));
+  return C;
+}
+
+/**
+ * Start a lazy screen now, React's wrapper included, so its first render doesn't suspend (the stage
+ * would blank to the Suspense fallback for a frame). Null when it's ready to render (or failed, which
+ * the error boundary shows as before); otherwise a promise for when it is. Uses React's own lazy
+ * fields (_payload, _init), the same in development and production; anything else is left alone.
+ */
+function warm(C) {
+  const p = C?._payload;
+  if (!p || typeof C._init !== 'function' || p._status === 1) return null;
+  try { C._init(p); return null; } catch (e) { return e && typeof e.then === 'function' ? e.then(() => {}, () => {}) : null; }
 }
 const onboarding = () => import('./screens/Onboarding.jsx');
 const people = () => import('./screens/People.jsx');
@@ -182,6 +195,8 @@ function pendingJoin() {
 
 /** Warm the screens once the first one is up, so tapping into one never shows a blank frame. */
 function preloadScreens() {
+  // Only the code, as before: a screen's React wrapper starts when it's first pushed (warm, below) or rendered.
+  // Starting every wrapper up front left the finish flow's Play screen on top (e2e, 2026-10-29)
   const go = () => LOADERS.forEach(l => l().catch(() => {}));
   if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 3000 });
   else setTimeout(go, 1500);
@@ -273,31 +288,32 @@ export default function App() {
     return pendingJoin();
   });
 
-  // Every move between screens is a transition: a screen whose code hasn't loaded yet keeps the one
-  // you're on showing until it's ready, instead of the stage blanking to the Suspense fallback for a frame
   const push = useCallback((name, params = {}) => {
     // The upsell guard: no paywall or Pro sheet while a round is live (upsell-guard.js)
     if (PAYWALL_ON && !routeAllowed(name, getState())) return;
-    startTransition(() => setStack(s => [...s, { name, params, key: Date.now() + Math.random() }]));
+    const add = () => setStack(s => [...s, { name, params, key: Date.now() + Math.random() }]);
+    // A screen whose code hasn't come in yet (a tap before the idle preload finished): the one you're on
+    // stays up until it has, rather than the stage blanking for a frame. Only pushes wait; every other
+    // move (back, replace, reset, a tab) happens at once, as it always has, and just warms the next one
+    const waiting = warm(SCREENS[name]);
+    if (waiting) waiting.then(add); else add();
     try { history.pushState({ bb: true }, ''); } catch { /* ignore */ }
   }, []);
   // Go back through browser history when we pushed an entry, so the phone's back gesture stays in sync
   const pop = useCallback(() => {
     if (history.state?.bb) history.back();
-    else startTransition(() => setStack(s => s.slice(0, -1)));
+    else setStack(s => s.slice(0, -1));
   }, []);
   /** Swap the top screen for another, with no new history entry (sending an idea → the roadmap). */
   const replace = useCallback((name, params = {}) => {
     if (PAYWALL_ON && !routeAllowed(name, getState())) return;
-    startTransition(() => setStack(s => [...s.slice(0, -1), { name, params, key: Date.now() + Math.random() }]));
+    setStack(s => [...s.slice(0, -1), { name, params, key: Date.now() + Math.random() }]);
   }, []);
   /** Replace the whole stack (e.g. finish a round → go to its results). */
   const reset = useCallback((nextTab, ...routes) => {
+    if (nextTab) setTab(nextTab);
     if (PAYWALL_ON) routes = allowedRoutes(routes, getState());
-    startTransition(() => {
-      if (nextTab) setTab(nextTab);
-      setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })));
-    });
+    setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })));
   }, []);
 
   // Save where you are as it changes (and kept.js saves again as the app goes to the background)
@@ -366,13 +382,13 @@ export default function App() {
       if (gone >= 0) { layers.current.splice(gone, 1); return; }
       const top = layers.current.pop();
       if (top) { top.done = true; top.onClose(); return; }
-      startTransition(() => setStack(s => s.slice(0, -1)));
+      setStack(s => s.slice(0, -1));
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const nav = useMemo(() => ({ push, pop, replace, reset, layer, tab, setTab: t => startTransition(() => { setTab(t); setStack([]); }) }), [push, pop, replace, reset, layer, tab]);
+  const nav = useMemo(() => ({ push, pop, replace, reset, layer, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, replace, reset, layer, tab]);
 
   // Which way the top screen changed, for the stage (Stage.jsx): deeper is a push, shallower a pop,
   // the same depth (a tab, a replaced screen, a reset) a swap. Worked out when the stage's id moves,

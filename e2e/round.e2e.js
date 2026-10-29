@@ -296,7 +296,8 @@ async function playThrough(page, nav, step, context, problems) {
   // --- The reveal ---
   step('reveal');
   await page.getByText(`${leader} takes it`).waitFor({ timeout: 30_000 });
-  await page.getByText('Skins won').waitFor();
+  // The reveal's own title, exactly: for a beat after Finish the hole screen is still leaving, with its "Skins won: ..." line
+  await page.getByText('Skins won', { exact: true }).waitFor();
   for (const p of PLAYERS) {
     if (want.won[p]) await page.getByText(`${want.won[p]} skin${want.won[p] === 1 ? '' : 's'}`, { exact: true }).first().waitFor();
   }
