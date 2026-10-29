@@ -7,7 +7,7 @@
 // Flags: --look classic|new (localStorage bb-look), --theme light|dark|both (default both),
 // --only upnext,tab (shot ids), --type <name> (opens ?type=<name>), --seed <file>,
 // --build-seed (rebuilds overnight/review-shots/seed-state.json with this server's code, then stops),
-// --top-set (the scoring screen's top, every game x theme, plain and scrolled, into
+// --look gooddog (the Good Dog trial's look, with --label gooddog), --top-set (the scoring screen's top, every game x theme, plain and scrolled, into
 // overnight/review-shots/top-final/<game>-<theme>[-scrolled].png; narrow it with --games skins,wolf, move it with --out).
 // Every page runs on a fixed clock (Mon 26 Oct 2026, 5:40 pm in Utah), so both copies show the same days.
 // See overnight/review-shots/README.md.
@@ -95,6 +95,23 @@ const SHOTS = [
   { id: 'plan-open', state: 'liveOpen', current: null, new: 'await home(); await openPlan("Birch Creek"); await w(1400);' },
   { id: 'plan-friend', state: 'friend', current: null, new: 'await home(); await openPlan("Birch Creek"); await w(1400);' },
   { id: 'pad', state: 'live', current: null, new: 'await toRound(); await w(1200); await openPad(); await w(900);' },
+  // The Good Dog trial's flows, end to end (--look gooddog against --look new): each also runs on the new look
+  { id: 'tab-scrolled', state: 'liveOpen', current: null, new: 'await home(); nav("Tab"); await w(1400); scrollOne(); await w(900);' },
+  { id: 'history-scrolled', state: 'liveOpen', current: null, new: 'await home(); nav("History"); await w(1400); scrollOne(); await w(900);' },
+  { id: 'results-scrolled', state: 'live', current: null, new: 'await home(); nav("History"); await w(1200); await openRound("Banker"); await w(1600); scrollOne(); await w(900);' },
+  { id: 'results-end', state: 'live', current: null, new: 'await home(); nav("History"); await w(1200); await openRound("Banker"); await w(1600); scroller().scrollTop = 1e5; await w(900);' },
+  { id: 'setup-game', state: 'done', current: null, new: 'await home(); await toSetupStep(0);' },
+  { id: 'setup-course', state: 'done', current: null, new: 'await home(); await toSetupStep(1);' },
+  { id: 'setup-players', state: 'done', current: null, new: 'await home(); await toSetupStep(2);' },
+  { id: 'setup-bets', state: 'done', current: null, new: 'await home(); await toSetupStep(3);' },
+  { id: 'setup-look', state: 'done', current: null, new: 'await home(); await toSetupStep(4);' },
+  { id: 'first-hole', state: 'done', current: null, new: 'await home(); await toFirstHole();' },
+  { id: 'scoring-scrolled', state: 'live', current: null, new: 'await toRound(); await w(1400); scroller().scrollTop = 1e5; await w(900);' },
+  { id: 'finish-reveal', state: 'live', current: null, new: 'await toFinish();' },
+  { id: 'finish-pays', state: 'live', current: null, new: 'await toFinish(); tap("Who pays who"); await w(1400);' },
+  { id: 'finish-results', state: 'live', current: null, new: 'await toFinish(); tap("See the full breakdown"); await w(1800);' },
+  { id: 'onboarding', state: 'fresh', current: null, new: 'await w(600);' },
+  { id: 'onboarding-q1', state: 'fresh', current: null, new: 'await w(600); tap("Set up my group"); await w(1200);' },
 ];
 
 // The copy-specific journeys the shots share; filled in per copy below
@@ -117,6 +134,10 @@ const JOURNEYS = {
     window.toAsk = async () => { tap('Get a round going'); };
     window.openPad = async () => { tap('Trevor: another score. Number pad'); };
     window.openRound = async t => { const rows = [...document.querySelectorAll('.screen.active .rc-card, .rc-card')].filter(vis); const r = rows.find(e => txt(e).includes(t)) || rows[0]; r.click(); };
+    window.toSetupStep = async n => { center(); await w(1400); tap('Pick a game'); await w(1000); if (n < 1) return; pickGame('Skins'); await w(500); tap('Next: Course'); await w(900); if (n < 2) return; tap('Logan River GC'); await w(400); tap('Next: Players'); await w(900); if (n < 3) return; tap('Jackson'); tap('Marcus'); tap('Dev'); await w(400); tap('Next: Bets'); await w(900); if (n < 4) return; tap('Next: Look it over'); await w(1000); };
+    window.toFirstHole = async () => { await toReady(); await w(1600); tap('Tee off on hole 1'); await w(1500); tryTap('Skip for now'); await w(800); };
+    // Saves every hole left at par to the last, Play on at the turn, then Finish round: the reveal
+    window.toFinish = async () => { await toRound(); await w(1000); for (let i = 0; i < 24; i++) { const b = [...document.querySelectorAll('.play-cta .full-btn:not(.outline)')].find(vis); if (b && txt(b).startsWith('Finish round')) { b.click(); break; } if (b) b.click(); await w(1000); tryTap('Play on'); await w(300); } await w(3000); };
   `,
 };
 
@@ -242,10 +263,11 @@ try {
       const steps = shot[isNew ? 'new' : 'current'];
       if (steps == null) continue;
       if (ONLY && !ONLY.includes(shot.id)) continue;
-      if (!STATES[shot.state]) { console.log(shot.id, 'SKIPPED (no state)'); continue; }
+      if (shot.state !== 'fresh' && !STATES[shot.state]) { console.log(shot.id, 'SKIPPED (no state)'); continue; }
       const name = `${shot.id}-${theme}`;
-      const state = structuredClone(STATES[shot.state]);
-      state.settings.theme = theme;
+      // A fresh phone (onboarding) starts with nothing saved and follows the phone's theme
+      const state = shot.state === 'fresh' ? null : structuredClone(STATES[shot.state]);
+      if (state) state.settings.theme = theme;
       const pg = await openPage({ theme, state, look: LOOK, url, storage: STORAGE[shot.state] });
       await ready(pg.s);
       try {

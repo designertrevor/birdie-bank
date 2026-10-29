@@ -3,13 +3,14 @@
 import { useMemo } from 'react';
 import { useStore } from './store.js';
 import { avatarFor, avatarModel, avatarName, noTwins, personKey } from './avatars.js';
+import { gdModel } from './look.js';
 
 /** `players`: [{ id, name, avatar? }] in the order they show (a round player can carry an avatar). */
 export function useGroupAvatars(players) {
   const state = useStore();
   return useMemo(() => {
     const list = (players || []).filter(p => p?.id);
-    const models = noTwins(list.map(p => avatarModel(avatarFor(state, p.id, p), { name: avatarName(state, p.id, p.name), key: personKey(state, p.id) })));
+    const models = noTwins(list.map(p => gdModel(avatarModel(avatarFor(state, p.id, p), { name: avatarName(state, p.id, p.name), key: personKey(state, p.id) }), avatarName(state, p.id, p.name))));
     return new Map(list.map((p, i) => [p.id, models[i]]));
   }, [state, players]);
 }

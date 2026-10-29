@@ -7,6 +7,9 @@ import { GAMES } from '../lib/round.js';
 import { ArtImage, Sticker } from './ArtFile.jsx';
 import { stickerUnits } from '../lib/sticker.js';
 import { artFile } from '../lib/art-files.js';
+import { isGoodDog } from '../lib/look.js';
+import { GdArt } from './GdArt.jsx';
+import { gdGameArt } from './gd-art.js';
 import { GROUP_TINTS } from '../lib/game-theme.js';
 import { INK, BALL, PINK, DEEP, OCHRE, GOLD, COIN, TEAL, MINT, CORAL, LAV, PEACH } from '../lib/art-palette.js';
 
@@ -281,6 +284,8 @@ export function GameScene({ game }) {
  * behind it; a `tint` an older call still passes does nothing. Decorative: screen readers get the name from the row.
  */
 export function GameArt({ game, size = null, className = '' }) {
+  // The Good Dog trial draws each game as a scratchy line icon (GdArt.jsx)
+  if (isGoodDog()) return <GdArt name={gdGameArt(game)} width={size || 44} className={`game-art ${className}`.trim()} />;
   const Scene = SCENES[game] || SCENES.stroke;
   const r = stickerUnits(64, size || 44);
   // An outside drawing (src/art/games/<game>.svg) replaces the hand-drawn one

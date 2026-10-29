@@ -1,6 +1,8 @@
 // The end of a round in three beats: the money reveal, settling up, and a results card to share.
 import { Spot } from './Spot.jsx';
 import { CrownedFace } from './Podium.jsx';
+import { GdArt } from './GdArt.jsx';
+import { isGoodDog } from '../lib/look.js';
 import { RaceBoard } from './RaceBoard.jsx';
 import { GameArt } from './GameArt.jsx';
 import { CheerArt } from './ResultsArt.jsx';
@@ -192,7 +194,9 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
           </h1>
           <div className={`rv-skip ${done ? 'gone' : ''}`} aria-hidden={done}>Tap to skip</div>
           {/* The winner's buddy takes the crown once the totals land; a tie or a winning side crowns them all */}
-          {done && heroFaces.length > 0 && (
+          {/* The Good Dog trial has no faces: the cup drawing crowns the winner instead */}
+          {done && heroFaces.length > 0 && isGoodDog() && <GdArt name="cup" width={150} className="rv-gd-art" />}
+          {done && heroFaces.length > 0 && !isGoodDog() && (
             <div className={`rv-crowned ${heroFaces.length > 1 ? 'many' : ''}`}>
               {heroFaces.map(([id, face]) => <CrownedFace key={id} model={face} size={heroFaces.length > 1 ? 52 : 64} />)}
             </div>

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './styles.css';
 import './look.css';
 import './look-new.css';
+import './look-gooddog.css';
 import App from './App.jsx';
 import { registerServiceWorker, reloadPending, updateBehindSplash } from './lib/sw-update.js';
 import { opsAfterPaint, opsAtLaunch } from './lib/ops.js';
@@ -11,10 +12,17 @@ import './lib/install-prompt.js';
 
 // The overhaul look is on unless this phone asked for the classic one (?look=classic, undone with
 // ?look=new), set before the first render so nothing paints in the wrong type (look.css)
+// The Good Dog trial (?look=gooddog, kept the same way) is the overhaul look with Good Dog's palette,
+// bands, edges and drawings on top: <html data-look="new" data-skin="gooddog"> (look-gooddog.css)
 try {
-  const pick = (location.search.match(/[?&]look=(new|classic)/) || [])[1];
+  const pick = (location.search.match(/[?&]look=(new|classic|gooddog)/) || [])[1];
   if (pick) localStorage.setItem('bb-look', pick);
-  document.documentElement.dataset.look = (pick || localStorage.getItem('bb-look')) === 'classic' ? 'classic' : 'new';
+  const look = pick || localStorage.getItem('bb-look');
+  document.documentElement.dataset.look = look === 'classic' ? 'classic' : 'new';
+  if (look === 'gooddog') {
+    document.documentElement.dataset.skin = 'gooddog';
+    import('./components/GdArtDraw.jsx').catch(() => {});
+  }
   // The runner-up type pairing on the new look, to compare: ?type=inter (Fraunces 400 and Inter, the
   // serif experiment's), undone with ?type=figtree; kept on this phone like the look (look-new.css)
   const type = (location.search.match(/[?&]type=(figtree|inter)/) || [])[1];

@@ -5,6 +5,7 @@ import { Suspense, lazy, useState } from 'react';
 import { useStore } from '../lib/store.js';
 import { avatarFor, avatarModel, avatarName, backdropOf, personKey, photoAllowed } from '../lib/avatars.js';
 import { supabaseUrl } from '../lib/supabase.js';
+import { gdModel, isGoodDog } from '../lib/look.js';
 
 // The Ball buddy drawings load just after the first paint (they're most of this file's weight), and
 // start loading as soon as the app does, so they're in long before a round or a sheet opens. Until
@@ -27,6 +28,11 @@ export function AvatarArt({ model, size = '', base = 'avatar', className = '', b
   if (model.kind === 'photo' && !broken) {
     return <span className={`${cls} av-photo`} aria-hidden="true"><img src={model.url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBrokenUrl(model.url)} /></span>;
   }
+  // The Good Dog trial has no faces: a buddy shows as initials on its pastel, ringed in ink
+  if (model.kind === 'buddy' && isGoodDog()) {
+    const b = backdropOf(model.bg);
+    return <span className={`${cls} av-initials gd-initials`} style={{ background: b.hex, color: b.ink }} aria-hidden="true"><span className="av-letters">{model.text || '?'}</span></span>;
+  }
   if (model.kind === 'buddy' && bare) {
     return <span className={`${cls} av-bare`} aria-hidden="true"><Suspense fallback={null}><BuddyArt id={model.buddy} bg={null} px={px} /></Suspense></span>;
   }
@@ -45,6 +51,6 @@ export function AvatarArt({ model, size = '', base = 'avatar', className = '', b
  */
 export function Avatar({ id = null, name = '', size = '', seat = null, model = null, letters = 1, base = 'avatar', className = '' }) {
   const state = useStore();
-  const m = model || avatarModel(avatarFor(state, id, seat), { name: avatarName(state, id, name), key: personKey(state, id) || name, letters });
+  const m = model || gdModel(avatarModel(avatarFor(state, id, seat), { name: avatarName(state, id, name), key: personKey(state, id) || name, letters }), avatarName(state, id, name));
   return <AvatarArt model={m} size={size} base={base} className={className} />;
 }

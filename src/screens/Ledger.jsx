@@ -33,6 +33,8 @@ import { ALL } from '../lib/books.js';
 import { TalkBar } from '../components/Talk.jsx';
 import { paymentTalk, roundTalk, roundThread } from '../lib/talk.js';
 import { useTalkSync } from '../lib/talk-sync.js';
+import { GdArt } from '../components/GdArt.jsx';
+import { isGoodDog } from '../lib/look.js';
 
 const first = name => name.split(' ')[0];
 // The tab you last looked at this visit (Everyone, or a crew's or trip's), so coming back keeps it
@@ -193,6 +195,7 @@ export default function Ledger() {
         {plan.length > 0 && summary.lead && (
           // What's still owed, big, and what you owe under it: the one thing to read on the screen
           <div className="te-summary">
+            {isGoodDog() && <GdArt name="receipt" width={132} className="te-gd-art" />}
             <span className="te-label">{summary.lead.label}</span>
             <span className={`te-big ${summary.lead.tone}`}>{money(summary.lead.amount)}</span>
             {summary.sub && <span className="te-sub">{summary.sub.text} <b className="neg">{money(summary.sub.amount)}</b></span>}

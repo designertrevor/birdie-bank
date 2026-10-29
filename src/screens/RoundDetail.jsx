@@ -7,6 +7,8 @@ import { ArtNote } from '../components/ArtNote.jsx';
 import { Scorecard } from '../components/Scorecard.jsx';
 import { AvatarArt } from '../components/Avatar.jsx';
 import { CrownedFace, Podium, TeamPodium } from '../components/Podium.jsx';
+import { GdArt } from '../components/GdArt.jsx';
+import { isGoodDog } from '../lib/look.js';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { BuddyArt } from '../components/BuddyArt.jsx';
 import { getState, update, useStore } from '../lib/store.js';
@@ -246,7 +248,7 @@ export default function RoundDetail({ id, celebrate }) {
         <div className={`results-a ${podium ? 'with-podium' : ''}`} ref={hero} style={{ '--ra-tint': gameTheme(round.game).soft, '--ra-strong': gameTheme(round.game).tint }}>
           {/* The eyebrow first, in every hero, then the face (or the podium further down) */}
           {!allSquare && !(res.big && !res.big.final) && <div className="ra-eyebrow"><Icon name="crown-simple" fill /> {tie && !winningSide ? 'Top of the table' : winningSide ? 'Winners' : 'Winner'}</div>}
-          {!podium && (!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
+          {!podium && !isGoodDog() && (!allSquare && !tie && faces.get(top.id) && !(res.big && !res.big.final)
             ? <CrownedFace model={faces.get(top.id)} size={84} />
             : allSquare || tie
               ? <Spot kind={allSquare ? 'handshake' : 'crowd'} ids={heroBuddies} size={120} className="hero-spot" plate={false} />
@@ -259,7 +261,9 @@ export default function RoundDetail({ id, celebrate }) {
           {meRow && meRow.id !== top.id && !allSquare && heroAmt != null && <div className="me-line">You: {fmt(meRow.amount, { sign: true })}</div>}
           {nice && <div className="me-line">You were just playing: {nice.score} ({nice.toPar})</div>}
           {/* The podium carries the faces and places; each amount is in the hero and Standings */}
-          {podium && (teamSides
+          {/* The Good Dog trial: one scratchy drawing under the money instead of the faces and the podium */}
+          {isGoodDog() && <GdArt name={allSquare ? 'roll' : 'flag'} width={allSquare ? 200 : 220} className="ra-gd-art" />}
+          {podium && !isGoodDog() && (teamSides
             ? <TeamPodium teams={teamSides} faces={faces} fmt={fmt} amounts={false} />
             : <Podium standings={res.standings} faces={faces} fmt={fmt} amounts={false} />)}
         </div>

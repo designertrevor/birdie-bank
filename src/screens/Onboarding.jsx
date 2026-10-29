@@ -7,6 +7,8 @@ import './onboarding.css';
 import { Spot } from '../components/Spot.jsx';
 import { GameArt } from '../components/GameArt.jsx';
 import { Scene } from '../components/Scenes.jsx';
+import { GdArt } from '../components/GdArt.jsx';
+import { isGoodDog } from '../lib/look.js';
 import { ArtImage } from '../components/ArtFile.jsx';
 import { Stage } from '../components/Stage.jsx';
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -71,6 +73,8 @@ const SCENE_PAD = Math.round(1024 * 0.022 * 3);
 
 function StepArt({ art }) {
   if (!art) return null;
+  // The Good Dog trial: a scene is the scratchy golf cart (GdArt.jsx); spots map themselves in Spot.jsx
+  if (art.scene && isGoodDog()) return <div className="ob-art ob-art-scene"><GdArt name="cart" width={300} className="ob-gd-art" /></div>;
   if (art.scene) {
     const file = artFile('scenes', art.scene);
     return (

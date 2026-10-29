@@ -3,6 +3,9 @@
 // avatars do (Avatar.jsx): until then a spot is an empty box of the same size and class, so
 // nothing moves, and a drawing that lands after its box was painted fades in.
 import { Suspense, lazy, useState } from 'react';
+import { isGoodDog } from '../lib/look.js';
+import { GdArt } from './GdArt.jsx';
+import { gdSpotArt } from './gd-art.js';
 
 const load = () => import('./SpotArt.jsx');
 let ready = false;
@@ -18,6 +21,8 @@ if (typeof window !== 'undefined') load().then(() => { ready = true; }, () => {}
 export function Spot({ size = 96, className = '', ...rest }) {
   // Whether the drawings were in before this spot first showed: one that lands later fades in
   const [late] = useState(() => !ready);
+  // The Good Dog trial swaps each spot for the nearest of its scratchy drawings (GdArt.jsx)
+  if (isGoodDog()) return <GdArt name={gdSpotArt(rest.kind)} width={size} className={`spot ${className}`.trim()} />;
   return (
     <Suspense fallback={<Box size={size} className={className} />}>
       <Art size={size} className={`${className} ${late ? 'spot-late' : ''}`.trim()} {...rest} />

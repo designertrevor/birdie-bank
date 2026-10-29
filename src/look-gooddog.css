@@ -1,0 +1,369 @@
+/* ============================================================
+   THE GOOD DOG TRIAL (2026-10-29), a trial branch only, never for main
+   ?look=gooddog puts <html data-look="new" data-skin="gooddog">: the overhaul look underneath, with
+   the Good Dog study's palette, edges, bands and drawings on top (mock canvas AZMxjvgztNqm29c4Kedwhc).
+     - Canvas #F9F6EF, ink #141816, white cards, warm hairlines, no shadows anywhere.
+     - Cards 8px, buttons and tags 4px. No pills.
+     - Pastel bands (butter, lilac, mint) and a deep teal band, one idea per band, on screens you read.
+       Play keeps tight: its bands are thin strips, so the scorers stay above the fold.
+     - Pink only on the one thing to tap. Money up and down is ink and grey, not green and red.
+     - Fraunces only at 20px and up; labels, tags, buttons and scorecard digits stay in Figtree.
+     - Drawings are scratchy line art with offset pastel fills and no faces (GdArt.jsx); avatars are
+       initials ringed in ink (Avatar.jsx).
+   Every rule hangs off :root[data-look][data-skin="gooddog"], one step more specific than the
+   overhaul's :root[data-look="new"] rules, so it wins without !important.
+   ============================================================ */
+
+:root[data-look][data-skin="gooddog"] {
+  --canvas: #f9f6ef; --surface: #f2eee4; --surface-strong: #e6e1d6; --card: #ffffff;
+  --line: #e6e1d6; --line-soft: #efebe2;
+  --ink: #141816; --body: #4a4d4b; --mute: #5a5d5a; --mute-soft: #6a6d6a;
+  --hair: inset 0 0 0 1px var(--line); --card-shadow: var(--hair);
+  --r-card: 8px; --r-btn: 4px; --r-chip: 4px;
+  --display-weight: 500; --money-weight: 500;
+  --band-butter: #f7e7b4; --band-mint: #ddefe8; --band-lilac: #e7e0f8; --band-peach: #ffe3d1;
+  --gd-teal: #1a3a3a; --gd-on-teal: #ffffff; --gd-teal-sub: #c9d6d3; --gd-teal-line: rgba(255, 255, 255, .16);
+  --pink-fill: #d42a6b; --pink-text: #b81f5a;
+  --eyebrow: var(--mute); --eyebrow-ink: var(--mute);
+  --check: var(--ink);
+  --gd-line: #141816; --gd-paper: #ffffff;
+  --sheet-radius: 12px; --sheet-card: #ffffff; --sheet-surface: #f2eee4; --sheet-surface-strong: #e6e1d6;
+  --sheet-shadow: none;
+  --av-ring: var(--ink);
+  --state-set-bg: var(--band-mint); --state-set-ink: var(--ink);
+  --state-vote-bg: var(--band-butter); --state-vote-ink: var(--ink);
+}
+:root[data-look][data-skin="gooddog"][data-theme="dark"] {
+  --canvas: #111514; --surface: #1c2220; --surface-strong: #283030; --card: #181d1c;
+  --line: #2a3230; --line-soft: #212827;
+  --ink: #f4efe4; --body: #cfcbbf; --mute: #a6a399; --mute-soft: #96938a;
+  --band-butter: #3a3219; --band-mint: #183029; --band-lilac: #272238; --band-peach: #3d2a20;
+  --gd-teal: #0d2322; --gd-teal-sub: #a9bdb9;
+  --pink-text: #f27aa6;
+  --gd-line: #ede6d6; --gd-paper: #181d1c;
+  --sheet-card: #181d1c; --sheet-bg: #181d1c; --sheet-surface: #1c2220; --sheet-surface-strong: #283030;
+  --av-ring: rgba(244, 239, 228, .7);
+  --state-vote-bg: var(--band-butter); --state-vote-ink: var(--ink); --state-vote-edge: transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-look][data-skin="gooddog"]:not([data-theme="light"]):not([data-theme="dark"]) {
+    --canvas: #111514; --surface: #1c2220; --surface-strong: #283030; --card: #181d1c;
+    --line: #2a3230; --line-soft: #212827;
+    --ink: #f4efe4; --body: #cfcbbf; --mute: #a6a399; --mute-soft: #96938a;
+    --band-butter: #3a3219; --band-mint: #183029; --band-lilac: #272238; --band-peach: #3d2a20;
+    --gd-teal: #0d2322; --gd-teal-sub: #a9bdb9;
+    --pink-text: #f27aa6;
+    --gd-line: #ede6d6; --gd-paper: #181d1c;
+    --sheet-card: #181d1c; --sheet-bg: #181d1c; --sheet-surface: #1c2220; --sheet-surface-strong: #283030;
+    --av-ring: rgba(244, 239, 228, .7);
+    --state-vote-bg: var(--band-butter); --state-vote-ink: var(--ink); --state-vote-edge: transparent;
+  }
+}
+
+:root[data-look][data-skin="gooddog"] {
+  /* ---------- Shared pieces ---------- */
+  body { -webkit-font-smoothing: antialiased; }
+  .screen { background: var(--canvas); }
+
+  /* Money up is ink, money down is grey: no green and red */
+  .pos { color: var(--ink) !important; }
+  .neg { color: var(--mute) !important; }
+
+  /* Headers: the title in Fraunces at 500, bare icon buttons with no rings */
+  .screen-title { font-weight: 500; letter-spacing: -.015em; }
+  .screen-header.large .screen-title { font-size: 32px; }
+  .header-back, .header-close, .icon-btn { box-shadow: none; background: transparent; }
+  .header-btn { border-radius: var(--r-btn); box-shadow: var(--hair); background: var(--card); }
+  .screen-header.edged, .screen-header.tucked { box-shadow: 0 1px 0 var(--line); }
+
+  /* Section labels: Fraunces headings over a band or a list, like the study's "Lately" */
+  .sec-label { font-family: var(--display); font-weight: 500; font-size: 24px; line-height: 1.15; letter-spacing: -.01em; color: var(--ink); padding: 32px 20px 12px; text-transform: none; }
+  .eyebrow { font-family: var(--body-font); font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--mute); }
+
+  /* Buttons: 4px corners, the main one pink (the one thing to tap), the second white with a hairline */
+  .full-btn { height: 52px; border-radius: var(--r-btn); background: var(--pink-fill); color: #fff; font-family: var(--body-font); font-size: 17px; font-weight: 600; }
+  .full-btn.outline:not(:disabled) { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
+  .full-btn:disabled { background: var(--surface-strong); color: var(--mute); }
+  .full-btn:active { transform: scale(.98); }
+  .cta-wrap { background: var(--canvas); }
+  .pill-btn, .chip, .rules-chip, .who-status, .sheet-item, .text-input, .search-box, .name-input { border-radius: var(--r-chip); }
+  .text-link, .link-btn { font-weight: 500; text-underline-offset: 3px; }
+
+  /* Avatars: initials on their pastel, ringed in ink */
+  .avatar.gd-initials { box-shadow: 0 0 0 1.5px var(--av-ring); font-family: var(--body-font); font-weight: 600; letter-spacing: -.01em; }
+  .avatar.gd-initials { font-size: 15px; }
+  .avatar.gd-initials .av-letters { font-size: inherit; line-height: 1; }
+  .avatar.sm.gd-initials { font-size: 12px; }
+  .avatar.lg.gd-initials, .avatar.xl.gd-initials { font-size: 26px; }
+  .avatar-btn .avatar.gd-initials { box-shadow: 0 0 0 1.5px var(--ink); }
+
+  /* Sheets: white, a hairline handle, small corners */
+  .sheet, .numpad-sheet, .sc-sheet, .rules-sheet { border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; }
+  .sheet-title { font-weight: 500; }
+
+  /* Segmented controls: a hairline box, the picked side ink */
+  .holes-toggle, .press-mode-row, .as-seg { border-radius: var(--r-btn); }
+  .holes-btn, .pm-btn, .as-seg button { border-radius: 2px; }
+  .pm-btn.active, .holes-btn.active { background: var(--ink); color: var(--canvas); }
+
+  /* Bottom nav: white with a hairline, thin outline icons, the play button a plain ink circle */
+  .bottom-nav { background: var(--card); box-shadow: inset 0 1px 0 var(--line); }
+  .nav-btn { color: var(--mute-soft); }
+  .nav-btn.active { color: var(--ink); }
+  .nav-lbl { font-size: 11px; }
+  .nav-play { width: 52px; height: 52px; transform: none; }
+  .np-hole { border-radius: var(--r-chip); background: var(--pink-fill); }
+
+  /* Drawings */
+  .gd-art { display: block; flex-shrink: 0; }
+  .gd-art .gd-fill { opacity: 1; }
+
+  /* A band: full bleed, one idea, the content inside keeps its own 16px edge */
+  .gd-band { display: block; padding: 8px 0 40px; }
+  .gd-band.butter { background: var(--band-butter); }
+  .gd-band.lilac { background: var(--band-lilac); }
+  .gd-band.mint { background: var(--band-mint); }
+  .gd-band.white { background: var(--card); }
+  .gd-band.teal { background: var(--gd-teal); color: var(--gd-on-teal); }
+  .gd-band.teal .sec-label { color: var(--gd-on-teal); }
+}
+
+/* ---------- Drawings at small sizes: the line stays at screen pixels (GdArt.jsx) ---------- */
+:root[data-look][data-skin="gooddog"] .gd-art.thin > g:last-child { stroke-width: 1.8px; }
+:root[data-look][data-skin="gooddog"] .gd-art.thin > g:last-child * { vector-effect: non-scaling-stroke; }
+
+/* ---------- Up next ---------- */
+:root[data-look][data-skin="gooddog"] .screen.upnext {
+  /* The round going on: a white card with a hairline, its go button the pink */
+  .resume-card { border-radius: var(--r-card); background: var(--card); box-shadow: var(--hair); margin: 8px 16px 8px; padding: 18px 16px 18px 18px; }
+  .resume-card .resume-eyebrow { font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--mute); }
+  .resume-card .d { font-family: var(--display); font-weight: 500 !important; font-size: 24px !important; line-height: 1.15; letter-spacing: -.01em; margin-top: 4px; }
+  .resume-card .resume-go { border-radius: 50%; }
+  .sec-label { padding-top: 36px; }
+
+  /* Upcoming: plain white cards, 8px, hairline */
+  .uc-wrap { border-radius: var(--r-card); box-shadow: var(--hair); }
+  .upcoming-card { border-radius: var(--r-card); }
+  .uc-title { font-weight: 500; }
+  .upcoming-card .eyebrow { color: var(--mute); }
+
+  /* Heads up: a butter band */
+  .card-stack { background: var(--band-butter); padding: 0 0 22px; margin-top: 32px; }
+  .card-stack > .sec-label { padding-top: 32px; }
+  .card-stack .remind-card { border-radius: var(--r-card); box-shadow: none; }
+  .card-stack.piled .remind-card:not(.cs-wait) { box-shadow: 0 5px 0 -2px color-mix(in srgb, var(--ink) 12%, var(--band-butter)); }
+  .rc-btn { border-radius: var(--r-btn); }
+  .rc-btn.ink { background: var(--pink-fill); color: #fff; }
+  .cs-more { color: var(--ink); }
+
+  /* Your golf: a deep teal band, the four numbers in a grid on it */
+  .sec-label:has(+ .un-tiles) { background: var(--gd-teal); color: var(--gd-on-teal); margin-top: 0; padding-top: 40px; }
+  .card-stack + .sec-label:has(+ .un-tiles) { margin-top: 0; }
+  .un-tiles { background: var(--gd-teal); margin: 0; padding: 4px 16px 40px; gap: 0; border-top: none; }
+  .un-tile { background: transparent; box-shadow: none; border-radius: 0; color: var(--gd-on-teal); padding: 14px 4px 14px 0; border-top: 1px solid var(--gd-teal-line); }
+  .un-tile.tab { background: transparent; box-shadow: none; border-top-color: var(--gd-teal-line); }
+  .un-tile-label { font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--gd-teal-sub); }
+  .un-tile-big, .un-tile-big.pos, .un-tile-big.neg { color: var(--gd-on-teal) !important; font-size: 32px; }
+  .un-tile-sub { color: var(--gd-teal-sub); }
+
+  /* Lately: a white band of hairline rows */
+  .sec-label:has(+ .lately-list) { background: var(--card); }
+  .lately-list { background: var(--card); margin: 0; padding: 0 16px; border-radius: 0; }
+  .lately-list li + li .lately-row { border-top-color: var(--line); }
+  .lately-row { padding: 12px 0; }
+  .lately-all { background: var(--card); margin: 0; width: 100%; border-radius: 0; padding: 8px 20px 32px; justify-content: flex-start; box-shadow: none; }
+
+  /* More ways to play: a lilac band, the rows on white */
+  .un-group { background: var(--band-lilac); padding: 4px 0 32px; }
+  .un-ways-card { border-radius: var(--r-card); box-shadow: none; }
+  .un-way .gd-art { margin: 0 4px; }
+  .un-fold { border-radius: var(--r-card); }
+
+  /* Nothing planned: the start card is a mint band with a drawing */
+  .un-start { border-radius: var(--r-card); box-shadow: none; }
+  .un-start-art { transform: none; }
+  .un-btn { border-radius: var(--r-btn); }
+}
+
+/* ---------- The Tab ---------- */
+:root[data-look][data-skin="gooddog"] .tab-e {
+  /* What's owed, big and left-aligned in a white card, the receipt drawing beside it */
+  .te-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; text-align: left; padding: 22px 16px 18px 20px; margin: 8px 16px 8px; border-radius: var(--r-card); }
+  .te-summary > * { grid-column: 1; }
+  .te-summary .te-gd-art { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin-right: -6px; }
+  .te-label { font-size: 15px; font-weight: 500; }
+  .te-big { font-size: 48px; letter-spacing: -.02em; margin: 4px 0; }
+  .te-net { grid-column: 1 / -1; justify-content: flex-start; font-weight: 500; }
+
+  /* Owes you and You owe: one white band each, a hairline row per person */
+  .te-section { background: var(--card); margin-top: 24px; padding: 0 0 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .te-head { padding: 24px 20px 4px; }
+  .te-title { font-family: var(--display); font-weight: 500; font-size: 24px; color: var(--ink); letter-spacing: -.01em; }
+  .te-count { background: var(--surface); border-radius: var(--r-chip); font-weight: 600; }
+  .te-total { font-size: 20px; }
+  .te-card { margin: 0 20px; padding: 14px 0 12px; border-radius: 0; box-shadow: none; background: transparent; }
+  .te-card + .te-card { border-top: 1px solid var(--line); }
+  .te-card .tp-name { font-family: var(--body-font); font-weight: 600; font-size: 17px; }
+  .te-card .tp-amt { font-size: 22px; }
+  .tab-person { padding: 0; }
+  /* Paid and the pay app side by side under the name: small 4px buttons, not full-width slabs */
+  .te-card .settle-pair, .te-card .pay-more { display: inline-flex; vertical-align: top; width: auto; margin: 10px 8px 0 0; gap: 8px; }
+  .te-card .pay-btn { min-height: 40px; height: 40px; padding: 0 14px; border-radius: var(--r-btn); font-size: 15px; font-weight: 600; box-shadow: var(--hair); background: var(--card); color: var(--ink); border: none; }
+  .te-card .pay-btn.settle { box-shadow: inset 0 0 0 1px var(--ink); }
+  .te-card .pay-btn.app-venmo { box-shadow: none; background: var(--surface); }
+  .te-card > .tab-part { margin: 6px 0 -6px; font-weight: 500; }
+  .te-list { border-radius: var(--r-card); }
+  .sec-label { padding-top: 40px; }
+  .sq-strip, .tab-tools:not(.solo) { border-radius: var(--r-card); }
+  .square-line { padding: 4px 20px 12px; }
+}
+
+/* ---------- History ---------- */
+:root[data-look][data-skin="gooddog"] .screen:has(.hx-chart) {
+  .rb-kinds { border-radius: var(--r-btn); }
+  .rb-kind { border-radius: 2px; }
+  .rb-kind.active { background: var(--ink); color: var(--canvas); }
+  .pick-chip { border-radius: var(--r-chip); }
+  .pick-chip.on { background: var(--ink); color: var(--canvas); }
+
+  /* Your net: a deep teal band, the line in white */
+  .hx-chart { margin: 12px 0 0; border-radius: 0; background: var(--gd-teal); box-shadow: none; color: var(--gd-on-teal); padding: 28px 20px 8px; }
+  .hx-chart .eyebrow, .hx-meta { color: var(--gd-teal-sub); }
+  .hx-big, .hx-big.pos, .hx-big.neg { color: var(--gd-on-teal) !important; font-size: 44px; }
+  .hx-chart svg text { fill: var(--gd-teal-sub); }
+  .hx-chart .chart-line { stroke: var(--gd-on-teal) !important; }
+  .hx-chart .chart-area { fill: var(--gd-on-teal) !important; opacity: .1; }
+  .hx-chart .chart-dot { fill: var(--gd-on-teal) !important; stroke: var(--gd-teal); }
+  .hx-chart .chart-zero { stroke: var(--gd-teal-line); }
+  .hx-stats { color: var(--gd-on-teal); border-top-color: var(--gd-teal-line); }
+  .hx-stats .sl-sub { color: var(--gd-teal-sub); }
+  .hx-stats i { color: var(--gd-teal-sub); }
+
+  /* Head to head: white cells with hairlines */
+  .hx-h2h { padding-top: 12px; }
+  .hx-label { font-family: var(--display); font-weight: 500; font-size: 24px; color: var(--ink); }
+  .hx-label span { font-family: var(--body-font); font-size: 14px; color: var(--mute); }
+  .h2h-item { border-radius: var(--r-card); box-shadow: var(--hair); background: var(--card); }
+
+  /* Each month: a Fraunces heading, the rounds as hairline rows on one white band */
+  .hx-month { background: var(--card); margin-top: 28px; border-top: 1px solid var(--line); }
+  .month-head { padding: 28px 20px 8px; }
+  .mh-name { font-family: var(--display); font-weight: 500; font-size: 28px; letter-spacing: -.01em; text-transform: none; color: var(--ink); }
+  .hx-cards { gap: 0; padding: 0 20px; }
+  .rc-card, .rc-card.big { border-radius: 0; box-shadow: none; background: transparent; margin: 0; padding: 16px 0; border-top: 1px solid var(--line); }
+  .rc-game { font-weight: 500; }
+  .rc-who.you { background: var(--band-butter); border-radius: var(--r-chip); padding: 1px 6px; color: var(--ink); justify-self: start; width: fit-content; }
+}
+
+/* ---------- A round's results ---------- */
+:root[data-look][data-skin="gooddog"] .results-a {
+  margin: 0; border-radius: 0; box-shadow: none; background: var(--band-butter); padding: 28px 20px 32px;
+  .ra-eyebrow { font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); }
+  .ra-eyebrow i { display: none; }
+  .ra-title { font-weight: 500; font-size: 34px; }
+  .ra-amt { font-weight: 500; color: var(--ink); }
+  .me-line { border-radius: var(--r-chip); background: var(--card); box-shadow: none; }
+  .ra-gd-art { margin: 14px auto 0; }
+}
+:root[data-look][data-skin="gooddog"] .screen:has(.results-a) {
+  .scroll > .sec-label { padding-top: 36px; }
+  .ra-pays { border-radius: var(--r-card); }
+  .talk-react { border-radius: var(--r-btn); }
+  .stand-group { border-radius: var(--r-card); }
+  .sr.gold { background: var(--band-butter); color: var(--ink); }
+  /* Run it back: a deep teal band at the foot, its button white */
+  .detail-actions { background: var(--gd-teal); margin: 32px 0 0; padding: 32px 20px calc(40px + env(safe-area-inset-bottom)); }
+  .detail-actions > .full-btn:first-child { background: #fff; color: #141816; }
+  .detail-actions .full-btn.outline:not(:disabled) { background: transparent; color: var(--gd-on-teal); box-shadow: inset 0 0 0 1px var(--gd-teal-line); }
+  .detail-actions .danger-link { color: #ffb3cb; }
+  .sc-wrap { border-radius: var(--r-card); }
+}
+
+/* ---------- New round (setup) ---------- */
+:root[data-look][data-skin="gooddog"] .screen.setup {
+  /* The steps as text tabs with an ink underline under the one you're on, not filled tags */
+  .step-bar { gap: 0; padding: 0 16px; margin-bottom: 8px; box-shadow: inset 0 -1px 0 var(--line); }
+  .step, .step.done, .step.active { flex: 1; background: transparent; color: var(--mute); border-radius: 0; height: 44px; font-size: 15px; font-weight: 500; box-shadow: none; }
+  .step.done { color: var(--ink); }
+  .step.active { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px 0 var(--ink); }
+  .step-check { display: none; }
+  .step-q { font-family: var(--display); font-weight: 500; font-size: 32px; line-height: 1.12; letter-spacing: -.015em; padding: 20px 20px 8px; }
+  /* Labels inside a step stay small, so the question is the one headline */
+  .sec-label { font-family: var(--body-font); font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--mute); padding: 24px 20px 8px; }
+  .game-row, .game-tile { border-radius: var(--r-card); box-shadow: var(--hair); }
+  .game-row .gn, .game-tile .gn { font-family: var(--display); font-weight: 500; font-size: 22px; letter-spacing: -.01em; }
+  .game-row .game-art, .game-tile .game-art { width: 48px; height: 48px; }
+  .rules-chip { border-radius: var(--r-chip); box-shadow: none; background: transparent; text-decoration: underline; text-underline-offset: 3px; padding: 0 2px; }
+  .rules-chip i { display: none; }
+  /* The overview's list: one white card with hairlines, Run it back a butter band */
+  .ov-again { border-radius: 0; margin: 0 0 8px; width: 100%; padding: 28px 20px 28px; box-shadow: none; background: var(--band-butter); }
+  .ov-again-title { font-family: var(--display); font-weight: 500; font-size: 26px; }
+  .ov-again-btn { border-radius: var(--r-btn); background: var(--ink); }
+  .ov-title { font-family: var(--display); font-weight: 500; font-size: 30px; }
+  .ov-list { border-radius: var(--r-card); box-shadow: var(--hair); }
+  .ov-change { border-radius: var(--r-btn); box-shadow: var(--hair); background: var(--card); }
+  .ov-value { font-family: var(--display); font-weight: 500; font-size: 20px; }
+  .ov-empty { font-family: var(--body-font); font-size: 17px; font-weight: 500; color: var(--mute); }
+  /* Cards and fields in the steps */
+  .card, .set-row, .list-item, .search-box, .chip { border-radius: var(--r-card); }
+  .chip { border-radius: var(--r-chip); }
+  .li-check { border-radius: 50%; }
+  .amt-btn, .np-quick-btn, .nassau-bet-btn, .bet-chip { border-radius: var(--r-btn); }
+}
+/* Round ready: the drawing, then a butter card for what's on the line */
+:root[data-look][data-skin="gooddog"] .ready-hero .ready-crew { width: 200px; height: auto; margin: 4px 0 6px; }
+:root[data-look][data-skin="gooddog"] .ready-hero .ready-title { font-size: 32px; letter-spacing: -.015em; }
+:root[data-look][data-skin="gooddog"] .ready-card { border-radius: var(--r-card); }
+:root[data-look][data-skin="gooddog"] .ready-card.themed { background: var(--band-butter); }
+:root[data-look][data-skin="gooddog"] .ready-art, :root[data-look][data-skin="gooddog"] .ready-art.side { box-shadow: none; border-radius: 0; transform: none; }
+
+/* ---------- Play: tight. Thin bands, hairline rows, the sun-proof numbers kept ---------- */
+:root[data-look][data-skin="gooddog"] .screen.play {
+  --play-win: var(--ink); --play-loss: var(--mute);
+  .play-track { background: var(--line); }
+  .play-track > * { background: var(--pink-fill); }
+  .play-course { font-weight: 500; }
+  .hole-head { padding: 16px 20px 12px; }
+  .hh-title { font-weight: 500; font-size: 44px; }
+  .hh-card { border-radius: var(--r-btn); box-shadow: var(--hair); background: var(--card); padding: 8px 12px; }
+  .hh-card > span { text-decoration: none; }
+  /* The game's panel: a mint strip, 20px of padding, not a 56px band */
+  .hole-game { background: var(--band-mint); padding: 12px 20px 12px; }
+  .worth-strip { background: transparent; padding: 0; border-radius: 0; }
+  .ws-l { font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 13px; }
+  .ws-change { border-radius: var(--r-btn); }
+  /* The money: a butter strip that still sticks to the top */
+  .money-line { margin: 0; width: 100%; padding: 10px 40px 10px 20px; background: var(--band-butter); box-shadow: none; }
+  .ml-more { right: 16px; }
+  .ml-a { font-family: var(--display); font-weight: 500; }
+  /* The players: hairline rows on one white band, not a stack of cards */
+  .pcard, .pcard.pc-row { margin: 0; border-radius: 0; box-shadow: none; background: var(--card); padding: 14px 20px 14px; border-top: 1px solid var(--line); }
+  .pcard + .pc-help { border-top: 1px solid var(--line); padding-top: 12px; }
+  .pc-row .pname { font-weight: 600; }
+  .pc-chip { border-radius: var(--r-btn); font-weight: 600; }
+  .pc-chip.more { box-shadow: inset 0 0 0 1px var(--line); }
+  .bp-chip, .bp-chip-x { border-radius: var(--r-btn); }
+  .bp-chip-row { padding: 0 20px; }
+  .cta-wrap .full-btn.outline:not(:disabled) { box-shadow: inset 0 0 0 1px var(--line); }
+  .sc-num { font-weight: 700; }
+}
+
+/* ---------- Onboarding ---------- */
+:root[data-look][data-skin="gooddog"] {
+  .ob-art-scene .gd-art { margin: 0 auto; }
+  .ob-tag, .ob-tag.chip.ochre { background: var(--card); color: var(--ink); box-shadow: var(--hair); border-radius: var(--r-chip); font-weight: 500; transform: none; }
+  .ob-tag i { display: none; }
+  .ob-tile { border-radius: var(--r-card); box-shadow: var(--hair); }
+  .ob-tile-name { font-family: var(--display); font-weight: 500; font-size: 20px; }
+  .ob-q { font-weight: 500; }
+  .ob-choices .list-item { border-radius: var(--r-card); }
+  .onboard-title { font-weight: 500; }
+}
+
+/* ---------- The finale: the reveal, settle up ---------- */
+:root[data-look][data-skin="gooddog"] {
+  .reveal-row { border-radius: var(--r-card); }
+  .reveal-row.top { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .settle-row, .settle-card { border-radius: var(--r-card); }
+}
+:root[data-look][data-skin="gooddog"] .rv-gd-art { margin: 8px auto 0; }
