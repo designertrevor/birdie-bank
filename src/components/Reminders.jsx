@@ -227,7 +227,7 @@ export function TeeTimeSection({ plan }) {
                 <p className="field-help">{remindOn ? `${remindOnLabel(plan)}, with the booking link.` : 'Pick a day and Up next reminds you to book, with the link.'}</p>
               </>
             )}
-            <button className="rc-btn tb-done" onClick={() => setSheet(true)}><Icon name="check-circle" fill /> Booked</button>
+            <button className="rc-btn tb-done" onClick={() => setSheet(true)}><Icon name="check-circle" fill /> I booked it</button>
           </>
         )}
       </div>

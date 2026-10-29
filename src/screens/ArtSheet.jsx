@@ -14,7 +14,6 @@ import { BUDDIES, backdropOf } from '../lib/avatars.js';
 import { GAMES, SIDE_GAMES } from '../lib/round.js';
 import { ONBOARD_GAMES } from '../lib/onboarding.js';
 
-const GROUP_NAME = { Classics: 'ochre', 'Head to head': 'pink', Team: 'mint', 'Full round': 'lavender', Points: 'peach' };
 
 /** Where a game's art shows, from the game itself. */
 function gameUses(k) {
@@ -120,7 +119,7 @@ export default function ArtSheet() {
         {games.map(k => {
           const g = GAMES[k];
           const name = g?.name || SIDE_GAMES[k]?.label || k;
-          const group = g ? `${g.group} (${GROUP_NAME[g.group]} backdrop)` : 'Side game (peach backdrop)';
+          const group = g ? g.group : 'Side game';
           return <Card key={k} kind="games" id={k} name={name} used={gameUses(k)} note={group} box="64 by 64"><GameArt game={k} size={96} /></Card>;
         })}
       </Section>

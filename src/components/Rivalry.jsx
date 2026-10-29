@@ -55,7 +55,8 @@ export function RivalryCard({ rv, name, isNemesis, id = null }) {
             <span className="rv-side them"><Avatar id={id} name={name} size="lg" /><span>{firstName}</span></span>
           </div>
         )}
-        <div className="rv-series d">{seriesLine(rv, name)}</div>
+        {/* With the score just above, the line says who leads without repeating it (tab-9) */}
+        <div className="rv-series d">{id && me ? seriesLine(rv, name).replace(/ \d+–\d+$/, '') : seriesLine(rv, name)}</div>
         {streak && <div className={`rv-streak ${rv.streak.result}`}><Icon name={STREAK_ICON[rv.streak.result]} fill /> {streak}</div>}
         <div className="rv-stats">
           <div>

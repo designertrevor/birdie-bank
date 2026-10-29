@@ -172,7 +172,7 @@ function ScoreCritter({ score, par, fresh = false }) {
   }, [up, score]);
   if (!up) return null;
   const eagle = score <= par - 2;
-  return <span key={score} className="sc-critter" aria-hidden="true"><BuddyArt id={eagle ? 'eagle' : 'birdie'} bg={eagle ? 'teal' : 'mint'} /></span>;
+  return <span key={score} className="sc-critter" aria-hidden="true"><BuddyArt id={eagle ? 'eagle' : 'birdie'} bg={null} px={28} /></span>;
 }
 
 // --------------------------- Any side bets? -------------------------------

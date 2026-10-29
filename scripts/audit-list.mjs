@@ -489,10 +489,9 @@ export const SHOTS = [
   {
     area: 'tab', id: 'paid-part', page: ctx => ({ state: ctx.STATES.done, place: ['ledger', []] }),
     run: async p => {
+      // Paid part of it? opens straight on the amount (n3 polish, tab-10)
       await p.js(`tap('Paid part of it?'); await w(1200);`);
-      await p.shoot('paid-part-sheet', 'Paid part of it? sheet', { scroll: false });
-      await p.js(`tap('I paid part of it'); await w(1000);`);
-      await p.shoot('paid-part-amount', 'I paid part of it: the amount', { scroll: false });
+      await p.shoot('paid-part-amount', 'Paid part of it?: the amount, named and capped', { scroll: false });
     },
   },
   {
@@ -635,7 +634,7 @@ export const SHOTS = [
       await p.shoot('big-game-setup-bets', 'Big Game setup: side bets');
       await p.js(`tap('Add a side bet'); await w(1200);`);
       await p.shoot('big-game-side-bet-sheet', 'Big Game: add a side bet sheet');
-      await p.js(`tryTap('Close', '.sheet button'); await w(900); const b = [...document.querySelectorAll('.full-btn.pink')].filter(vis).pop(); b.click(); await w(2500);`);
+      await p.js(`tryTap('Close', '.sheet button'); await w(900); const b = [...document.querySelectorAll('.cta-wrap .full-btn')].filter(vis).filter(b => /Start the groups/.test(txt(b))).pop(); b.click(); await w(2500);`);
       await p.shoot('big-game-board', 'The Big Game board after starting the groups');
       for (const v of ['Pot', 'Skins', 'Groups', 'Bets', 'Money']) {
         const ok = await p.js(`const b = [...document.querySelectorAll('.pm-btn, [role=tab]')].filter(vis).find(b => txt(b) === ${JSON.stringify(v)}); if (!b) return false; b.click(); await w(1000); return true;`);

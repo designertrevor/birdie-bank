@@ -125,9 +125,12 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
             <div style={{ padding: '0 20px 12px' }}>
               <div className="eyebrow" style={{ marginBottom: 8 }}>Handicap for this round</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button className="sc-btn" aria-label="Lower handicap" onClick={() => setHc(v => Math.max(-10, v - 1))}><Icon name="minus" /></button>
-                <span className="sc-num" aria-live="polite">{hc}</span>
-                <button className="sc-btn" aria-label="Higher handicap" onClick={() => setHc(v => Math.min(54, v + 1))}><Icon name="plus" /></button>
+                {/* The same stepper as Fix hole and the pad: a quiet minus, an ink plus (play-55) */}
+                <div className="score-ctrl" role="group" aria-label="Handicap for this round">
+                  <button className="sc-btn" aria-label="Lower handicap" onClick={() => setHc(v => Math.max(-10, v - 1))}><Icon name="minus" /></button>
+                  <span className="sc-num" aria-live="polite">{hc}</span>
+                  <button className="sc-btn" aria-label="Higher handicap" onClick={() => setHc(v => Math.min(54, v + 1))}><Icon name="plus" /></button>
+                </div>
                 {/* Their strokes once there's a name to work them out for; nothing before, not a lone dash */}
                 {added && <span style={{ fontWeight: 700 }}>{strokesLabel(added.plays)}</span>}
               </div>

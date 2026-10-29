@@ -89,13 +89,13 @@
 :root[data-look="new"] .ec:active { transform: scale(.96); box-shadow: none; }
 :root[data-look="new"] .et { letter-spacing: -.015em; }
 
-/* Fields: a card with a hairline, the focus ring as before */
+/* Fields: a card with a hairline, and a 2px ink ring in focus (players-5: the lavender was used for nothing else) */
 :root[data-look="new"] .search-box,
 :root[data-look="new"] .text-input,
 :root[data-look="new"] .name-input { border-radius: var(--r-btn); background: var(--card); box-shadow: var(--hair); }
 :root[data-look="new"] .search-box:focus,
 :root[data-look="new"] .text-input:focus,
-:root[data-look="new"] .name-input:focus { box-shadow: 0 0 0 1px var(--line), 0 0 0 3px var(--lav); }
+:root[data-look="new"] .name-input:focus { box-shadow: 0 0 0 2px var(--ink); }
 :root[data-look="new"] .add-row { border-width: 1px; }
 :root[data-look="new"] .set-row.add-side { border-width: 1px; }
 
@@ -164,3 +164,21 @@
 
 /* Setup's step bar: soft tags, the steps still to come in the readable grey */
 :root[data-look="new"] .step:not(.done):not(.active) { color: var(--mute); }
+
+/* Switches: on is the eyebrow teal with the card's colour for the knob, not pink, since a screen of
+   settings holds many and pink is only for the one thing to tap (Settings, more-9) */
+:root[data-look="new"] .tog.on { background: var(--eyebrow-ink); }
+:root[data-look="new"] .tog.on::after { background: var(--card); }
+
+/* One of a list in a sheet or a setting (Where, who sees your profile, the banker): an ink ring and
+   an ink check with no tint, like the When sheet's picked chip and the segmented controls (plan-12,
+   more-9). Picking people and onboarding's answers keep the pink pick */
+:root[data-look="new"] .sheet .list-item.pick[role="radio"].on,
+:root[data-look="new"] .pp-choices .list-item.pick[role="radio"].on { background: var(--card); box-shadow: inset 0 0 0 2px var(--ink); }
+:root[data-look="new"] .sheet .list-item.pick[role="radio"].on .li-check.on,
+:root[data-look="new"] .pp-choices .list-item.pick[role="radio"].on .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+
+/* First tee's labels (Strokes, Bets, Gimmes) are the same tracked eyebrow as every in-card label,
+   not a heavier untracked cap of their own (setup-16) */
+:root[data-look="new"] .ft-h,
+:root[data-look="new"] .screen.play .ft-h { font-weight: 600; letter-spacing: .1em; }

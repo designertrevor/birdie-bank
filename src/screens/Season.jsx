@@ -124,12 +124,15 @@ function RealSeason({ state, preview = false, sub = null }) {
       <div className="sec-label">Everyone’s season</div>
       <Balances rows={b.balances} />
       <p className="field-help pad">Only you see this. It adds up the money from the rounds you played this season, every game and side bet for money included. Points rounds stay out.</p>
-      <button className="text-link stats-link" onClick={() => nav.push('stats', { range: { kind: 'season', year: b.year } })}>
-        <Icon name="chart-bar" fill /> <span className="row-main">Your stats for the season<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
-      </button>
-      <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: b.year })}>
-        <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
-      </button>
+      {/* The two links in one card of rows, like the Tab's tools (tab-12) */}
+      <div className="tab-tools edged">
+        <button className="text-link stats-link" onClick={() => nav.push('stats', { range: { kind: 'season', year: b.year } })}>
+          <Icon name="chart-bar" fill /> <span className="row-main">Your stats for the season<span className="sl-sub">By game and course, presses, skins and biggest wins</span></span> <Icon name="caret-right" />
+        </button>
+        <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: b.year })}>
+          <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
+        </button>
+      </div>
       <HallLinks />
       <ClosedSeasons />
     </div>

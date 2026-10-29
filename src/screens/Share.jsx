@@ -92,7 +92,7 @@ export default function ShareScreen({ kind, id, year }) {
       <ShareView title="Share the standings" small onBack={nav.pop} what="Standings" link={link}
         make={show => card(tripCardModel(state, st, { showAmounts: show, link }))} render={renderCard}
         fileName={slugName('trip', st.trip.name)} money={st.standings.length > 0} people={people}
-        onText="Everyone’s money on the trip is on the image" offText="The order and the cup, no money" />
+        onText="Everyone’s money on the trip is on the image" offText={st.cup ? 'The order and the cup, no money' : 'Just the order, no money'} />
     </Screen>
   );
 }

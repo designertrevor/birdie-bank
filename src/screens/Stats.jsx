@@ -199,7 +199,8 @@ function Trend({ trend }) {
               <div className="cc-big">{formatIndex(guide)}</div>
             </div>
             <div className="trend-official">
-              <div className="eyebrow">Official index</div>
+              {/* A dotted swatch ties the number to the chart's dotted line (history-17) */}
+              <div className="eyebrow"><span className="trend-dash" aria-hidden="true" />Official index</div>
               <div className="trend-official-v d">{formatIndex(official)}</div>
             </div>
           </div>
@@ -210,6 +211,7 @@ function Trend({ trend }) {
             </div>
           )}
           <TrendChart points={shown} official={official} />
+          <p className="trend-note">Lower is better, so the line climbs as you get better</p>
           <Insight insight={trendInsight(trend)} />
         </div>
       )}

@@ -70,9 +70,11 @@ button.pd-seat:active { background: var(--surface); }
 .pd-ticket .ph-follow { align-self: flex-start; }
 /* The perforation: a dashed line with the canvas biting a half circle out of each side */
 .pt-perf { position: relative; height: 1px; margin: 16px -18px 12px; border-top: 2px dashed var(--line); }
-.pt-perf::before, .pt-perf::after { content: ''; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--canvas); }
-.pt-perf::before { left: -11px; }
-.pt-perf::after { right: -11px; }
+/* The notches: canvas half-circles cut into the card, each with the card's hairline round its curve, so the
+   edge follows the notch instead of stopping at a pasted-on dot (plan-15). Only the half inside the card shows */
+.pt-perf::before, .pt-perf::after { content: ''; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--canvas); box-shadow: inset 0 0 0 1px var(--line); }
+.pt-perf::before { left: -11px; clip-path: inset(0 0 0 50%); }
+.pt-perf::after { right: -11px; clip-path: inset(0 50% 0 0); }
 
 /* A friend's answer and the organizer's nudge */
 .pd-answer { margin: 8px 0 0; }
@@ -98,9 +100,13 @@ button.pd-seat:active { background: var(--surface); }
 .pd-seg { margin: 4px 0; }
 .pd-seg .holes-btn { font-family: var(--body-font); font-size: 15px; font-weight: 700; padding-left: 6px; padding-right: 6px; white-space: nowrap; }
 .pd-help { margin: 2px 0 4px; font-size: 14px; line-height: 1.4; color: var(--mute); text-wrap: pretty; }
-.pd-sub-label { margin-top: 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+/* A sheet's section label: sentence case like the page behind it (Your message, The details), not tracked caps (plan-11) */
+.pd-sub-label { margin-top: 12px; font-size: 15px; font-weight: 600; color: var(--body); }
 .pd-done { margin-top: 10px; }
-.pd-list { max-height: 52vh; overflow-y: auto; margin: 0 -4px; }
+/* The rows line up with the search field above them (the shared .pick-list inset doubled the sheet's
+   own); 2px each side keeps room for a focus ring */
+.pd-list { max-height: 52vh; overflow-y: auto; margin: 0 -2px; }
+.pd-list.pick-list { padding: 0 2px; }
 .pd-chips { flex-wrap: wrap; padding: 0; }
 .pd-lock-big { font-family: var(--display); font-weight: var(--display-weight); font-size: 26px; line-height: 1.15; color: var(--ink); margin-top: 4px; }
 .pd-who-day { margin: 0; font-size: 14px; color: var(--body); }

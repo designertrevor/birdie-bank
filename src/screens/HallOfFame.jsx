@@ -158,7 +158,8 @@ export default function HallOfFame({ crew: crewId }) {
         <div className="sec-label">Biggest wins</div>
         <div className="block kv-block">
           {hall.biggestWins.length
-            ? hall.biggestWins.map(w => <Kv key={`${w.roundId}${w.id}`} k={`${first(w.id)} · ${w.course || day(w.at)}`} v={signed(w.cents)} sub={w.course ? day(w.at) : null} />)
+            // Who won it in ink, the money green like Stats' biggest wins (history-18)
+            ? hall.biggestWins.map(w => <Kv key={`${w.roundId}${w.id}`} k={<><b className="kv-who">{first(w.id)}</b> · {w.course || day(w.at)}</>} v={signed(w.cents)} tone={w.cents > 0 ? 'pos' : w.cents < 0 ? 'neg' : ''} sub={w.course ? day(w.at) : null} />)
             : <Kv k="Nobody yet" v={DASH} />}
         </div>
 
@@ -172,14 +173,17 @@ export default function HallOfFame({ crew: crewId }) {
         </div>
         <p className="field-help pad">Only you see this. It’s built from the crew’s rounds on this phone, back to the first one. Points rounds count in points and reward rounds in the reward, never in the money.</p>
         <RecordBookNote line={line} />
-        <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: new Date(now).getFullYear() })}>
-          <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
-        </button>
-        {season.rounds > 0 && (
-          <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: `crew:${crew.id}` })}>
-            <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">End this season and start the next</span></span> <Icon name="caret-right" />
+        {/* The links in one card of rows, like the Tab's tools */}
+        <div className="tab-tools edged">
+          <button className="text-link stats-link" onClick={() => nav.push('share', { kind: 'wrapped', year: new Date(now).getFullYear() })}>
+            <Icon name="share-network" /> <span className="row-main">Your year in review<span className="sl-sub">A card for your Story, money only if you show it</span></span> <Icon name="caret-right" />
           </button>
-        )}
+          {season.rounds > 0 && (
+            <button className="text-link stats-link" onClick={() => nav.push('closeBooks', { scope: `crew:${crew.id}` })}>
+              <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">End this season and start the next</span></span> <Icon name="caret-right" />
+            </button>
+          )}
+        </div>
       </div>
     </Screen>
   );
@@ -195,6 +199,6 @@ const Badge = ({ art, k, who, v, sub }) => (
   </div>
 );
 
-const Kv = ({ k, v, sub }) => (
-  <div className="kv-row"><span className="kv-k">{k}{sub && <span className="sl-sub">{sub}</span>}</span><span className="kv-v">{v}</span></div>
+const Kv = ({ k, v, sub, tone = '' }) => (
+  <div className="kv-row"><span className="kv-k">{k}{sub && <span className="sl-sub">{sub}</span>}</span><span className={`kv-v ${tone}`}>{v}</span></div>
 );

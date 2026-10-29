@@ -88,7 +88,7 @@ export function ScheduleEditor({ schedule, onChange, perTeam, start }) {
             <span className="tm-day-name">Day {di + 1}</span>
             <span className="tm-day-date">{shortDay(plus(start, di))}</span>
           </div>
-          <label className="field-label" htmlFor={`tm-course-${di}`}>Course <span className="opt">(optional)</span></label>
+          <label className="field-label" htmlFor={`tm-course-${di}`}>Course <span className="opt">optional</span></label>
           <CoursePick id={`tm-course-${di}`} title={`Day ${di + 1} course`} value={d.course} none="Set it later" onPick={c => pick(di, c)} />
           {d.sessions.map((s, si) => (
             <div key={si} className="tm-session">

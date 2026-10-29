@@ -1,9 +1,11 @@
-// Game art: one small drawing per game (and per side game) in the Ball buddies' palette, on a
-// backdrop coloured by its group, so the game picker reads as a shelf of stickers instead of a
-// column of icons. Drawn on a 64 by 64 square; `GameArt` wraps one in an SVG with a rounded
-// backdrop, `GameScene` gives the drawing alone to place inside a bigger drawing.
+// Game art: one small drawing per game (and per side game) in the Ball buddies' palette, so the
+// game picker reads as a shelf of stickers instead of a column of icons. Drawn on a 64 by 64
+// square; `GameArt` sets one on the page as a die-cut sticker (a white border round its silhouette,
+// ArtFile.jsx) with no colour plate behind it (Trevor, 2026-10-29: drawings vanished into the
+// plate); `GameScene` gives the drawing alone to place inside a bigger drawing.
 import { GAMES } from '../lib/round.js';
-import { ArtImage } from './ArtFile.jsx';
+import { ArtImage, Sticker } from './ArtFile.jsx';
+import { stickerUnits } from '../lib/sticker.js';
 import { artFile } from '../lib/art-files.js';
 import { GROUP_TINTS } from '../lib/game-theme.js';
 import { INK, BALL, PINK, DEEP, OCHRE, GOLD, COIN, TEAL, MINT, CORAL, LAV, PEACH } from '../lib/art-palette.js';
@@ -273,18 +275,19 @@ export function GameScene({ game }) {
 }
 
 /**
- * One game's art on its group's backdrop, as an SVG that fills its box. `game` is a GAMES key or a
- * side game's. `tint` overrides the backdrop. Decorative: screen readers get the name from the row.
+ * One game's art as a sticker, in an SVG that fills its box. `game` is a GAMES key or a side game's.
+ * `size` is its width in px when the call sets it (most are sized by their class, about 44px), for
+ * the border's width. The group's colour (GROUP_TINT) is for a tag or an edge beside it, not a plate
+ * behind it; a `tint` an older call still passes does nothing. Decorative: screen readers get the name from the row.
  */
-export function GameArt({ game, tint = null, size = null, className = '' }) {
+export function GameArt({ game, size = null, className = '' }) {
   const Scene = SCENES[game] || SCENES.stroke;
-  const bg = tint || GROUP_TINT[GAMES[game]?.group] || PEACH;
-  // An outside drawing (src/art/games/<game>.svg) sits on the same backdrop
+  const r = stickerUnits(64, size || 44);
+  // An outside drawing (src/art/games/<game>.svg) replaces the hand-drawn one
   const file = artFile('games', game);
   return (
     <svg className={`game-art ${className}`.trim()} viewBox="0 0 64 64" width={size || undefined} height={size || undefined} aria-hidden="true" focusable="false">
-      <rect width="64" height="64" rx="18" fill={bg} />
-      {file ? <ArtImage file={file} w={64} h={64} outline={false} /> : <Scene />}
+      {file ? <ArtImage file={file} w={64} h={64} sticker={r} /> : <Sticker r={r} box={[0, 0, 64, 64]}><Scene /></Sticker>}
     </svg>
   );
 }

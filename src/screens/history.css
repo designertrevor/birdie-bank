@@ -48,8 +48,9 @@
 
 /* Head to head: a quiet strip of small tiles */
 .hx-h2h { margin-top: 8px; }
-.hx-label { padding: 12px 20px 8px; font-size: 13px; font-weight: 700; color: var(--ink); }
-.hx-label span { display: block; font-weight: 500; color: var(--mute); margin-top: 1px; }
+/* The same section label as Up next's (15px, 600, body), its line under it smaller and mute (history-12) */
+.hx-label { padding: 20px 20px 8px; font-size: 15px; font-weight: 600; color: var(--body); }
+.hx-label span { display: block; font-size: 13px; font-weight: 500; color: var(--mute); margin-top: 2px; }
 .hx-h2h .h2h-item { border-radius: var(--r-card); box-shadow: var(--hair); padding: 10px 12px; min-width: 96px; }
 .hx-h2h .h2h-amt { font-size: 18px; font-weight: var(--money-weight); }
 
@@ -87,7 +88,8 @@
 .rc-more { margin-left: 10px; font-size: 12px; font-weight: 700; color: var(--mute); }
 .rc-moment { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 13px; color: var(--body); }
 .rc-moment i { color: var(--ochre); font-size: 15px; flex-shrink: 0; }
-.rc-mt { font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* The moment wraps to a second line rather than cutting off (classic-2) */
+.rc-mt { font-weight: 700; color: var(--ink); min-width: 0; text-wrap: pretty; }
 .rc-hole { flex-shrink: 0; color: var(--mute); font-size: 12px; font-weight: 600; }
 .rc-moment.quiet { color: var(--mute); font-size: 12px; font-weight: 600; }
 /* A good day: the bigger card, on a butter band */
