@@ -7,6 +7,8 @@ import { CheerArt } from './ResultsArt.jsx';
 import { useArtSrc } from '../lib/useArtSrc.js';
 import { gameTheme } from '../lib/game-theme.js';
 import './finale.css';
+// The Tab's quiet payment app button (.pay-more), used on Settle up's rows
+import './tab-card.css';
 import '../art-places.css';
 import { useEffect, useRef, useState } from 'react';
 import { Header, Icon, Sheet, Toggle, useUI } from './ui.jsx';
@@ -20,17 +22,17 @@ import { Avatar } from './Avatar.jsx';
 import { useGroupAvatars } from '../lib/useAvatars.js';
 import { buzz, confettiFrom } from '../lib/delight.js';
 import { sound } from '../lib/sound-play.js';
-import { gameLabel, meFor, roundDate, roundPlayerName, scoreLine, shareText } from '../lib/format.js';
+import { gameLabel, meFor, myIds, roundDate, roundPlayerName, scoreLine, shareText } from '../lib/format.js';
 import { gamesLine } from '../lib/side-games.js';
 import { markRoundAsked, roundAsked, submitReaction } from '../lib/feedback.js';
-import { codeOf } from '../lib/shared-tab.js';
+import { canonicalOf, codeOf } from '../lib/shared-tab.js';
 import { markTransfer, undoPayments, useTabSync } from '../lib/tab-sync.js';
 import { useNav } from '../lib/nav.js';
 import { revealSteps, revealTiming } from '../lib/reveal.js';
 import { cardReaction, renderResultsCard, resultsAlt, shareCardModel, shareImageName } from '../lib/shareImage.js';
 import { shareRoundLink } from '../lib/share.js';
 import { ShareView } from './ShareSheet.jsx';
-import { countsMoney, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
+import { countsMoney, openRewards, playForOf, rewardOutcome, unitFmt } from '../lib/play-for.js';
 import { RoundWhereFrom } from './WhereFrom.jsx';
 import { NICE_ROUND_NOTE, cardFromLine, niceRound } from '../lib/just-playing.js';
 import { bettors, cardOnly } from '../lib/round.js';
@@ -177,7 +179,8 @@ export function Reveal({ round, res, onNext, onDetail, extra, instant = false })
       <div ref={scroller} className={`scroll rv-scroll ${skipped ? 'rv-still' : ''}`} onClick={() => { if (!done) setSkipped(true); }}>
         {/* The main game's colour as a band behind the head, with its art beside the course */}
         <div className="reveal-head rv-themed" ref={hero} style={{ '--rv-tint': theme.tint }}>
-          <div className="rv-eyebrow"><GameArt game={round.game} className="rv-game" /><span className="eyebrow">{round.course.name} · {gameLabel(round)}</span></div>
+          {/* No game badge here: at 28px the art was too small to read (it went from the scoring strip for that) */}
+          <div className="rv-eyebrow"><span className="eyebrow">{round.course.name} · {gameLabel(round)}</span></div>
           <h1 className="reveal-title d">
             {titles.map(x => <span key={x} className={`rt ${x === title ? '' : 'out'}`} aria-hidden={x !== title}>{x}</span>)}
           </h1>
@@ -270,24 +273,47 @@ export function NiceRound({ round, me, onDetail, onDone }) {
  * A reward round's result, where the payments would be: "Sam wins lunch. Dave's buying." No
  * pay buttons: it isn't money. The Tab keeps a line on each person card until it's marked done.
  */
-export function RewardCard({ round, res }) {
-  const me = useStore(s => meFor(round, s));
+export function RewardCard({ round, res, lead = true }) {
+  const state = useStore();
+  const { showToast } = useUI();
+  const me = meFor(round, state);
   const o = rewardOutcome(round, res);
   if (!o) return null;
   const square = !o.winners.length;
   // Only a reward you win or owe goes on this phone's Tab, so only then does the card say so
   const mine = o.winners.includes(me) || o.owers.includes(me);
+  // Its lines still open on this phone's Tab (play-for.js openRewards), so the card that raises the IOU
+  // can close it too: the same Done mark as the Tab's, with Undo
+  const open = round.status === 'done' ? openRewards(state, { ids: myIds(state), canon: canonicalOf(state) }).filter(l => l.round.id === round.id) : [];
+  const keys = open.flatMap(l => l.keys || [l.key]);
+  const markDone = () => {
+    setRewardsDone(keys, true);
+    buzz(15);
+    showToast(open.some(l => l.iOwe) ? 'Done. Enjoy it together' : 'Done. Enjoy it', { label: 'Undo', run: () => setRewardsDone(keys, false) });
+  };
+  const settled = mine && !square && round.status === 'done' && !open.length;
   return (
     <div className={`reward-card ${square ? 'square' : ''}`}>
       {/* Who's buying (its ball is solid now, so no plate under it); the handshake when nobody won */}
       {square ? <Spot kind="handshake" size={64} className="reward-art" /> : <Spot kind="buying" size={64} className="reward-art" />}
       <div className="rc-text">
-        <div className="rc-win d">{o.win}</div>
-        <div className="rc-buy">{o.buy}</div>
-        {!square && <div className="rc-note">{mine ? 'It stays on your Tab until it’s done. ' : ''}{res?.cash ? 'The reward isn’t money. The side bets for money are below.' : 'No money changes hands.'}</div>}
+        {/* Under a hero that already says who won (results), the card starts at who's buying */}
+        {lead && <div className="rc-win d">{o.win}</div>}
+        <div className={lead ? 'rc-buy' : 'rc-win d'}>{o.buy}</div>
+        {!square && <div className="rc-note">{settled ? 'Marked done. ' : mine ? 'It stays on your Tab until it’s done. ' : ''}{res?.cash ? 'The reward isn’t money. The side bets for money are below.' : 'No money changes hands.'}</div>}
+        {keys.length > 0 && <button type="button" className="rc-done" onClick={markDone}><Icon name="check" /> {o.noun.length <= 12 && !/\s/.test(o.noun) ? `${o.noun.charAt(0).toUpperCase()}${o.noun.slice(1)} is sorted` : 'Mark it done'}</button>}
       </div>
     </div>
   );
+}
+
+/** Mark a reward's lines done on this phone (or take it back), as the Tab's Done does. Never money. */
+function setRewardsDone(keys, on) {
+  update(s => {
+    const next = { ...(s.rewardsDone || {}) };
+    for (const key of keys) { if (on) next[key] = Date.now(); else delete next[key]; }
+    s.rewardsDone = next;
+  });
 }
 
 /**
@@ -311,8 +337,11 @@ export function CashCard({ round, res }) {
   );
 }
 
-/** Beat 2: the fewest payments, a pay or request button for yours (in the payee's own app), and a way to mark each paid. */
-export function SettleUp({ round, res, onBack, onNext }) {
+/**
+ * Beat 2: the fewest payments, a pay or request button for yours (in the payee's own app), and a way to mark each paid.
+ * `fromResults`: opened from a saved round's results to pay, so it ends with Done (back there), not the share step.
+ */
+export function SettleUp({ round, res, onBack, onNext, fromResults = false }) {
   const state = useStore();
   const { showToast } = useUI();
   const me = meFor(round, state);
@@ -354,26 +383,30 @@ export function SettleUp({ round, res, onBack, onNext }) {
           <div className="d settle-count">{n} payment{n === 1 ? '' : 's'} square{n === 1 ? 's' : ''} everyone up</div>
           <p>Every bet is netted first, so nobody sends money that just comes back to them.</p>
         </div>
-        {res.transfers.map((t, i) => {
-          const paid = !!paidFor(t);
-          return (
-            <div key={t.from + t.to} className={`pay-card ${paid ? 'paid' : ''}`} style={{ '--i': i }}>
-              <div className="pay-who">
-                <span className="pf">{name(t.from)}{t.from === me ? ' (you)' : ''}</span>
-                <span className="pa"><Icon name="arrow-right" /></span>
-                <span className="pt">{name(t.to)}{t.to === me ? ' (you)' : ''}</span>
-                <span className="pm">{money(t.amount)}</span>
+        {/* One card of rows with hairlines, like Who pays who on the results. The payment app is the
+            Tab's quiet button (its colour on the name, not a brand slab) and Mark paid the outline one */}
+        <div className="settle-list">
+          {res.transfers.map((t, i) => {
+            const paid = !!paidFor(t);
+            return (
+              <div key={t.from + t.to} className={`settle-pay ${paid ? 'paid' : ''}`} style={{ '--i': i }}>
+                <div className="pay-who">
+                  <span className="pf">{t.from === me ? 'You' : name(t.from)}</span>
+                  <span className="pa"><Icon name="arrow-right" /></span>
+                  <span className="pt">{t.to === me ? 'You' : name(t.to)}</span>
+                  <span className="pm">{money(t.amount)}</span>
+                </div>
+                <div className="pay-acts pay-more">
+                  {!paid && t.from === me && <PayButton info={payInfoFor(state, t.to)} amount={t.amount} note={note} />}
+                  {!paid && t.to === me && <RequestButton payer={payInfoFor(state, t.from)} mine={myApp} amount={t.amount} note={note} who={t.from} />}
+                  <button className={`pay-btn mark ${paid ? 'done' : ''}`} onClick={() => toggle(t)} aria-pressed={paid}>
+                    <Icon name={paid ? 'check-circle' : 'circle'} fill={paid} /> {paid ? 'Paid' : 'Mark paid'}
+                  </button>
+                </div>
               </div>
-              <div className="pay-acts">
-                {!paid && t.from === me && <PayButton info={payInfoFor(state, t.to)} amount={t.amount} note={note} />}
-                {!paid && t.to === me && <RequestButton payer={payInfoFor(state, t.from)} mine={myApp} amount={t.amount} note={note} who={t.from} />}
-                <button className={`pay-btn ${paid ? 'done' : ''}`} onClick={() => toggle(t)} aria-pressed={paid}>
-                  <Icon name={paid ? 'check-circle' : 'circle'} fill={paid} /> {paid ? 'Paid' : 'Mark paid'}
-                </button>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
         <p className="field-help pad">
           {paidCount === n ? 'All paid. Nice and tidy.' : `${paidCount} of ${n} paid. Anything left stays on the Tab.`}
           {missingApp ? ' Add each person’s payment app in Players to get pay buttons.' : ''}
@@ -383,7 +416,7 @@ export function SettleUp({ round, res, onBack, onNext }) {
         <RoundWhereFrom round={round} res={res} fmt={countsMoney(round) ? null : money} />
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" onClick={onNext}>Share results <Icon name="arrow-right" /></button>
+        <button className="full-btn" onClick={onNext}>{fromResults ? <>Done <Icon name="check" /></> : <>Share results <Icon name="arrow-right" /></>}</button>
       </div>
     </>
   );
@@ -419,7 +452,7 @@ export function ShareCard({ round, res, onBack, onDone, doneLabel = 'Done' }) {
     <span key={`game-${round.game}`} ref={grabGame} hidden><GameArt game={round.game} tint={theme.soft} size={240} /></span>
     <ShareView title="Share" onBack={onBack} onDone={onDone} doneLabel={doneLabel} make={make} render={renderResultsCard}
       fileName={shareImageName(round)} link={link} what="Results" money={countsMoney(round)} people={bettors(round)}
-      onText="Dollar figures are on the image" offText="Only the order and the bets, no money"
+      onText="Dollar figures are on the image" offText="Off: only the order and the bets, no money"
       standIn={(m, show) => <ResultsStandIn round={round} res={res} show={show} scores={scoresOn} />}>
       <div className="toggle-row share-toggle">
         <div><div className="toggle-lbl" id="share-scores">Show scores</div><div className="toggle-sub">{scoresOn ? 'Everyone’s total and score to par are on the image' : 'Only the result of the bets'}</div></div>
@@ -466,7 +499,7 @@ const RECENT = 3 * 24 * 60 * 60 * 1000; // only ask about rounds that just finis
 const REACTIONS = [
   { key: 'great', icon: 'smiley', label: 'Great', kind: 'feature', lead: 'Glad it was a good one. Anything that would make the next round even better?' },
   { key: 'ok', icon: 'smiley-meh', label: 'Just OK', kind: 'feature', lead: 'Thanks for saying so. What would have made it better?' },
-  { key: 'off', icon: 'smiley-sad', label: 'Something was off', kind: 'bug', lead: 'Sorry about that. Tell us what went wrong and we’ll look into it.' },
+  { key: 'off', icon: 'smiley-sad', label: 'Not great', kind: 'bug', lead: 'Sorry about that. Tell us what went wrong and we’ll look into it.' },
 ];
 
 /**

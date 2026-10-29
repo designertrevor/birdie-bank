@@ -49,7 +49,7 @@ export function CrownedFace({ model, size = 96 }) {
  * The top three on steps (second, first, third from left), each with their buddy, name and amount.
  * `standings` is sorted best first; `faces` maps id to an avatar model; `fmt` formats an amount.
  */
-export function Podium({ standings, faces, fmt, tint = null }) {
+export function Podium({ standings, faces, fmt, tint = null, amounts = true }) {
   // `rank` is the place with ties shared (two level on top are both 1st), so tied players stand on steps of the same height
   const top = standings.slice(0, 3).map((p, i) => ({ ...p, label: placeLabel(standings, i), i, rank: Math.min(3, 1 + standings.filter(q => q.amount > p.amount).length) }));
   const order = top.length === 3 ? [top[1], top[0], top[2]] : top;
@@ -65,10 +65,39 @@ export function Podium({ standings, faces, fmt, tint = null }) {
         <div key={p.id} className={`pod pod-${p.rank}`} role="listitem">
           <span className="pod-face">{crowned(p) && faces.get(p.id) ? <CrownedFace model={faces.get(p.id)} size={64} /> : faces.get(p.id) && <AvatarArt model={faces.get(p.id)} />}</span>
           <span className="pod-name">{p.name.split(' ')[0]}</span>
-          <span className={`pod-amt ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</span>
+          {amounts && <span className={`pod-amt ${p.amount > 0 ? 'pos' : p.amount < 0 ? 'neg' : ''}`}>{fmt(p.amount, { sign: true })}</span>}
           <span className="pod-step d"><span className="sr-only">Place </span>{p.label}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Two sides on two steps, for a 2 v 2 (or any two-team) result: each team's buddies side by side
+ * over its name, the winners on the taller step in the crown. Level sides share the height (and a T1).
+ * `teams` is [{ id, name, players: [ids], amount }], `amount` being each player's.
+ */
+export function TeamPodium({ teams, faces, fmt, tint = null, amounts = true }) {
+  const best = Math.max(...teams.map(t => t.amount));
+  const level = teams.every(t => t.amount === best);
+  const rank = t => (t.amount === best ? 1 : 2);
+  const steps = tint ? { '--pod-1': tint, '--pod-2': lighten(tint, 0.38), '--pod-3': lighten(tint, 0.6), '--pod-tint': tint } : undefined;
+  return (
+    <div className={`podium team-podium ${tint ? 'themed' : ''}`.trim()} style={steps} role="list" aria-label="The two sides">
+      {teams.map(t => {
+        const won = rank(t) === 1 && !level;
+        return (
+          <div key={t.id} className={`pod pod-${rank(t)}`} role="listitem">
+            <span className="pod-face pod-faces">
+              {t.players.map(pid => faces.get(pid) && (won ? <CrownedFace key={pid} model={faces.get(pid)} size={52} /> : <AvatarArt key={pid} model={faces.get(pid)} />))}
+            </span>
+            <span className="pod-name">{t.name}</span>
+            {amounts && <span className={`pod-amt ${t.amount > 0 ? 'pos' : t.amount < 0 ? 'neg' : ''}`}>{fmt(t.amount, { sign: true })}{t.players.length > 1 ? ' each' : ''}</span>}
+            <span className="pod-step d"><span className="sr-only">Place </span>{level ? 'T1' : rank(t) === 1 ? '1' : '2'}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

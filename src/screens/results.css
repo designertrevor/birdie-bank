@@ -17,7 +17,7 @@
 .results-a .hero-spot { display: block; margin: -10px auto -8px; }
 .results-a > .crown { font-size: 40px; color: var(--ochre); }
 .ra-eyebrow { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--eyebrow-ink); }
-.ra-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 28px; line-height: 1.15; color: var(--ink); margin-top: 4px; }
+.ra-title { font-family: var(--display); font-weight: var(--display-weight); font-size: 28px; line-height: 1.15; color: var(--ink); margin-top: 4px; text-wrap: balance; }
 .ra-amt { font-family: var(--display); font-weight: var(--money-weight); font-size: 44px; line-height: 1.05; letter-spacing: -.02em; color: var(--win); font-variant-numeric: tabular-nums; margin-top: 2px; }
 .ra-sub { font-size: 13px; color: var(--body); margin-top: 6px; }
 .results-a .me-line { margin-top: 8px; display: inline-block; padding: 4px 10px; border-radius: var(--r-chip); background: var(--card); color: var(--ink); font-size: 13px; font-weight: 700; box-shadow: var(--hair); }
@@ -26,16 +26,21 @@
 
 /* Paying is the one big action; rolling it over is the quieter way out under it, so neither label
    has to wrap at phone width */
-.ra-pay-acts { display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin: 8px 0 4px; }
+/* The Roll link's own 44px tap height is the gap under it, so Standings sits a normal section gap below */
+.ra-pay-acts { display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin: 8px 0 -14px; }
 .ra-pay-acts .full-btn { margin: 0; }
 .ra-pay-acts .ra-roll { align-self: center; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; }
 
-/* Who pays who: one card, a hairline between payments, each one's reactions under its row */
+/* Who pays who: one card, a hairline between payments, each one's react and comment buttons at the
+   end of its row (after the amount), so a payment is one line, not three. Opening the reactions tray
+   gives the buttons a line of their own under the row */
 .ra-pays { background: var(--card); box-shadow: var(--hair); border-radius: var(--r-card); overflow: hidden; }
-.ra-pays .talk-pay { margin: 0; }
+.ra-pays .talk-pay { margin: 0; display: flex; flex-wrap: wrap; align-items: center; }
 .ra-pays .talk-pay + .talk-pay { border-top: 1px solid var(--line-soft); }
-.ra-pays .pay-row { margin: 0; background: none; border-radius: 0; box-shadow: none; }
-.ra-pays .talk-bar { padding: 0 12px 12px; margin-top: -4px; }
+.ra-pays .pay-row { flex: 1 1 0; min-width: 0; margin: 0; background: none; border-radius: 0; box-shadow: none; }
+.ra-pays .pay-row .pf, .ra-pays .pay-row .pt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ra-pays .talk-bar { flex: none; max-width: 55%; justify-content: flex-end; padding: 0 12px 0 0; margin-left: -6px; }
+.ra-pays .talk-bar:has(.talk-tray) { flex-basis: 100%; max-width: none; justify-content: flex-start; padding: 0 12px 12px; margin: -6px 0 0; }
 
 /* The reveal's own way to the scores (Finale.jsx) */
 .rv-card-link { display: flex; justify-content: center; margin: 4px 16px 12px; }
@@ -43,3 +48,19 @@
 
 /* Standings: every place level with first wears the gold disc */
 .stand-line .sr.gold { background: var(--ochre); color: var(--on-pastel); }
+
+/* A 2 v 2 on two steps: each side's buddies side by side, a little overlapped, over the side's name */
+.podium.team-podium { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.team-podium .pod-faces { display: flex; align-items: flex-end; justify-content: center; }
+.team-podium .pod-faces > * + * { margin-left: -8px; }
+.team-podium .pod-faces .avatar { box-shadow: 0 0 0 3px var(--card); border-radius: 50%; }
+.team-podium .pod-name { white-space: normal; text-align: center; line-height: 1.2; text-wrap: balance; }
+
+/* The dark winner block's game colour as a straight bar across the top, clipped by the corners, not an
+   inset edge that bends down round them (the same on Round ready and the reveal) */
+:root[data-theme="dark"] .results-a { position: relative; box-shadow: var(--hair); overflow: hidden; }
+:root[data-theme="dark"] .results-a::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--ra-strong, var(--ochre)); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .results-a { position: relative; box-shadow: var(--hair); overflow: hidden; }
+  :root:not([data-theme="light"]) .results-a::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--ra-strong, var(--ochre)); }
+}
