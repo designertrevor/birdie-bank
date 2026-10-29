@@ -281,12 +281,15 @@ function Crowd({ ids }) {
   const who = (ids?.length ? ids : GROUP).slice(0, 5);
   const n = who.length;
   const size = n <= 2 ? 62 : n === 3 ? 54 : 48;
-  const step = n <= 1 ? 0 : Math.min(size * 0.8, (124 - size) / (n - 1));
+  const step = n <= 1 ? 0 : Math.min(size * 0.8, (122 - size) / (n - 1));
   const left = (120 - (size + step * (n - 1))) / 2;
-  // Every other one stands a little in front, so it reads as a group
+  // Every other one stands in front and lower, so it reads as a group; with four or five the back row
+  // stands well above the front, so every face shows between the hats in front (a jumble otherwise)
+  const lift = n >= 4 ? 22 : 12;
+  const top = (120 - size - lift) / 2;
   const order = who.map((id, i) => ({ id, i })).sort((a, b) => (a.i % 2) - (b.i % 2));
   // One sticker round the whole group (Spot), so no ground shadow and no border round each buddy
-  return order.map(({ id, i }) => <BuddyFigure key={`${id}${i}`} id={id} x={left + step * i} y={(i % 2 ? 46 : 36) + (62 - size) / 2} size={size} />);
+  return order.map(({ id, i }) => <BuddyFigure key={`${id}${i}`} id={id} x={left + step * i} y={top + (i % 2 ? lift : 0)} size={size} />);
 }
 
 // Two buddies leaning in, arms up to one clap in the middle: the arms and ink motion lines say

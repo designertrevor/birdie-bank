@@ -3964,7 +3964,7 @@ svg.spot, svg.game-art { overflow: visible; }
 
 /* The art sheet (?art): every drawing, labelled, in both themes */
 .art-sheet { max-width: 1120px; margin: 0 auto; padding: 0 20px 80px; color: var(--ink); }
-.as-top { position: sticky; top: 0; z-index: 2; background: var(--canvas); padding: 16px 0 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--edge); }
+.as-top { position: relative; background: var(--canvas); padding: 16px 0 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--edge); }
 .as-top h1 { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: -.03em; margin: 0; }
 .as-jump { display: flex; gap: 4px 14px; flex-wrap: wrap; flex: 1; font-size: 13px; font-weight: 600; }
 .as-jump a { color: var(--mute); text-decoration: none; }
