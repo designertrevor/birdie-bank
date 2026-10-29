@@ -5,6 +5,10 @@ import { Icon } from './ui.jsx';
 import { TalkCount } from './TalkCount.jsx';
 import { useNav } from '../lib/nav.js';
 import { useStore } from '../lib/store.js';
+import { Avatar } from './Avatar.jsx';
+import { GameArt } from './GameArt.jsx';
+import { GAMES } from '../lib/round.js';
+import { planSeatAvatar } from '../lib/plan-faces.js';
 
 const LOOK = {
   payment: { icon: 'hand-coins', tint: 'mint' },
@@ -19,6 +23,14 @@ const LOOK = {
   brag: { icon: 'star', tint: 'ochre' },
 };
 
+/** Who a row is about: their face, or on a plan the face that plan carries for them (plan-faces.js). */
+function LatelyFace({ face }) {
+  const me = useStore(s => s.me);
+  const plan = useStore(s => (face.plan ? s.plans?.[face.plan] : null));
+  const props = plan ? planSeatAvatar(plan, face.who, me) : { id: face.id, seat: null };
+  return <Avatar id={props.id} seat={props.seat} name={face.name} size="sm" className="lately-face" />;
+}
+
 export function LatelyList({ items }) {
   const nav = useNav();
   const talk = useStore(s => s.talk);
@@ -30,7 +42,10 @@ export function LatelyList({ items }) {
         const look = { icon: it.icon || base.icon, tint: it.tint || base.tint };
         const body = (
           <>
-            <span className={`lately-ic ${look.tint}`} aria-hidden="true"><Icon name={look.icon} fill /></span>
+            {/* A feed about people leads with their faces, a round with its game's sticker; the rest keep their icon (history-15) */}
+            {it.face ? <LatelyFace face={it.face} />
+              : it.game && GAMES[it.game] ? <GameArt game={it.game} size={32} className="lately-art" />
+              : <span className={`lately-ic ${look.tint}`} aria-hidden="true"><Icon name={look.icon} fill /></span>}
             <span className="lately-main">
               <span className="lately-text">{it.text}</span>
               {it.sub && <span className="lately-sub">{it.sub}</span>}

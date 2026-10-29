@@ -102,7 +102,8 @@ export function statTiles(stats, { mine = false, privacy = null } = {}) {
   tiles.push({ key: 'rounds', label: 'Rounds', value: String(rounds), onlyYou: statsHidden });
   tiles.push({ key: 'record', label: 'Record', value: recordText(stats.record), sub: isObj(stats.record) && stats.record.even ? 'won, lost, even' : 'won, lost', onlyYou: statsHidden });
   const fav = favoriteName(stats.favoriteGame);
-  tiles.push({ key: 'game', label: 'Favorite game', value: fav || EMPTY, onlyYou: statsHidden });
+  // One word, so the eyebrow stays one line and its value sits level with the tiles beside it (more-16)
+  tiles.push({ key: 'game', label: 'Favorite', value: fav || EMPTY, onlyYou: statsHidden });
   // Someone else's money is only in their stats when they chose to show it
   const m = isObj(stats.money) ? stats.money : null;
   if (m) {

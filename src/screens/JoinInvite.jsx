@@ -3,6 +3,7 @@
 // Not on the list? Ask the scorekeeper for a seat and wait here for them to let you in.
 // No organizer onboarding. They become "me" using their player from the shared round.
 import { Spot } from '../components/Spot.jsx';
+import { GameArt } from '../components/GameArt.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BallIllo, Icon, Screen, Segmented } from '../components/ui.jsx';
 import '../components/gone.css';
@@ -458,7 +459,8 @@ export default function JoinInvite({ code, onJoined, onSkip, setUp = false }) {
           <div className="ic-from">
             {host ? <><Avatar base="join-avatar" model={faces.get(hostSeat?.id)} name={host} size="sm" /> <span><strong>{host}</strong> invited you</span></> : <span>You’re invited</span>}
           </div>
-          <div className="ic-game"><Icon name={big ? 'users-four' : game?.icon || 'golf'} fill /> {big ? big.title : game ? gameLabel(meta) : 'Golf'}</div>
+          {/* The game's own sticker, as everywhere else it's named, not the welcome's glyph (onboarding-10) */}
+          <div className="ic-game">{!big && game ? <GameArt game={meta.game} size={40} className="ic-game-art" /> : <Icon name={big ? 'users-four' : 'golf'} fill />} {big ? big.title : game ? gameLabel(meta) : 'Golf'}</div>
           <div className="ic-course">{meta.course?.name} · {meta.holes.length} holes</div>
           {playForLine(meta) && <div className="ic-playfor"><Icon name={meta.playFor?.kind === 'reward' ? 'gift' : 'trophy'} fill /> {playForLine(meta)}</div>}
           <dl className="ic-facts">

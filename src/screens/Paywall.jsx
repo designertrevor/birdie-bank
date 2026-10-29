@@ -51,7 +51,7 @@ export default function Paywall({ source = 'onboarding' }) {
   // From Settings or the Season preview it's a look at Pro, so it closes without an answer. After onboarding, "Keep scoring for free" is the way out
   const onClose = source !== 'onboarding' ? () => nav.pop() : null;
   return (
-    <View plan={plan} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true}>
+    <View plan={plan} source={source} setPlan={setPlan} onClose={onClose} onTrial={() => answer('trial')} onFree={() => answer('free')} freeWayOut={VARIANTS[variant]?.freeWayOut ?? true}>
       <SplitProSheet open={!!splitting} plan={splitting} onDone={() => nav.pop()} />
     </View>
   );
@@ -62,10 +62,11 @@ export default function Paywall({ source = 'onboarding' }) {
  * button. The trial is the same on both plans; the one picked says what comes after it, on its
  * row, on the timeline's last step and under the button.
  */
-function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayOut, children }) {
+function TrialWithFreeWayOut({ plan, source, setPlan, onClose, onTrial, onFree, freeWayOut, children }) {
   const [start] = useState(() => new Date());
   const picked = PLANS[plan] || PLANS[DEFAULT_PLAN];
-  const steps = trialTimeline(start, { planned: Object.values(getState().plans || {}).some(p => p.host), plan: picked });
+  // "Your next round is set up" only straight after onboarding set one up; from Settings or Season nothing was (more-4)
+  const steps = trialTimeline(start, { planned: source === 'onboarding' && Object.values(getState().plans || {}).some(p => p.host), plan: picked });
   const cta = trialCta(picked);
   const save = annualSavings();
   const games = Object.keys(GAMES).length;
@@ -93,7 +94,7 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
               <span className="pw-dot"><Icon name={s.icon} fill={i > 0} /></span>
               <div>
                 <div className="pw-step-title">{s.title}{s.when && <span className="pw-when"> · {s.when}</span>}</div>
-                <div className="li-sub">{s.text}</div>
+                <div className="li-sub pw-tl-text">{s.text}</div>
               </div>
             </li>
           ))}
@@ -107,7 +108,7 @@ function TrialWithFreeWayOut({ plan, setPlan, onClose, onTrial, onFree, freeWayO
               <button key={p.id} role="radio" aria-checked={on} aria-label={`${p.label}, ${trialLine(p)}${p.per === 'year' ? `, ${perMonthLabel(p)}, save ${save}%` : ''}`} className={`list-item pick pw-plan ${on ? 'on' : ''}`} onClick={() => setPlan(p.id)}>
                 <div className="row-main">
                   <div className="li-name">{p.label} {p.per === 'year' && <span className="pw-save">Save {save}%</span>}</div>
-                  <div className="li-sub">{trialLine(p)}{p.per === 'year' ? ` (${perMonthLabel(p)})` : ''}</div>
+                  <div className="li-sub">{trialLine(p)}{p.per === 'year' ? <> <span className="nowrap">({perMonthLabel(p)})</span></> : ''}</div>
                 </div>
                 <PickMark on={on} add={false} />
               </button>

@@ -181,7 +181,8 @@ export default function Suggest({ kind: initialKind = null, prefill = null, lead
         </div>
       </div>
       <div className="cta-wrap">
-        <button className="full-btn" disabled={busy} onClick={submit}>{busy ? 'Sending…' : <>Send <Icon name="paper-plane-tilt" fill /></>}</button>
+        {/* Looks off until there's something to send, but still answers a tap by showing what's missing (more-23) */}
+        <button className={`full-btn ${missing.length ? 'looks-off' : ''}`} aria-disabled={missing.length > 0 || undefined} disabled={busy} onClick={submit}>{busy ? 'Sending…' : <>Send <Icon name="paper-plane-tilt" fill /></>}</button>
       </div>
     </Screen>
   );

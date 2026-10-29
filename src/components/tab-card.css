@@ -52,3 +52,6 @@
 .settle-row-acts .pay-btn[class*="app-"] { flex: 0 1 auto; }
 /* Round rows inside a one-card list (a trip's played rounds) */
 :root .te-list > .hist-row, :root[data-look] .te-list > .hist-row { width: 100%; margin: 0; border-radius: 0; box-shadow: none; background: none; }
+
+/* A crew tab's Mark paid: a 36px chip with its 44px hit area (styles.css), clear of the amount (tab-4) */
+.te-mark { min-height: 36px; padding: 0 14px; }

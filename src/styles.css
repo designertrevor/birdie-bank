@@ -74,12 +74,15 @@ button { font-family: inherit; }
 .stage.in-pop > .screen.active, .stage.in-pop > .stage.in-none > .screen.active { animation: screenBack var(--duration-fast) var(--ease-smooth-out) both; }
 .stage.out-pop .screen.active { animation: screenPushOut var(--duration-fast) var(--ease-in) both; pointer-events: none; }
 .stage.out-swap .screen.active { animation: screenFade var(--duration-fast) ease-in both; pointer-events: none; }
-.stage.under .screen.active { animation: none; pointer-events: none; }
+/* The one underneath fades out quickly as the new one comes in, so two screens' headers and words never
+   read through each other mid-push (history-14, setup-27) */
+.stage.under .screen.active { animation: screenUnder calc(var(--duration-fast) * .6) ease-in both; pointer-events: none; }
 /* A pushed screen starts partly there, so its first frames are never a blank canvas */
 @keyframes screenPush { from { opacity: .4; transform: translateX(var(--distance-medium)); } }
 @keyframes screenBack { from { opacity: .4; transform: translateX(calc(-1 * var(--distance-medium))); } }
 @keyframes screenPushOut { to { opacity: 0; transform: translateX(var(--distance-medium)); } }
 @keyframes screenFade { to { opacity: 0; } }
+@keyframes screenUnder { to { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 @keyframes float { 50% { transform: translateY(-8px) rotate(4deg); } }
@@ -161,6 +164,14 @@ h2.sec-label { margin: 0; }
    reads as more. Every pinned footer has it now, not only .fade ones (play-65: a hard cut sliced rows) */
 :is(.cta-wrap, .pin-btn) { position: relative; }
 :is(.cta-wrap, .pin-btn)::before { content: ''; position: absolute; left: 0; right: 0; top: -28px; height: 28px; background: linear-gradient(to bottom, transparent, var(--canvas)); pointer-events: none; }
+/* The fade is long enough to hide the cut, ends solid, and paints over what scrolls under it, so a row
+   meeting the footer fades out instead of being sliced (setup-1). The scroll above carries room for the
+   fade plus air, so its last row always scrolls fully clear of it. */
+:is(.cta-wrap, .pin-btn)::before { top: -40px; height: 40px; z-index: 2; background: linear-gradient(to bottom, transparent, var(--canvas) 70%); }
+.scroll:has(~ :is(.cta-wrap, .pin-btn)) { padding-bottom: 56px; }
+/* In a sheet the footer isn't pinned (the whole sheet scrolls), so a fade would only wash out the control
+   above it: the 18 holes segment, Fix hole's last line (play-30) */
+:is(.sheet, .numpad-sheet, .sc-sheet, .rules-sheet) :is(.cta-wrap, .pin-btn)::before { content: none; }
 /* A sheet open at the screen sits after the footer, so it doesn't count as last */
 .screen > div[style*="border-top"]:nth-last-child(1 of :not(.sheet-overlay, .numpad-overlay, [hidden])) { border-top: none !important; padding-bottom: calc(14px + env(safe-area-inset-bottom)) !important; }
 
@@ -340,7 +351,9 @@ a.set-row { text-decoration: none; }
   font-size: 22px; cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
   transition: transform .2s var(--spring), background .15s;
 }
-.sc-btn:last-child { background: var(--ink); color: var(--on-ink); }
+/* Minus and plus the same weight, an ink edge on the card, so an enabled minus never looks like the
+   disabled one and plus doesn't read as the main action (play-44) */
+.sc-btn, .sc-btn:last-child { background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 35%, transparent); }
 .sc-btn:active { transform: scale(.85); }
 .sc-num { width: 44px; text-align: center; font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--ink); flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .sc-num.bump { animation: pop .3s var(--spring); }
@@ -439,6 +452,8 @@ a.set-row { text-decoration: none; }
 .holes-btn:active:not(:disabled), .pm-btn:active { transform: scale(.95); }
 
 /* EMPTY */
+.scroll.empty-center { display: flex; flex-direction: column; justify-content: center; }
+.empty-state .ec-back { width: auto; padding: 0 24px; margin-top: 8px; }
 .empty-state { padding: 56px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; flex: 1; }
 .empty-illo { width: 150px; height: 150px; animation: float 3s ease-in-out infinite; margin-bottom: 4px; }
 .et { font-family: var(--display); font-size: 28px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
@@ -455,7 +470,7 @@ a.set-row { text-decoration: none; }
    dims the page, so the sheet's edge always reads. Inside a sheet the page tokens are swapped for sheet ones, so a
    card, a chip or a "same as the background" ring sits right on the new surface without each screen knowing. */
 :root {
-  --scrim: rgba(10,26,26,.45);
+  --scrim: rgba(26,22,18,.4); /* a warm ink, so the cream page dims rather than turning sage (home-10) */
   --sheet-bg: #ffffff; --sheet-card: #f7f2e6; --sheet-surface: #f5f0e0; --sheet-surface-strong: #ebe6d6;
   --sheet-edge: transparent; --sheet-shadow: 0 18px 48px rgba(10,26,26,.22), 0 2px 8px rgba(10,26,26,.08);
   --sheet-radius: 30px; --sheet-gap: 12px;
@@ -508,6 +523,17 @@ a.set-row { text-decoration: none; }
 /* A sheet's title row stays put at the top while a long sheet scrolls under it */
 /* The title starts 20px in, on the same edge as a confirm's title and a sheet's words under it (play-42, play-43) */
 .sheet-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px 20px; background: inherit; border-radius: inherit; }
+/* Once a sheet has scrolled, a short fade under its title, so what slides under it fades out instead of
+   being sliced half a line down (play-2). Scroll-driven: a sheet that doesn't scroll shows none */
+@supports (animation-timeline: scroll()) {
+  :is(.sheet, .sc-sheet, .rules-sheet) { scroll-timeline: --sheet-scroll block; }
+  .sheet-head::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 16px; pointer-events: none;
+    background: linear-gradient(var(--sheet-bg), transparent); opacity: 0;
+    animation: sheetEdgeIn linear both; animation-timeline: --sheet-scroll; animation-range: 0 16px;
+  }
+}
+@keyframes sheetEdgeIn { from { opacity: 0; } to { opacity: 1; } }
 .sheet-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 16px; }
 .sheet-title-row .sheet-title { flex: 1; min-width: 0; }
 .sheet-handle { width: 40px; height: 5px; background: var(--surface-strong); margin: 10px auto 0; border-radius: 3px; }
@@ -565,7 +591,8 @@ a.set-row { text-decoration: none; }
 .rules-section { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); margin: 18px 0 6px; }
 .rules-body { font-size: 15px; color: var(--body); line-height: 1.55; }
 .rules-body li { margin-left: 18px; margin-bottom: 6px; }
-.rules-body li::marker { color: var(--pink-text); font-weight: 700; }
+/* Quiet bullets on a reading sheet: pink is only for the thing to tap (play-42) */
+.rules-body li::marker { color: var(--mute); font-weight: 700; }
 
 /* NASSAU MATCH STATUS */
 .match-status { display: flex; gap: 6px; margin: 0 16px 8px; flex-shrink: 0; }
@@ -606,6 +633,9 @@ a.set-row { text-decoration: none; }
 .tog:disabled { opacity: .45; }
 /* Off, the track carries an edge a thumb can find in the sun (its fill alone was 1.25:1 on a card) */
 .tog:not(.on) { box-shadow: inset 0 0 0 1.5px var(--mute); }
+/* The knob a size down with clear air all round, so off it never sits on that edge (it read as bitten, play-31) */
+.tog::after { top: 5px; left: 5px; width: 24px; height: 24px; }
+.tog.on::after { left: 27px; }
 
 /* NASSAU SETUP */
 .nassau-bet-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 18px; margin: 0 16px 8px; background: var(--card); border-radius: 18px; border: none !important; }
@@ -615,10 +645,12 @@ a.set-row { text-decoration: none; }
   padding: 10px 14px; width: 100%; outline: none; color: var(--ink);
 }
 .name-input:focus { box-shadow: 0 0 0 2px var(--ink); }
+/* A hint, not a name already typed: lighter and smaller than what you type (play-32) */
+.name-input::placeholder { font-weight: 500; font-size: 18px; color: var(--mute); }
 .or-rule { display: flex; align-items: center; gap: 10px; margin: 14px 4px; color: var(--mute); font-size: 13px; font-weight: 600; }
 .or-rule::before, .or-rule::after { content: ''; flex: 1; height: 1px; background: var(--surface-strong); }
 .text-input { font: inherit; font-size: 16px; border: none; background: var(--surface); border-radius: 14px; padding: 12px 14px; width: 100%; outline: none; color: var(--ink); line-height: 1.45; }
-.text-input.area { resize: vertical; min-height: 96px; }
+.text-input.area { resize: none; min-height: 96px; } /* no resize grip in the corner (more-23) */
 .text-input::placeholder { color: var(--mute-soft); }
 .text-input:focus { box-shadow: 0 0 0 2px var(--ink); }
 .text-input[aria-invalid] { box-shadow: 0 0 0 2px var(--loss); }
@@ -655,6 +687,10 @@ a.set-row { text-decoration: none; }
   /* A long toast (a bets line) wraps inside the screen instead of pushing the page sideways */
   width: max-content; max-width: calc(100% - 32px); text-align: center; text-wrap: balance;
   transition: opacity .2s, transform .35s var(--spring);
+  /* A halo of the page around it, so words underneath (the hint over Save & next hole) never touch or
+     show through its edge, and a quicker fade so it's see-through for as short a time as it can be (play-9) */
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--canvas) 88%, transparent);
+  transition-duration: .12s, .35s;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 .toast.has-act { display: flex; align-items: center; gap: 12px; padding: 4px 6px 4px 20px; white-space: normal; text-align: left; width: max-content; max-width: calc(100% - 32px); font-size: 15px; }
@@ -688,6 +724,8 @@ button { font: inherit; color: inherit; }
 
 button:disabled { cursor: not-allowed; }
 .full-btn:disabled { background: var(--surface-strong); color: var(--mute); transform: none; }
+/* A button that still explains itself when tapped but has nothing to do yet */
+.full-btn.looks-off { background: var(--surface-strong); color: var(--mute); }
 .full-btn.outline:disabled { background: var(--surface); color: var(--mute-soft); }
 .full-btn.danger { background: var(--loss); }
 /* The app's own surface, never the browser's button gray (dark in dark mode) */
@@ -852,7 +890,7 @@ button:disabled { cursor: not-allowed; }
 }
 .pickup-btn.on { color: var(--loss); }
 .sc-num.untouched { color: var(--mute-soft); }
-.sc-btn:disabled { opacity: .35; transform: none; }
+.sc-btn:disabled { opacity: .4; transform: none; }
 .play-cta { background: var(--canvas); }
 .wolf-panel { margin: 0 16px 8px; padding: 12px 14px; background: var(--lav); border-radius: 20px; flex-shrink: 0; }
 .wolf-panel .bl { color: rgba(0,0,0,.75); font-size: 14px; }
@@ -930,7 +968,8 @@ button:disabled { cursor: not-allowed; }
 .tee-block { display: flex; flex-direction: column; gap: 10px; }
 .tee-block .pill-btn { background: var(--surface); font-size: 13px; padding: 8px 10px; }
 .color-row { display: flex; gap: 8px; }
-.swatch { width: 30px; height: 30px; border-radius: 50%; border: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); cursor: pointer; }
+/* A ring in ink at a quarter, so black keeps an edge on a dark card and white on a white one (more-6) */
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 25%, transparent); cursor: pointer; }
 .swatch.on { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
 
 /* ============================================================
@@ -1326,7 +1365,7 @@ button:disabled { cursor: not-allowed; }
 .ic-stack { display: inline-flex; }
 .ic-stack .join-avatar + .join-avatar { margin-left: -8px; }
 .ic-note { margin-top: 10px; font-size: 14px; color: var(--body); }
-.join-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 19px; color: var(--on-pastel); flex-shrink: 0; box-shadow: 0 0 0 2px var(--card); }
+.join-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 19px; color: var(--on-pastel); flex-shrink: 0; box-shadow: var(--av-stack, 0 0 0 2px var(--card)); }
 .join-avatar.sm { width: 30px; height: 30px; font-size: 14px; }
 .join-avatar.lg { width: 84px; height: 84px; font-size: 38px; }
 .join-avatar.lav { background: var(--lav); } .join-avatar.peach { background: var(--peach); }
@@ -1335,7 +1374,8 @@ button:disabled { cursor: not-allowed; }
 .seat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
 .seat-tile { border: none; background: var(--card); border-radius: 22px; padding: 16px 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; text-align: center; color: var(--ink); transition: transform .2s var(--spring); min-width: 0; }
 .seat-tile:active { transform: scale(.96); }
-.seat-tile.add { background: transparent; box-shadow: inset 0 0 0 2px var(--surface-strong); }
+/* The same tile as a name beside it, a dashed hairline for the one to add (more-24) */
+.seat-tile.add { background: transparent; box-shadow: none; outline: 1.5px dashed var(--line); outline-offset: -1.5px; }
 .seat-name { font-family: var(--display); font-size: 17px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
 .seat-sub { font-size: 13px; color: var(--mute); line-height: 1.3; }
 .join-confirm { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
@@ -1422,7 +1462,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .rsvp-tag.maybe { background: var(--ochre); color: var(--on-pastel); }
 .rsvp-tag.out { background: var(--loss-bg); color: var(--loss); }
 .when-block { margin-top: 2px; }
-.day-strip { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
+.day-strip { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; scroll-padding-inline: 16px; }
 .day-strip::-webkit-scrollbar { display: none; }
 .day-chip {
   flex-shrink: 0; min-width: 58px; min-height: 58px; border: none; border-radius: 16px; background: var(--surface); color: var(--ink);
@@ -1494,7 +1534,7 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-step-title { font-family: var(--display); font-weight: 800; font-size: 16px; }
 .pw-when { font-family: Inter, system-ui, sans-serif; font-weight: 500; font-size: 13px; color: var(--mute); }
 .pw-plan { border: none; text-align: left; color: var(--ink); gap: 12px; }
-.pw-save { display: inline-block; vertical-align: 2px; margin-left: 6px; font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--band-butter); color: var(--ink); }
+.pw-save { display: inline-block; vertical-align: 2px; margin-left: 6px; font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--state-vote-bg); color: var(--state-vote-ink); box-shadow: inset 0 0 0 1px var(--state-vote-edge); } /* butter in light, a gold outline in dark rather than a brown chip (more-3) */
 .pw-list { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: var(--body); }
 .pw-list li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.4; }
 .pw-list li > i { font-size: 20px; color: var(--icon); flex-shrink: 0; }
@@ -1503,8 +1543,10 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .pw-free .pw-list { margin-top: 10px; }
 .pw-free .pw-list li > i { color: var(--win); }
 /* The list scrolls under the buttons through a short fade, so a card cut at the edge reads as more below */
-.screen.paywall .cta-wrap { position: relative; }
-.screen.paywall .cta-wrap::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 28px; background: linear-gradient(transparent, var(--canvas)); pointer-events: none; }
+/* The paywall's lines break cleanly: the per-month price stays whole, the timeline keeps "Two taps." company (onboarding-14) */
+.nowrap { white-space: nowrap; }
+.pw-tl-text { text-wrap: balance; }
+/* (The paywall's footer fade is every pinned footer's now, styles.css near .cta-wrap) */
 .pw-fine { font-size: 13px; color: var(--mute); text-align: center; line-height: 1.4; }
 
 /* YOUR PLAN and the cancel screen (Settings, paywall flag only) */
@@ -1659,6 +1701,8 @@ button.who-status { cursor: pointer; min-height: 36px; }
 
 /* SEASON PREVIEW (Pro) and the free promise on the Tab (2026-09-29) */
 .link-btn.center { align-self: center; }
+/* The underline is the label's alone: an icon in the link sits out of it (a short line under the plus, trips-39) */
+.link-btn i { display: inline-block; text-decoration: none; }
 .tab-view { margin: 0 16px 10px; }
 .pro-tag { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 800; letter-spacing: .04em; padding: 2px 6px; border-radius: 999px; background: var(--pink-fill); color: #fff; vertical-align: 2px; }
 .pm-btn.active .pro-tag { background: var(--on-ink); color: var(--ink); }
@@ -1678,6 +1722,9 @@ button.who-status { cursor: pointer; min-height: 36px; }
 /* A loss is a solid muted red, not a pink outline round a pale fill (maroon in dark) (tab-12) */
 .sb-track.left i { right: 0; background: color-mix(in srgb, var(--loss) 60%, transparent); }
 .sb-track.right i { left: 0; background: var(--win); }
+/* In dark, a losing bar at 60% on the card read as a dull brick beside bright mint: the coral of the -$ amounts, stronger (tab-7) */
+:root[data-theme="dark"] .sb-track.left i { background: color-mix(in srgb, var(--loss) 80%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sb-track.left i { background: color-mix(in srgb, var(--loss) 80%, transparent); } }
 .sb-amt { padding-left: 8px; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
 .kv-block { display: flex; flex-direction: column; }
 .kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
@@ -1707,6 +1754,9 @@ button.who-status { cursor: pointer; min-height: 36px; }
 .lately-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 16px; border: none; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .lately-row.static { cursor: default; }
 button.lately-row:active { background: var(--surface); }
+/* A row's face or game sticker sits where the icon disc does, the same 32px (history-15) */
+.lately-row .avatar.lately-face { width: 32px; height: 32px; margin: 0; font-size: 14px; flex-shrink: 0; }
+.lately-row .lately-art { width: 32px; height: 32px; flex-shrink: 0; }
 .lately-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; flex-shrink: 0; color: var(--on-pastel); }
 /* One quiet chip for every kind of line (Trevor's note on Up next's colours: a column of coloured
    dots was the same noise as the cards). The tint classes stay for anything that wants them back */
@@ -1715,7 +1765,8 @@ button.lately-row:active { background: var(--surface); }
 /* No one-word last line ("took it", "putter") (history-10) */
 .lately-text { font-weight: 700; color: var(--ink); font-size: 15px; line-height: 1.3; text-wrap: pretty; }
 .lately-sub { font-size: 13px; color: var(--mute); margin-top: 2px; }
-.lately-all { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 32px); min-height: 44px; margin: 0 16px 4px; border: none; border-radius: 14px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+/* The same centred pill as a card stack's "2 more", so one screen has one show-more control (home-5) */
+.lately-all { position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 36px; margin: 2px auto 10px; padding: 0 14px; border: none; border-radius: 999px; background: var(--surface); color: var(--body); font: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
 
 /* Round menu: grouped, with feedback up top */
 .menu-sec { padding: 14px 24px 6px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
@@ -1815,7 +1866,7 @@ button.lately-row:active { background: var(--surface); }
 .nemesis-card:active { transform: scale(.97); }
 .nemesis-card .row-main { min-width: 0; }
 .nm-eyebrow { display: flex; align-items: center; gap: 5px; color: var(--loss); margin-bottom: 2px; }
-.nm-line { margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--body); }
+.nm-line { margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--body); text-wrap: balance; } /* never "is Marcus." alone (classic-2) */
 
 /* ROUND MOMENTS (overnight 5): the banner's colors for skins, wolf, Vegas, the money lead and the
    last hole. A skin that ends a long carry gets a gold card, a bigger icon and a second bounce. */
@@ -1867,7 +1918,7 @@ button.lately-row:active { background: var(--surface); }
 .ft-line { color: var(--ink); font-size: 15px; }
 .ft-list { margin: 0; padding-left: 18px; color: var(--ink); font-size: 15px; line-height: 1.45; }
 .ft-list li + li { margin-top: 4px; }
-.ft-changes li::marker { color: var(--pink-text); }
+.ft-changes li::marker { color: var(--mute); }
 .ft-call + .ft-call { margin-top: 12px; }
 .ft-seg .pm-btn { flex: 1 1 0; min-width: 0; padding: 0 6px; font-size: 14px; line-height: 1.1; }
 .ft-skip { display: block; width: 100%; min-height: 44px; margin-top: 6px; background: none; border: none; color: var(--mute); font-weight: 600; font-size: 15px; cursor: pointer; }
@@ -2083,15 +2134,20 @@ button.trip-card:active { transform: scale(.97); }
 :root[data-theme="dark"] { --av-ring: rgba(255,255,255,.14); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]):not([data-theme="dark"]) { --av-ring: rgba(255,255,255,.14); } }
 .avatar.av-buddy, .avatar.av-photo, .join-avatar.av-buddy, .join-avatar.av-photo { overflow: hidden; padding: 0; }
-.avatar.av-buddy, .avatar.av-photo { box-shadow: 0 0 0 1.5px var(--av-ring); background: var(--surface); }
+.avatar.av-buddy, .avatar.av-photo { box-shadow: var(--av-stack, 0 0 0 1.5px var(--av-ring)); background: var(--surface); }
+/* Faces in a stack (round cards, the Tab, the Square band, the preview's pairs, the invite card) overlap
+   by about a quarter and each wears a 2px ring in the colour behind the stack, in both themes, so every
+   face keeps its own edge instead of the plates fusing into one shape (history-3, tab-1, play-34). A
+   stack on another surface sets --stack-ring. The rules below read --av-stack before their own ring. */
+:is(.rc-faces, .tab-faces, .ip-faces, .pv-pair, .ic-stack) { --av-stack: 0 0 0 2px var(--stack-ring, var(--card)); }
 /* In the dark theme a buddy's colour circle needs no grey ring (it read as a muddy halo). Every
-   backdrop, the sea teal too, reads on a dark card on its own (2026-10-29) */
-:root[data-theme="dark"] .avatar.av-buddy { box-shadow: none; }
+   backdrop, the sea teal too, reads on a dark card on its own (2026-10-29); a stack keeps its ring */
+:root[data-theme="dark"] .avatar.av-buddy { box-shadow: var(--av-stack, none); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy { box-shadow: none; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .avatar.av-buddy { box-shadow: var(--av-stack, none); }
 }
 /* Initials get the same ring, so the teal colour still has an edge on dark cards */
-.avatar.av-initials:not(.av-in-btn) { box-shadow: 0 0 0 1.5px var(--av-ring); }
+.avatar.av-initials:not(.av-in-btn) { box-shadow: var(--av-stack, 0 0 0 1.5px var(--av-ring)); }
 .av-buddy > svg, .av-photo > img, .av-bare > svg { display: block; width: 100%; height: 100%; }
 /* A buddy drawn as a sticker beside a label: no plate, no ring */
 .avatar.av-bare { background: none; box-shadow: none; overflow: visible; padding: 0; }
@@ -2127,6 +2183,9 @@ button.trip-card:active { transform: scale(.97); }
 .pf-home-line { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
 .pf-home-line i { color: var(--icon); }
 .set-row.pf-row .avatar { margin-right: 12px; }
+/* About's game rules: each row leads with its game's sticker (more-13) */
+.set-row.ab-game { gap: 12px; }
+.ab-game-art { width: 36px; height: 36px; flex-shrink: 0; }
 
 /* The avatar picker */
 .av-preview { text-align: center; padding: 4px 20px 12px; }
@@ -2137,7 +2196,8 @@ button.trip-card:active { transform: scale(.97); }
 .av-pick:active { transform: scale(.92); }
 .av-pick .av-tile { width: 64px; height: 64px; margin: 0; }
 /* The picked buddy: an ink ring and an ink check, like the picked backdrop under it (players-8) */
-.av-pick.on .av-tile { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
+/* Through the avatar's own ring (--av-stack), so the dark theme's "no ring on a buddy" doesn't drop it; --ink is cream in dark (players-3) */
+.av-pick.on { --av-stack: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); --av-stack-teal: 0 0 0 3px var(--canvas), 0 0 0 5px var(--ink); }
 .av-check { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--on-ink); font-size: 12px; box-shadow: 0 0 0 2px var(--canvas); }
 .av-eyebrow { margin: 14px 0 8px; text-align: center; }
 .av-swatches { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; justify-items: center; padding: 4px 0 8px; }
@@ -2164,7 +2224,8 @@ button.trip-card:active { transform: scale(.97); }
 
 /* ---------- Profile follow-ups: avatar shelves (critters), money privacy with Everyone (overnight 6 follow-ups, profiles) ---------- */
 .av-shelves { justify-content: center; padding: 4px 0 2px; }
-.av-shelf-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink-fill); display: inline-block; }
+/* The shelf your picked buddy is on: a small ink check, not a pink dot with no meaning (players-9) */
+.av-shelf-mark { margin-left: 4px; font-size: 12px; color: inherit; vertical-align: -1px; }
 .pf-money-seg .pm-btn { font-size: 13px; padding: 0 4px; }
 
 /* o6f side bets: either player changes a bet, money or points on a reward round, the reprice note */
@@ -2330,7 +2391,7 @@ button.trip-card:active { transform: scale(.97); }
 .pv-recs .set-name { line-height: 1.35; font-weight: 600; }
 .pv-pair { display: flex; flex-shrink: 0; }
 .pv-pair .avatar { margin: 0; }
-.pv-pair .avatar + .avatar { margin-left: -12px; box-shadow: 0 0 0 2px var(--card); }
+.pv-pair .avatar + .avatar { margin-left: -10px; }
 
 /* ---------- Monday recap and callouts (overnight 7, recap): the day-after recap card and the group text lines on Up next ---------- */
 /* The recap: a card like the rest of Up next, its x in the corner outside the head's own button */
@@ -2492,7 +2553,8 @@ button.ch-main:active { transform: scale(.98); }
 /* ---------- Deeper stats (o7 stats): Your stats screen, the profile's More stats, the links to it ---------- */
 .stats-tiles .pf-tile { grid-column: span 3; }
 .stats-tiles .pf-tile:nth-child(3) .pf-v { font-size: 22px; line-height: normal; white-space: nowrap; }
-.stats-all { display: block; margin: -2px 16px 10px; text-align: center; }
+/* A caption, not a title: muted, left on the page edge, clear of the switch above (history-8) */
+.range-label.stats-all { display: block; margin: 16px 20px 10px; text-align: left; font-family: var(--body-font); font-size: 14px; font-weight: 600; color: var(--mute); }
 .stats-lines { list-style: none; padding: 4px 16px; }
 .stats-line { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .stats-line:last-child { border-bottom: 0; }
@@ -2782,7 +2844,8 @@ button.ch-main:active { transform: scale(.98); }
 .tee-block .tb-label + .day-strip { margin-top: 0; }
 /* The reminder days and Schedule for later's days run to the card's edge and fade there, so the cut
    reads as more to scroll (plan-21, setup-28) */
-.tee-block .day-strip, .when-block .day-strip { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+/* Both edges fade, so a day scrolled half out on the left reads as more that way too (plan-11) */
+.tee-block .day-strip, .when-block .day-strip { -webkit-mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 28px), transparent); }
 .tb-link-row { display: flex; gap: 8px; align-items: center; }
 .tb-link-row .text-input { flex: 1; min-width: 0; }
 .tb-link-row .rc-btn { flex-shrink: 0; }
@@ -3243,6 +3306,7 @@ button.cal-title:active { transform: scale(.95); background: var(--surface); }
 .rm-vote i { font-size: 20px; }
 .rm-vote .rm-count { font-family: var(--display); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
 .rm-vote:active { transform: scale(.92); }
+.rm-vote .rm-count.rm-zero { font-family: var(--body-font); font-size: 12px; font-weight: 700; }
 .rm-vote.on { background: var(--pink-fill); color: #fff; }
 .rm-vote.static { min-height: 0; padding: 8px 0; background: transparent; color: var(--mute); cursor: default; }
 .rm-vote.static:active { transform: none; }
@@ -3320,6 +3384,8 @@ a.header-btn.rm-open { text-decoration: none; }
 }
 .trip-form-cta .full-btn { margin: 0; }
 .trip-form-cta .link-btn.center { align-self: center; }
+/* The underline is the label's alone: an icon in the link sits out of it (a short line under the plus, trips-39) */
+.link-btn i { display: inline-block; text-decoration: none; }
 .trip-form-cta .field-help { margin: 2px 0 0; text-align: center; }
 /* Templates: picked like a game in setup */
 .tm-template { min-height: 64px; padding: 12px 14px; border-radius: 18px; background: var(--card); }
@@ -3327,6 +3393,8 @@ a.header-btn.rm-open { text-decoration: none; }
 .tm-template.on { background: var(--card); box-shadow: inset 0 0 0 2px var(--ink); }
 .tm-template .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
 .tm-template .li-check { margin-left: auto; }
+/* An empty ring you can see on the card, cream on cream before (trips-36) */
+.tm-template .li-check:not(.on) { border: 1.5px solid var(--mute); }
 .tm-template.scratch { min-height: 56px; }
 /* Who's going: find or add, then everyone you could take */
 .trip-who-step .trip-lede { margin: 0 0 16px; }
@@ -3452,7 +3520,10 @@ a.header-btn.rm-open { text-decoration: none; }
 .join-how { width: 100%; margin: 12px 0 8px; text-align: left; }
 /* The invite's quiet ways out (keep my own score, not now) on one row under the two buttons */
 .join-quiet { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 20px; }
-.join-quiet .text-link { min-height: 44px; justify-content: center; }
+.join-quiet .text-link { min-height: 44px; justify-content: center; margin: 0; padding: 0 4px; font-size: 14px; font-weight: 600; color: var(--body); }
+/* Two quiet ways out read as a pair: one row, the same weight, a middle dot between (more-25) */
+.join-quiet { align-items: center; gap: 0 10px; }
+.join-quiet .text-link + .text-link::before { content: '·'; margin-right: 10px; color: var(--mute); }
 /* The friendly finish: a card with the score, never money */
 .nice-scroll { padding: 8px 16px 24px; }
 .nice-card {
@@ -3573,7 +3644,7 @@ a.header-btn.rm-open { text-decoration: none; }
 /* Settle the trip: the lede on the 16px gutter with room between its lines */
 .settle-lede { padding: 4px 16px 16px; }
 /* Close the books: on the section labels' 20px edge, so the intro and "Final net" line up (tab-13) */
-.settle-lede.books-lede { padding-left: 20px; padding-right: 20px; }
+.settle-lede.books-lede { padding-left: 20px; padding-right: 20px; padding-top: 24px; } /* the same air under the header as other pushed screens (tab-10) */
 .settle-lede p { line-height: 1.45; }
 /* "I paid" and "I got it" are the quiet second button next to the pay app's, so a page of them
    doesn't stack up black bars */
@@ -3658,7 +3729,7 @@ a.header-btn.rm-open { text-decoration: none; }
 .ip-code { font-size: 12px; color: var(--mute); font-weight: 600; }
 .ip-title { font-size: 20px; font-weight: 800; line-height: 1.15; letter-spacing: -.01em; }
 .ip-faces { display: flex; align-items: center; min-width: 0; }
-.ip-faces .avatar { margin-right: -8px; box-shadow: 0 0 0 2px var(--card); }
+.ip-faces .avatar { margin-right: -8px; }
 .ip-who { margin-left: 16px; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .ip-foot { font-size: 14px; color: var(--body); }
 
@@ -3825,12 +3896,14 @@ a.header-btn.rm-open { text-decoration: none; }
 /* THE TAB: who the money's with and the season's line under the big number; one job per card */
 .tab-who { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 14px; color: var(--mute); font-weight: 600; }
 .tab-faces { display: inline-flex; }
-.tab-faces .avatar { margin: 0 -8px 0 0; box-shadow: 0 0 0 2px var(--canvas); }
+.tab-faces { --stack-ring: var(--canvas); }
+.tab-faces .avatar { margin: 0 -8px 0 0; }
 .tab-faces .avatar:last-child { margin-right: 0; }
 .pay-btn.icon-only { flex: 0 0 52px; padding: 0; }
 .tab-card > .tab-part { display: block; margin: 10px 2px 0; }
 .square-line { display: flex; align-items: center; gap: 12px; margin: 4px 16px 12px; padding: 10px 14px; border-radius: 18px; background: var(--win-bg); color: var(--win); font-size: 14px; font-weight: 700; }
-.square-line .tab-faces .avatar { box-shadow: 0 0 0 2px var(--win-bg); }
+/* On the mint band a mint plate would melt into it: the card colour rings every face there (tab-1, classic-4) */
+.square-line .tab-faces { --stack-ring: var(--card); }
 .square-line i { vertical-align: -2px; }
 .how.pad { margin: 4px 20px 12px; }
 .tab-tools { margin: 8px 16px 12px; background: var(--card); border-radius: 18px; overflow: hidden; }
@@ -3910,7 +3983,9 @@ svg.scene { overflow: visible; }
 /* UP NEXT: reminders and news share one slot, the rest piled behind the first */
 .card-stack .cs-wait { display: none; }
 .card-stack.piled .remind-card:not(.cs-wait) { box-shadow: 0 6px 0 -2px var(--surface-strong), 0 12px 0 -5px var(--line); margin-bottom: 20px; }
-.cs-more { display: flex; align-items: center; gap: 4px; margin: -8px auto 10px; padding: 6px 12px; border: none; border-radius: 999px; background: var(--surface); color: var(--body); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.cs-more { position: relative; display: flex; align-items: center; gap: 4px; min-height: 36px; margin: -8px auto 10px; padding: 0 14px; border: none; border-radius: 999px; background: var(--surface); color: var(--body); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+/* Both show-more pills reach 44px for a thumb */
+.cs-more::before, .lately-all::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
 
 /* Want a heads-up: a lock screen with one of ours on it */
 .lock-preview { margin: 4px 16px 12px; padding: 14px 12px 12px; border-radius: 24px; background: linear-gradient(160deg, #1a3a3a, #2c5a5a 55%, #a4d4c5); display: flex; flex-direction: column; gap: 8px; }
@@ -4200,6 +4275,11 @@ svg.spot, svg.game-art { overflow: visible; }
 .bt-top { display: flex; flex-direction: column-reverse; align-items: stretch; gap: 6px; width: 100%; }
 .bt-top .bt-art { align-self: flex-end; }
 .bt-top .bt-k { min-height: 2.5em; line-height: 1.25; }
+/* The four records line up across each row of tiles: eyebrow, who, the number, the note, each on a
+   shared row (subgrid), every drawing in one 40px box (history-10) */
+.badge-grid .badge-tile { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 2px; align-content: start; }
+.badge-grid .bt-top .bt-k { min-height: 0; }
+.badge-grid .bt-art { width: 40px; height: 40px; margin: 0; }
 .bt-ic { width: 28px; height: 28px; margin: 0; font-size: 15px; }
 .bt-k { font-size: 12px; font-weight: 600; letter-spacing: .08em; }
 .bt-who { font-size: 14px; font-weight: 700; color: var(--ink); }

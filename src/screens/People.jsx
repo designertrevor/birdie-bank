@@ -10,7 +10,9 @@ import { mergePlayer, mergedInto, unmergePlayer } from '../lib/merge.js';
 import { headToHeadSummary, nameOf, outstanding, tabWith } from '../lib/ledger.js';
 import { canonicalOf } from '../lib/pair-debts.js';
 import { PAY_APPS, PAY_APP_IDS, handleText, payInfo, payInfoFor, profilePayInfo } from '../lib/pay.js';
-import { theirName } from '../lib/their-profile.js';
+import { theirName, theirProfile } from '../lib/their-profile.js';
+import { AvatarPicker } from '../components/AvatarPicker.jsx';
+import { Spot } from '../components/Spot.jsx';
 import { savePlayerCard } from '../lib/player-save.js';
 import { money } from '../lib/golf.js';
 import { AvatarButton, BottomNav } from '../nav.jsx';
@@ -28,7 +30,7 @@ const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
 
 // The row of big avatars on top: the people you've played with most, once the list is long
 // enough to need it, and only those you've played a couple of rounds with
-const REGULARS_MAX = 5;
+const REGULARS_MAX = 4; // four faces with air between them, not five edge to edge (players-6)
 const REGULARS_FROM = 6; // people in the list before the row shows
 const SEARCH_FROM = 8;
 
@@ -158,7 +160,8 @@ export default function People() {
         )}
         {people.length < 1 && (
           <div className="people-empty">
-            <div className="pe-outlines" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className="pe-ghost"><Icon name="user" /></span>)}</div>
+            {/* The group drawn, like every other empty state's sticker, not outlines standing in for art (players-5) */}
+            <Spot kind="crowd" size={150} className="empty-illo pe-art" />
             <div className="pe-title d">Add the people you play with</div>
             <p className="pe-sub">Then pick them in one tap when you start a round. Everyone gets a Ball buddy.</p>
             {/* The card's own button, so the empty state carries its action (players-4) */}
@@ -239,6 +242,7 @@ export function PlayerEdit({ id, onSaved }) {
   const [handle, setHandle] = useKept('player:handle', () => { const i = payInfo(existing); return i ? handleText(i) : ''; });
   const isMe = !!id && id === state.me;
   const [pad, setPad] = useState(false);
+  const [picking, setPicking] = useState(false);
   const trimmed = name.trim();
   const duplicate = Object.values(state.players).some(p => p.id !== id && !p.mergedInto && p.name.toLowerCase() === trimmed.toLowerCase());
   const mine = myIds(state);
@@ -256,6 +260,8 @@ export function PlayerEdit({ id, onSaved }) {
   const profName = id && !isMe ? theirName(state, id) : null;
   const profPay = id && !isMe ? profilePayInfo(state, id) : null;
   const who = firstName(profName || existing?.name) || 'They';
+  // A friend who picked their own avatar in their profile: theirs shows everywhere, so there's nothing to pick here
+  const ownFace = id && !isMe && !!theirProfile(state, id)?.avatar;
 
   const save = () => {
     const pid = id || uid('p_');
@@ -303,6 +309,21 @@ export function PlayerEdit({ id, onSaved }) {
     <Screen>
       <Header title={existing ? 'Edit player' : 'New player'} onBack={nav.pop} />
       <div className="scroll">
+        {/* Their face on top, and a pencil to pick it: the same picker as yours, saved on their card (players-4) */}
+        {existing && (
+          <div className="pe-face">
+            {ownFace
+              ? <Avatar id={id} name={name || existing.name} size="lg" />
+              : (
+                <button type="button" className="pe-face-btn" onClick={() => setPicking(true)} aria-label={isMe ? 'Your avatar. Change it' : `${who}’s avatar. Change it`}>
+                  <Avatar id={id} name={name || existing.name} size="lg" />
+                  <span className="pe-face-edit" aria-hidden="true"><Icon name="pencil-simple" /></span>
+                </button>
+              )}
+            {ownFace && <p className="field-help">{who} picked this in their own profile.</p>}
+          </div>
+        )}
+        <AvatarPicker open={picking} onClose={() => setPicking(false)} playerId={isMe ? null : id} name={name || existing?.name} />
         <div className="block">
           <label className="field-label" htmlFor="pe-name">Name</label>
           <input id="pe-name" className="name-input" value={name} maxLength={24} onChange={e => setName(e.target.value)} placeholder="Name" autoFocus={!existing}
@@ -368,15 +389,18 @@ export function PlayerEdit({ id, onSaved }) {
       </div>
       <Sheet open={merging} onClose={() => setMerging(false)} title={`Who is ${existing?.name || 'this'}?`}>
         <p className="field-help" style={{ margin: '0 20px 8px' }}>Pick the player to keep. Everything with {existing?.name} adds up under them.</p>
-        {candidates.map(c => (
-          <button key={c.id} className="list-item" onClick={() => merge(c)}>
-            <Avatar id={c.id} name={c.name} />
-            <div className="row-main">
-              <div className="li-name">{c.name}</div>
-              <div className="li-sub">{c.rounds ? `${c.rounds} round${c.rounds === 1 ? '' : 's'} together` : 'No rounds together yet'}{c.pay ? ` · ${PAY_APPS[c.pay.app].name} ${handleText(c.pay)}` : ''}{c.saved ? '' : ' · from a round you joined'}</div>
-            </div>
-          </button>
-        ))}
+        {/* One white card of hairline rows, like every other people list (players-7) */}
+        <div className="pe-merge-list">
+          {candidates.map(c => (
+            <button key={c.id} className="list-item" onClick={() => merge(c)}>
+              <Avatar id={c.id} name={c.name} />
+              <div className="row-main">
+                <div className="li-name">{c.name}</div>
+                <div className="li-sub">{c.rounds ? `${c.rounds} round${c.rounds === 1 ? '' : 's'} together` : 'No rounds together yet'}{c.pay ? ` · ${PAY_APPS[c.pay.app].name} ${handleText(c.pay)}` : ''}{c.saved ? '' : ' · from a round you joined'}</div>
+              </div>
+            </button>
+          ))}
+        </div>
       </Sheet>
       <Numpad open={pad} title="Handicap" initial={index ?? ''} allowDecimal allowNegative min={-10} max={54}
         onClose={() => setPad(false)} onDone={v => { setIndex(v); setPad(false); }} />

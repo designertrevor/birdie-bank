@@ -53,6 +53,8 @@ import { notifyMoment, pushRsvp } from '../lib/push-client.js';
 import { noteError } from '../lib/recent-errors.js';
 import { firstOpen } from '../lib/ops.js';
 
+/** A day that never breaks across lines ("Sun Nov 8", not "Sun / Nov 8", plan-5). */
+const keepDay = iso => shortDay(iso).replace(/ /g, '\u00a0');
 const first = name => String(name || '').trim().split(/\s+/)[0];
 const listNames = n => (n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} and ${n.at(-1)}`);
 const STATUS_ICON = { in: 'check-circle', maybe: 'question', out: 'x-circle' };
@@ -310,7 +312,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
         {noDay && planned && !plan.host && answered && !changing && (
           <div className="pd-mine">
             <span className={`ps-status ${mine.status}`}>{mine.status === 'out' ? 'You can’t make it' : mine.status === 'maybe' ? 'You’re a maybe' : 'You’re in'}</span>
-            <span className="row-main pd-mine-days">{mine.status !== 'out' && (mine.days?.length ? mine.days.map(shortDay).join(', ') : 'No days picked yet')}</span>
+            <span className="row-main pd-mine-days">{mine.status !== 'out' && (mine.days?.length ? mine.days.map(keepDay).join(', ') : 'No days picked yet')}</span>
             <button type="button" className="pill-btn sm" onClick={() => setChanging(true)}>Change</button>
           </div>
         )}
@@ -351,7 +353,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
               <PlanAvatar plan={plan} who={p.who} name={p.name} />
               <div className="row-main">
                 <div className="set-name">{first(p.name)}{p.who === me ? ' (you)' : ''}</div>
-                {noDay && p.status && p.status !== 'out' && p.days?.length > 0 && <div className="set-sub">Can make {p.days.map(shortDay).join(', ')}</div>}
+                {noDay && p.status && p.status !== 'out' && p.days?.length > 0 && <div className="set-sub">Can make {p.days.map(keepDay).join(', ')}</div>}
                 {(p.game || p.bet || sideYes(plan, p).length > 0) && p.status !== 'out' && (
                   <div className="set-sub">Votes {[GAMES[p.game]?.name, voteBetLabel(p, unit), ...sideYes(plan, p)].filter(Boolean).join(', ')}</div>
                 )}
@@ -408,7 +410,7 @@ function PlanBody({ plan: saved, standalone = false, onSkip, lock: lockFirst = f
           {(days != null && days <= 1 && (plan.code || !plan.host || off)) ? (
             <button className={`full-btn ${plan.host && days <= 0 ? 'outline' : 'pink'}`} onClick={morning}><Icon name="chat-circle-text" /> {days <= 0 ? 'Send the morning text' : 'Text the group'}</button>
           ) : plan.host && !(off && !plan.code) ? (
-            <button className={`full-btn ${(days != null && days <= 0) || (noDay && lead && !nudge) ? 'outline' : 'pink'}`} disabled={sharing} onClick={invite}><Icon name="share-network" /> {sharing ? 'Getting the link…' : plan.code ? 'Send the group link' : 'Invite the group'}</button>
+            <button className={`full-btn ${(days != null && days <= 0) || (noDay && lead) ? 'outline' : 'pink'}`} disabled={sharing} onClick={invite}><Icon name="share-network" /> {sharing ? 'Getting the link…' : plan.code ? 'Send the group link' : 'Invite the group'}</button>
           ) : null}
           {plan.host && days != null && days > 0 && (
             <button className="full-btn outline" onClick={() => nav.push('rollCall', { id: plan.id })}>Playing now? Roll call</button>
@@ -685,7 +687,8 @@ function WhoAreYou({ plan, defaultName, standalone, onSkip }) {
                 return (
                   <button key={p.id} className={`seat-tile ${theirs ? 'taken' : ''}`} disabled={theirs} onClick={() => pick(p.id)}
                     aria-label={theirs ? `${first(p.name)}, already answered from their own phone` : undefined}>
-                    <Avatar id={p.id} name={p.name} />
+                    {/* The face the plan carries for them, as on the plan page (plan-faces.js) */}
+                    <PlanAvatar plan={plan} who={p.id} name={p.name} />
                     <span className="seat-name">{first(p.name)}</span>
                     {/* Every tile three lines: No answer where nobody's answered yet (more-7) */}
                     <span className="seat-sub">{theirs ? 'Answered' : taken.has(p.id) ? RSVP_LABEL[plan.answers[p.id].status] || ' ' : 'No answer'}</span>
@@ -832,11 +835,12 @@ export function RollCall({ id }) {
           <div className="li-sub">{t.total > 1 ? `The group’s pick (${t.rows.find(r => r.choice === setup.game)?.votes || 0} of ${t.total} votes)` : 'Your suggestion. Nobody else voted'}</div>
         </div>
         <h2 className="step-q d">Who showed up?</h2>
-        <div className="pick-list">
+        {/* One hairline card of people with their faces, like every other people list (plan-9) */}
+        <div className="pick-list rc-people">
           {people.map(p => {
             const on = present.includes(p.who);
             return (
-              <PickRow key={p.who} on={on} onClick={() => toggle(p.who)}
+              <PickRow key={p.who} on={on} onClick={() => toggle(p.who)} lead={<PlanAvatar plan={plan} who={p.who} name={p.name} size="sm" />}
                 title={p.who === plan.hostWho ? `${first(p.name)} (you)` : p.name}
                 sub={p.who.startsWith('w_') ? 'Walked up' : <>{p.status ? `Said ${RSVP_LABEL[p.status].toLowerCase()}` : 'Didn’t answer'}{!p.invited ? ' · from the link' : ''}</>} />
             );

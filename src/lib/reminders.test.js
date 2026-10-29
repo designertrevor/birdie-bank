@@ -306,7 +306,7 @@ test('nudges: the line is friendly and says the day, never how late it is', () =
   const sat = new Date(2026, 8, 26, 15).getTime(); // the Saturday before NOW
   assert.equal(nudgeLine('Mike Jones', 18, sat, { now: NOW, fmt: v => `$${v}` }), 'Mike still owes you $18 from Saturday');
   assert.equal(sinceDay(new Date(2026, 8, 12).getTime(), NOW), 'Sep 12');
-  assert.equal(nudgeLine('', 5, NOW - 8 * DAY, { now: NOW }), 'A friend still owes you $5 from Sep 23');
+  assert.equal(nudgeLine('', 5, NOW - 8 * DAY, { now: NOW }), 'A friend still owes you $5 from Sep\u00a023');
   for (const t of [nudgeLine('Mike', 18, sat, { now: NOW })]) assert.doesNotMatch(t, /overdue|late|week|days/i);
 });
 

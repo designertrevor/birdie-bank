@@ -85,9 +85,11 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
         text: toMe ? `${name(other)} paid you ${money(s.amount)}` : `You paid ${name(other)} ${money(s.amount)}`,
         sub: app ? `${app} · ${when}` : when,
         target: ['person', { id: other }],
+        // The row leads with who it's about (LatelyList.jsx draws their face, history-15)
+        face: { id: other, name: name(other) },
       });
     } else {
-      items.push({ id: `pay:${s.id}`, kind: 'payment', at: s.at, text: `${name(s.from)} settled up with ${name(s.to)}`, sub: when, target: round });
+      items.push({ id: `pay:${s.id}`, kind: 'payment', at: s.at, text: `${name(s.from)} settled up with ${name(s.to)}`, sub: when, target: round, face: { id: s.from, name: name(s.from) } });
     }
   }
 
@@ -105,6 +107,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
         : `${name(c.from)} and ${name(c.to)} rolled it to next time`,
       sub: agoLabel(at, t),
       target: other ? ['person', { id: other }] : null,
+      face: other ? { id: other, name: name(other) } : null,
     });
   }
 
@@ -124,7 +127,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
       const n = first(a.name);
       const text = a.status === 'in' ? `${n} is in for ${day}` : a.status === 'out' ? `${n} is out for ${day}` : a.status === 'maybe' ? `${n} is a maybe for ${day}` : null;
       if (!text) continue;
-      items.push({ id: `rsvp:${plan.id}:${who}`, kind: 'rsvp', at: a.at, text, sub: [plan.course?.name, agoLabel(a.at, t)].filter(Boolean).join(' · '), target: ['plan', { id: plan.id }] });
+      items.push({ id: `rsvp:${plan.id}:${who}`, kind: 'rsvp', at: a.at, text, sub: [plan.course?.name, agoLabel(a.at, t)].filter(Boolean).join(' · '), target: ['plan', { id: plan.id }], face: { plan: plan.id, who, name: n } });
     }
   }
 
@@ -157,7 +160,7 @@ export function latelyItems(state, now = Date.now(), { carries = state?.carries,
     const cash = reward && played && hasCashBet(r, me) ? cents(tabMoneyOf(r, me)) : null;
     const bets = cash == null ? null : cash === 0 ? 'Side bets square' : `You ${money(cash, { sign: true })} on side bets`;
     items.push({
-      id: `recap:${r.id}`, kind: 'recap', at: roundTime(r),
+      id: `recap:${r.id}`, kind: 'recap', at: roundTime(r), game: r.game,
       text: `${gameLabel(r)} at ${r.course?.name || 'the course'} · ${took}`,
       sub: [reward ? reward.buy.replace(/\.$/, '') : yours, bets, agoLabel(roundTime(r), t)].filter(Boolean).join(' · '),
       target: ['roundDetail', { id: r.id }],

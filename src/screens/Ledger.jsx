@@ -24,7 +24,7 @@ import { AvatarButton, BottomNav } from '../nav.jsx';
 import { useNav } from '../lib/nav.js';
 import { PAYWALL_ON } from '../lib/paywall-flag.js';
 import { isOrganizer } from '../lib/paywall.js';
-import { StartTripLink, TripTabCard } from '../components/Trips.jsx';
+import { StartTripLink, TripSheet, TripTabCard } from '../components/Trips.jsx';
 import { currentTrips, tripHidden, tripsOf } from '../lib/trips.js';
 import { tripSettleOf } from '../lib/trip-pay.js';
 import { OneTab, SinceBooks, TabSwitch } from '../components/CrewTabs.jsx';
@@ -38,6 +38,9 @@ const first = name => name.split(' ')[0];
 // The tab you last looked at this visit (Everyone, or a crew's or trip's), so coming back keeps it
 const VIEW_KEY = 'bb-tab-view';
 const readView = () => { try { return sessionStorage.getItem(VIEW_KEY) || 'everyone'; } catch { return 'everyone'; } };
+
+/** A day, for which payments still carry a full Undo button */
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default function Ledger() {
   const nav = useNav();
@@ -59,6 +62,9 @@ export default function Ledger() {
   const one = view === 'everyone' ? null : switches.find(t => t.key === view);
   const [open, setOpen] = useState(null);
   const [free, setFree] = useState(false);
+  const [tripping, setTripping] = useState(false);
+  // When the screen opened, for which payments are recent enough for a full Undo button
+  const [openedAt] = useState(() => Date.now());
   // Before launch Season is open to everyone who has played a round. With the paywall flag on it's
   // the Pro preview again: organizers only, with the Pro tag
   const showSeason = PAYWALL_ON ? isOrganizer(state) : Object.values(state.rounds).some(r => r.status === 'done');
@@ -266,7 +272,8 @@ export default function Ledger() {
                       <div className="lr-status">{new Date(s.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{tripNames.get(tripOf(s))?.name ? ` · ${tripNames.get(tripOf(s)).name}` : ''}</div>
                     </div>
                     <div className="lr-amt" style={{ marginRight: 8 }}>{money(s.amount)}</div>
-                    <button className="icon-btn sm" onClick={() => undo(s)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
+                    {/* Undo is there on every payment; only the last day's is a full button, older ones quiet (tab-6) */}
+                    <button className={`icon-btn sm ${openedAt - s.at < DAY_MS ? '' : 'quiet-undo'}`} onClick={() => undo(s)} aria-label="Undo payment"><Icon name="arrow-counter-clockwise" /></button>
                   </div>
                   {pt && <TalkBar ctx={roundTalk(pt.round, state)} on={pt.on} title={line} />}
                 </div>
@@ -277,6 +284,7 @@ export default function Ledger() {
         )}
         {/* The season's tools, together in one short list. Season moved here from the switch at the
             top, so the summary card has the top of the screen to itself */}
+        {(showSeason || hasRounds) && <h2 className="sec-label">More</h2>}
         {(showSeason || hasRounds || trips.length === 0) && (
           <div className={`tab-tools ${showSeason || hasRounds ? '' : 'solo'}`}>
             {showSeason && (
@@ -289,7 +297,14 @@ export default function Ledger() {
                 <Icon name="book-bookmark" fill /> <span className="row-main">Close the books<span className="sl-sub">Keep everyone’s totals, then settle up or roll to next season</span></span> <Icon name="caret-right" />
               </button>
             )}
-            {trips.length === 0 && <StartTripLink onMade={t => nav.push('trip', { id: t.id })} />}
+            {/* With Season and Close the books, Start a trip is a row like them (tab-5); alone, the quiet link */}
+            {trips.length === 0 && (showSeason || hasRounds
+              ? (
+                <button className="text-link stats-link" onClick={() => setTripping(true)}>
+                  <Icon name="suitcase-rolling" fill /> <span className="row-main">Start a trip<span className="sl-sub">A few days of golf on one Tab</span></span> <Icon name="caret-right" />
+                </button>
+              )
+              : <StartTripLink onMade={t => nav.push('trip', { id: t.id })} />)}
           </div>
         )}
         {/* The free-forever list is held until Trevor says so: only with the paywall preview flag */}
@@ -304,6 +319,7 @@ export default function Ledger() {
       <BottomNav />
       <SettleSheet debt={open} onClose={() => setOpen(null)} />
       <FreePromise open={free} onClose={() => setFree(false)} />
+      <TripSheet open={tripping} onClose={() => setTripping(false)} onDone={t => { setTripping(false); nav.push('trip', { id: t.id }); }} />
     </Screen>
   );
 }

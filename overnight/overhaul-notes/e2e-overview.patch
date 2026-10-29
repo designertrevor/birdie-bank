@@ -1,0 +1,31 @@
+diff --git a/e2e/round.e2e.js b/e2e/round.e2e.js
+index 5f0d0f9..7a75d4a 100644
+--- a/e2e/round.e2e.js
++++ b/e2e/round.e2e.js
+@@ -220,6 +220,7 @@ async function playThrough(page, nav, step, context, problems) {
+   // --- Round setup: game, course, players, bets ---
+   step('setup');
+   await page.getByRole('button', { name: 'Start a round' }).first().click();
++  await page.getByRole('button', { name: /^Pick a game/ }).click();
+   // A game row holds its own Rules button in the middle, so pick it from the keyboard
+   await page.getByRole('radio', { name: /^Skins:/ }).press('Enter');
+   await page.getByRole('button', { name: 'Next: Course' }).click();
+@@ -241,7 +242,8 @@ async function playThrough(page, nav, step, context, problems) {
+   await page.getByRole('button', { name: `Value per skin: $${SKIN}. Change` }).waitFor();
+   await page.getByRole('radio', { name: 'Per skin', checked: true }).waitFor();
+   await page.getByRole('radiogroup', { name: 'Still carried after the last hole' }).getByRole('radio', { name: 'Nobody', checked: true }).waitFor();
+-  await page.getByRole('button', { name: 'Create round' }).click();
++  await page.getByRole('button', { name: /Next: Look it over/ }).click();
++  await page.getByRole('button', { name: /^Create round/ }).click();
+   await page.getByText('Round ready').waitFor();
+   await page.getByRole('button', { name: 'Tee off on hole 1' }).click();
+ 
+@@ -346,7 +348,7 @@ async function playThrough(page, nav, step, context, problems) {
+   await page.getByRole('button', { name: 'Done' }).click();
+   // History lists the round with Alex's total
+   const mine = `${want.net.Alex < 0 ? '\u2212' : want.net.Alex > 0 ? '+' : ''}$${Math.abs(want.net.Alex)}`;
+-  await page.getByRole('button', { name: new RegExp(`^Birch Creek GC, Skins, .+\\. You ${mine.replace('$', '\\$').replace('+', '\\+')}$`) }).waitFor();
++  await page.getByRole('button', { name: new RegExp(`^Birch Creek GC, Skins, .+\\. You ${mine.replace('$', '\\$').replace('+', '\\+')}(\\.|$)`) }).first().waitFor();
+   await nav.getByRole('button', { name: 'Tab' }).click();
+   for (const t of wantPay) {
+     // These scores leave Alex owing, so Alex is never the one paid here

@@ -49,7 +49,7 @@
 }
 /* Not set yet: an edge, no fill (the plan's "Not yet" state); something to fix: Up for a vote's colours */
 .ov-row.todo .ov-change { background: transparent; box-shadow: inset 0 0 0 1px var(--state-not-edge); }
-.ov-row.fix .ov-change { background: var(--state-vote-bg); color: var(--state-vote-ink); }
+.ov-row.fix .ov-change { background: var(--state-vote-bg); color: var(--state-vote-ink); box-shadow: inset 0 0 0 1.5px var(--state-vote-edge); }
 
 /* Setup's small controls keep their size but take a 44px tap: the step tabs and a side game's rules dot */
 .step.tappable, .gt-info { position: relative; }
@@ -86,15 +86,16 @@
   .setup { timeline-scope: --setup-scroll; }
   .setup > .scroll { scroll-timeline: --setup-scroll block; }
   .setup > .scroll::before {
-    content: ''; position: sticky; top: 0; z-index: 3; display: block; height: 16px; margin-bottom: -16px; pointer-events: none;
-    background: linear-gradient(var(--canvas), transparent); opacity: 0;
+    content: ''; position: sticky; top: 0; z-index: 3; display: block; height: 24px; margin-bottom: -24px; pointer-events: none;
+    /* A hairline on top once scrolled, so a control cut under the title reads as cut, not smeared (setup-24) */
+    background: linear-gradient(var(--canvas) 20%, transparent); box-shadow: inset 0 1px 0 var(--line); opacity: 0;
     animation: edgeFadeIn linear both; animation-timeline: --setup-scroll; animation-range: 0 16px;
   }
   .setup > .cta-wrap { position: relative; }
   .setup > .cta-wrap::before {
-    content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 24px; pointer-events: none;
-    background: linear-gradient(transparent, var(--canvas)); opacity: 0;
-    animation: edgeFadeOut linear both; animation-timeline: --setup-scroll; animation-range: calc(100% - 24px) 100%;
+    content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 40px; z-index: 2; pointer-events: none;
+    background: linear-gradient(transparent, var(--canvas) 70%); opacity: 0;
+    animation: edgeFadeOut linear both; animation-timeline: --setup-scroll; animation-range: calc(100% - 40px) 100%;
   }
 }
 @keyframes edgeFadeIn { from { opacity: 0; } to { opacity: 1; } }

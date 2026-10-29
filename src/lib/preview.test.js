@@ -98,6 +98,9 @@ test('how long to go, for the plan page', () => {
 test('the Up next line: the countdown and the tee time', () => {
   assert.equal(countdownLine({ date: '2026-10-03', teeTime: '08:10' }, NOW), 'Saturday, 2 days · 8:10 AM');
   assert.equal(countdownLine({ date: '2026-10-02', teeTime: null }, NOW), 'Tomorrow');
+  // Under the countdown strip for the same round, the card names the day and leaves the count to the strip
+  assert.equal(countdownLine({ date: '2026-10-03', teeTime: '08:10' }, NOW, { counted: true }), 'Saturday · 8:10 AM');
+  assert.equal(countdownLine({ date: '2026-10-02', teeTime: null }, NOW, { counted: true }), 'Tomorrow');
 });
 
 // --------------------------- who is who -------------------------------------

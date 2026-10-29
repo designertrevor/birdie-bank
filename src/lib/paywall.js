@@ -140,7 +140,7 @@ const fmtDay = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'sh
 export function trialTimeline(start = new Date(), { days = TRIAL_DAYS, remind = REMIND_DAY, planned = false, plan = null } = {}) {
   const at = n => new Date(start.getTime() + n * DAY);
   return [
-    { key: 'today', icon: 'check', title: 'Today', when: null, text: planned ? 'Everything in Pro. Your next round is set up and the group link is ready.' : 'Everything in Pro, starting with your next round.' },
+    { key: 'today', icon: 'check', title: 'Today', when: null, text: planned ? 'Everything in Pro. Your next round is set up and the group link is ready.' : 'Everything in Pro, starting now.' },
     { key: 'remind', icon: 'bell', title: `Day ${remind}`, when: fmtDay(at(remind)), text: 'We remind you the trial is ending. No surprises.' },
     { key: 'start', icon: 'star', title: `Day ${days}`, when: fmtDay(at(days)), text: plan ? `Pro starts at ${priceLabel(plan)}, unless you cancel. Two taps.` : 'Pro starts, unless you cancel. Two taps.' },
   ];

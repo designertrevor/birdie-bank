@@ -115,7 +115,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
           </div>
           {!onlyCasual && !jpProblem && (
             <div className="ap-how">
-              <div className="eyebrow" id="ap-how">How they play</div>
+              <div className="field-label" id="ap-how">How they play</div>
               <Segmented label="How they play" className="press-mode-row" btn="pm-btn" value={casual ? 'casual' : 'bet'} onChange={v => setCasual(v === 'casual')}
                 options={[{ value: 'bet', label: 'In the games', disabled: !!betProblem }, { value: 'casual', label: JUST_PLAYING }]} />
               <p className="field-help">{casual ? JUST_PLAYING_HELP : 'Their money counts like everyone’s.'}{betProblem && casual ? ` ${betProblem}` : ''}</p>
@@ -123,9 +123,9 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
           )}
           {round.useHandicaps && !casual && (
             <div style={{ padding: '0 20px 12px' }}>
-              <div className="eyebrow" style={{ marginBottom: 8 }}>Handicap for this round</div>
+              <div className="field-label">Handicap for this round</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* The same stepper as Fix hole and the pad: a quiet minus, an ink plus (play-55) */}
+                {/* The same stepper as Fix hole and the pad: minus and plus the same weight (play-44) */}
                 <div className="score-ctrl" role="group" aria-label="Handicap for this round">
                   <button className="sc-btn" aria-label="Lower handicap" onClick={() => setHc(v => Math.max(-10, v - 1))}><Icon name="minus" /></button>
                   <span className="sc-num" aria-live="polite">{hc}</span>
@@ -139,7 +139,7 @@ export function AddPlayerSheet({ round, request = null, onClose }) {
           )}
           {started && (
             <div style={{ padding: '0 20px 12px' }}>
-              <div className="eyebrow" style={{ marginBottom: 8 }}>Starts on hole</div>
+              <div className="field-label">Starts on hole</div>
               <div className="chip-row ap-holes" style={{ padding: 0 }} role="radiogroup" aria-label="Starts on hole">
                 {choices.map(h => (
                   <PickChip key={h.no} radio check={false} className="ap-hole" on={fromNo === h.no} onClick={() => setFromNo(h.no)}>{h.no}</PickChip>

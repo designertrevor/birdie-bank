@@ -14,6 +14,7 @@ import { GAMES, cardOnly } from '../lib/round.js';
 import { useNav } from '../lib/nav.js';
 import { RSVP_LABEL, countsLine, dayLabel, daysUntil, planChoice, planCounts, whenLabel } from '../lib/plan-basics.js';
 import { countdownLine, weekdayOf } from '../lib/countdown.js';
+import { nextPlan, stripClock } from '../lib/upnext-first.js';
 import { STATE_LABEL, detailStates, leadingDay, lockNudge, normalizePlan, shortDay } from '../lib/plan-open.js';
 import '../screens/plan/plan.css';
 
@@ -30,11 +31,14 @@ export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
   const planned = plans.length > 0 || onNow.length > 0;
   // On the day of a round you organized, its card's Start this round is the pink; Start a round goes quiet (home-11)
   const today = plans.some(p => p.host && p.status !== 'off' && p.status !== 'started' && !p.gone && !p.movedTo && daysUntil(p.date) === 0);
+  const strip = nextPlan(plans);
+  const counted = strip && stripClock(strip) ? strip.id : null;
   return (
     <>
       {live.length === 0 && <CountdownStrip plans={plans} />}
       {plans.length > 0 && <h2 className="sec-label">Upcoming</h2>}
-      {plans.map(p => <UpcomingCard key={p.id} plan={p} />)}
+      {/* The card for the round the strip counts down to leaves the count to the strip (trips-34) */}
+      {plans.map(p => <UpcomingCard key={p.id} plan={p} counted={live.length === 0 && p.id === counted} />)}
       {/* Starting a round at the course (or running the last one back) stays one tap, plans or not */}
       {live.length === 0 && <StartCard last={last} fresh={!hasHistory} planned={planned} quiet={today} onJoin={onJoin} />}
       {!hasHistory && <FirstSteps />}
@@ -47,7 +51,7 @@ export function PlansAndNext({ plans, onNow, live, last, onJoin }) {
  * who's in. A round still on opens its preview from the strip under it. A plan with no day yet
  * (plan-open.js) says so where the countdown goes, with the leading day and its four details' states.
  */
-export function UpcomingCard({ plan: saved }) {
+export function UpcomingCard({ plan: saved, counted = false }) {
   const nav = useNav();
   const plan = normalizePlan(saved);
   if (!plan.date && plan.status === 'planned' && !plan.gone) return <OpenPlanCard plan={plan} />;
@@ -67,7 +71,7 @@ export function UpcomingCard({ plan: saved }) {
   const card = (
     <button className={`upcoming-card ${off ? 'off' : ''} ${ahead ? 'has-preview' : ''}`} onClick={() => nav.push('plan', { id: plan.id })}>
       <div className="row-main">
-        <div className="eyebrow">{ahead ? countdownLine(plan) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : moved ? ' · Moved' : started ? ' · The round is on' : ''}</div>
+        <div className="eyebrow">{ahead ? countdownLine(plan, new Date(), { counted }) : whenLabel(plan)}{off ? (plan.status === 'off' ? ' · Called off' : ' · Deleted') : moved ? ' · Moved' : started ? ' · The round is on' : ''}</div>
         {/* A round a trip's schedule planned (trip-templates.js) leads with its matches */}
         <div className="uc-title d">{plan.session?.line || `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'}`}</div>
         <div className="uc-sub">{off ? `Organized by ${plan.host ? 'you' : plan.hostName || 'a friend'}` : moved ? `Moved to ${moved.date ? dayLabel(moved.date) : 'another day'}${moved.code ? '. Tap for the new plan' : ''}` : started ? (plan.liveCode ? 'Tap to follow along' : 'Teeing off now') : plan.session?.line ? `${GAMES[game]?.name || 'Golf'} · ${plan.course?.name || 'Course to be set'} · ${countsLine(c)}` : countsLine(c)}</div>
@@ -170,7 +174,7 @@ function StartCard({ last, fresh, planned = false, quiet = false, onJoin = null 
   }
   return (
     <div className="un-start">
-      <Spot kind="tee" size={104} className="un-start-art" plate={false} />
+      <Spot kind="tee" size={96} className="un-start-art" plate={false} />
       <span className="un-eyebrow">{fresh ? 'Welcome to the first tee' : 'Nothing on the calendar'}</span>
       <h2 className="un-start-title">{fresh ? 'Your first round' : 'Play a round'}</h2>
       <div className="un-start-sub">{fresh
@@ -222,8 +226,8 @@ function FirstSteps() {
   const active = roundsInProgress(state)[0] || null;
   const steps = [
     { done: people > 0, title: 'Add your group', sub: 'The people you play with', go: () => nav.setTab('people') },
-    // Start a round is the big button above, so this step says so rather than being a second one
-    { done: rounds.length > 0, title: 'Start a round', sub: 'With the Start a round button above', go: null },
+    // The same as the big button above, but tappable like its neighbours: a step with no chevron read as done or off (home-4)
+    { done: rounds.length > 0, title: 'Start a round', sub: 'Pick the game, the course and who’s in', go: () => nav.push('newRound') },
     { done: rounds.some(r => r.shared), title: 'Send the group the link', sub: active ? 'Invite the group from the round menu' : 'They follow the money live', go: () => (active ? nav.push('play', { id: active.id }) : nav.push('newRound')) },
   ];
   if (steps.every(x => x.done)) return null;

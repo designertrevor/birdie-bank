@@ -64,7 +64,7 @@ export const TITLES = {
   'joining-from-a-link-starts-on-an': { title: 'An invite card when you join', blurb: 'Who invited you, the game, the bets and who’s in' },
   'one-scorekeeper-who-can-hand-off-the': { title: 'One scorekeeper, hand off any time' },
   'a-link-preview-card-for-group-texts': { title: 'Link previews in the group text' },
-  '16-games-with-the-setup-wizard-game': { title: '16 games, crews and bets that change mid-round' },
+  '16-games-with-the-setup-wizard-game': { title: 'The first 16 games, crews and bets that change mid-round' },
   'rules-check-fixes-every-money-rule-from': { title: 'Every money rule checked and fixed' },
   'snake-three-putts-fixed-growing-or-doubling': { title: 'Snake and Hammer', kind: 'game' },
   'money-on-screen-from-the-first-hole': { title: 'Money on screen from the first hole' },
@@ -268,11 +268,19 @@ export function friendlyTitle(text) {
   s = s.replace(/^New games?:\s+/i, '');
   s = s.split(/:\s|\.\s|;\s|\.$/)[0];
   s = s.replace(/^["“]([^"”]+)["”]$/, '$1').replace(/\s+/g, ' ').trim();
+  // Curly apostrophes, as everywhere else in the app (trip’s, not trip's, more-21)
+  s = s.replace(/(\w)'(\w)/g, '$1’$2');
+  s = s.replace(/"([^"]+)"/g, '“$1”');
+  // A long one stops at a comma; with none it stops at a word and says so with an ellipsis, so it never
+  // reads as a sentence cut off mid-thought (more-5). Still 60 characters at most, the ellipsis included
+  let clipped = false;
   if (s.length > 60) {
     const cut = s.slice(0, 60).lastIndexOf(', ');
-    s = cut > 20 ? s.slice(0, cut) : s.slice(0, s.slice(0, 60).lastIndexOf(' '));
+    if (cut > 20) s = s.slice(0, cut);
+    else { s = s.slice(0, s.slice(0, 59).lastIndexOf(' ')); clipped = true; }
   }
   s = s.replace(/[,.;:\s]+$/, '');
+  if (clipped && s) s += '…';
   return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 

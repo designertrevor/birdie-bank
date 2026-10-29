@@ -217,6 +217,9 @@ function baseStates(seed, extra) {
   if (extra) {
     for (const k of ['live', 'done']) S[k + 'Open'] = { ...structuredClone(S[k]), plans: { ...S[k].plans, [extra.open.id]: structuredClone(extra.open) } };
     S.friend = { ...structuredClone(S.done), plans: { ...S.done.plans, [extra.friend.id]: structuredClone(extra.friend) } };
+    // Riley's phone: she is this phone's "me", with her own face, so her seat shows hers and Trevor's the one his plan carried
+    S.friend.me = 'p_riley';
+    S.friend.profile = { ...S.friend.profile, avatar: S.friend.players.p_riley?.avatar };
   }
   const watch = structuredClone(seed);
   const r = watch.rounds[watch.activeRoundId];

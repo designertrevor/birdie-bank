@@ -48,9 +48,10 @@ export function NotifyPicks() {
   const { muted } = useNotify();
   return (
     <Screen>
-      <Header title="Which ones" onBack={nav.pop} />
+      {/* The screen is Notifications; which ones is its question (more-15) */}
+      <Header title="Notifications" onBack={nav.pop} />
       <div className="scroll">
-        <div className="sec-label">Pushes you get</div>
+        <div className="sec-label">Which ones you get</div>
         {PUSH_GROUPS.map(g => (
           <div key={g.id} className="toggle-row">
             <div><div className="toggle-lbl" id={`np-${g.id}-lbl`}>{g.label}</div><div className="toggle-sub" id={`np-${g.id}-sub`}>{g.sub}</div></div>

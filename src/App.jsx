@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UIProvider } from './components/ui.jsx';
 import { Stage } from './components/Stage.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
@@ -273,27 +273,31 @@ export default function App() {
     return pendingJoin();
   });
 
+  // Every move between screens is a transition: a screen whose code hasn't loaded yet keeps the one
+  // you're on showing until it's ready, instead of the stage blanking to the Suspense fallback for a frame
   const push = useCallback((name, params = {}) => {
     // The upsell guard: no paywall or Pro sheet while a round is live (upsell-guard.js)
     if (PAYWALL_ON && !routeAllowed(name, getState())) return;
-    setStack(s => [...s, { name, params, key: Date.now() + Math.random() }]);
+    startTransition(() => setStack(s => [...s, { name, params, key: Date.now() + Math.random() }]));
     try { history.pushState({ bb: true }, ''); } catch { /* ignore */ }
   }, []);
   // Go back through browser history when we pushed an entry, so the phone's back gesture stays in sync
   const pop = useCallback(() => {
     if (history.state?.bb) history.back();
-    else setStack(s => s.slice(0, -1));
+    else startTransition(() => setStack(s => s.slice(0, -1)));
   }, []);
   /** Swap the top screen for another, with no new history entry (sending an idea → the roadmap). */
   const replace = useCallback((name, params = {}) => {
     if (PAYWALL_ON && !routeAllowed(name, getState())) return;
-    setStack(s => [...s.slice(0, -1), { name, params, key: Date.now() + Math.random() }]);
+    startTransition(() => setStack(s => [...s.slice(0, -1), { name, params, key: Date.now() + Math.random() }]));
   }, []);
   /** Replace the whole stack (e.g. finish a round → go to its results). */
   const reset = useCallback((nextTab, ...routes) => {
-    if (nextTab) setTab(nextTab);
     if (PAYWALL_ON) routes = allowedRoutes(routes, getState());
-    setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })));
+    startTransition(() => {
+      if (nextTab) setTab(nextTab);
+      setStack(routes.map(([name, params = {}]) => ({ name, params, key: Date.now() + Math.random() })));
+    });
   }, []);
 
   // Save where you are as it changes (and kept.js saves again as the app goes to the background)
@@ -362,13 +366,13 @@ export default function App() {
       if (gone >= 0) { layers.current.splice(gone, 1); return; }
       const top = layers.current.pop();
       if (top) { top.done = true; top.onClose(); return; }
-      setStack(s => s.slice(0, -1));
+      startTransition(() => setStack(s => s.slice(0, -1)));
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const nav = useMemo(() => ({ push, pop, replace, reset, layer, tab, setTab: t => { setTab(t); setStack([]); } }), [push, pop, replace, reset, layer, tab]);
+  const nav = useMemo(() => ({ push, pop, replace, reset, layer, tab, setTab: t => startTransition(() => { setTab(t); setStack([]); }) }), [push, pop, replace, reset, layer, tab]);
 
   // Which way the top screen changed, for the stage (Stage.jsx): deeper is a push, shallower a pop,
   // the same depth (a tab, a replaced screen, a reset) a swap. Worked out when the stage's id moves,

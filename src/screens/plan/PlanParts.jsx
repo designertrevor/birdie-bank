@@ -13,22 +13,21 @@ import { coursePickerSections } from '../../lib/courses.js';
 import { isoDate } from '../../lib/plan-basics.js';
 import { BET_LADDER } from '../../lib/plans.js';
 import { money } from '../../lib/golf.js';
+import { planSeatAvatar } from '../../lib/plan-faces.js';
 import { MAX_DAY_OPTIONS, STATE_LABEL, dayTile, shortDay, soonDays, waitingLine } from '../../lib/plan-open.js';
 import './plan.css';
 
 const first = name => String(name || '').trim().split(/\s+/)[0];
 
 /**
- * Someone on a plan, with the same face they have everywhere else. The organizer is `hostWho` on the
- * plan (not a player id), so on their own phone that's their profile, and on a friend's phone it's the
- * avatar the plan carried when it was shared (plan-sync.js), else the one their name gives.
+ * Someone on a plan, with the same face they have everywhere else, on every phone. Which face is
+ * plan-faces.js's call: the organizer's phone knows everyone; a friend's phone uses its own face for
+ * its own seat and the faces the plan carried for everyone else.
  */
 export function PlanAvatar({ plan, who, name, size = '' }) {
   const me = useStore(s => s.me);
-  const host = !who || who === plan.hostWho;
-  // Your own seat on someone else's plan is you
-  if (!host) return <Avatar id={who === plan.localMe && !plan.host ? me : who} name={name} size={size} />;
-  return <Avatar id={plan.host ? me : null} name={name || plan.hostName} size={size} seat={plan.hostAvatar ? { avatar: plan.hostAvatar } : null} />;
+  const { id, seat } = planSeatAvatar(plan, who, me);
+  return <Avatar id={id} name={name || (!who || who === plan.hostWho ? plan.hostName : '')} size={size} seat={seat} />;
 }
 
 /** A detail's state as a tag: Set (with what it is), Up for a vote, Not yet. */
@@ -150,7 +149,8 @@ export function WhenSheet({ open, value, onDone, onClose }) {
   // A fresh copy each time it opens
   const [was, setWas] = useState(open);
   if (open !== was) { setWas(open); if (open) setV(value); }
-  const soon = soonDays(new Date());
+  // Seven weekend days, so Pick a day completes the second row of four instead of sitting alone on a third (plan-4)
+  const soon = soonDays(new Date(), 7);
   const extra = [...(v.days || []), v.date].filter(d => d && !soon.includes(d));
   const days = [...new Set([...soon, ...extra])].sort();
   const toggle = iso => setV(x => {

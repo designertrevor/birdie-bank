@@ -170,8 +170,8 @@ export function OneTab({ tab }) {
               <div className="lr-info">
                 <div className="lr-name" style={{ fontSize: 16 }}>{nameOf(state, l.from)} owes {nameOf(state, l.to)}</div>
               </div>
-              <div className="lr-amt" style={{ marginRight: 8 }}>{money(l.amount)}</div>
-              {isCrew && <button className="pill-btn sm" onClick={() => mark(l)} aria-label={`Mark paid: ${nameOf(state, l.from)} paid ${nameOf(state, l.to)} ${money(l.amount)}`}>Mark paid</button>}
+              <div className="lr-amt" style={{ marginRight: 12 }}>{money(l.amount)}</div>
+              {isCrew && <button className="pill-btn sm te-mark" onClick={() => mark(l)} aria-label={`Mark paid: ${nameOf(state, l.from)} paid ${nameOf(state, l.to)} ${money(l.amount)}`}>Mark paid</button>}
             </div>
           ))}
           </div>

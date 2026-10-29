@@ -33,7 +33,7 @@ function whereLine(user, server, privacy) {
   return `Saved to your account. ${who} ${privacy.profile === 'everyone' ? 'sees' : 'see'} it soon`;
 }
 
-export default function Profile() {
+export default function Profile({ open = null }) {
   const nav = useNav();
   const { ask, showToast } = useUI();
   const state = useStore();
@@ -47,8 +47,9 @@ export default function Profile() {
   const [payApp, setPayApp] = useState(payInfo(card)?.app || null);
   const [handle, setHandle] = useState(() => { const i = payInfo(card); return i ? handleText(i) : ''; });
   const [pad, setPad] = useState(false);
-  const [picking, setPicking] = useState(false);
-  const [home, setHome] = useState(false);
+  // Opened from a Settings chip: its sheet is up as the profile opens (more-7)
+  const [picking, setPicking] = useState(open === 'avatar');
+  const [home, setHome] = useState(open === 'home');
   // The deeper stats, all time, from your rounds on this phone (their records go with your profile, the money never)
   // The Record Book limit (record-book.js) applies to these, the way it does to Your stats. The
   // tiles above are your profile as people see it, from every round, so they stay as they are
@@ -125,7 +126,7 @@ export default function Profile() {
                   {deep.skins.rounds > 0 && <div className="kv-row"><span className="kv-k">Skins won</span><span className="kv-v">{skinsText(deep.skins.won)}</span></div>}
                   <button className="pf-home stats-open" onClick={() => nav.push('stats', { range: { kind: 'all' } })}>
                     <Icon name="chart-bar" fill />
-                    <span className="row-main"><b>See all your stats</b><span>By game and course, presses, skins and biggest wins. {me.privacy.profile === 'hidden' ? 'Only you see them.' : 'Records, presses and skins show on your profile. Dollars and biggest wins stay with you.'}</span></span>
+                    <span className="row-main"><b>See all your stats</b><span>{me.privacy.profile === 'hidden' ? 'By game and course. Only you see them.' : 'By game and course. Dollars stay with you.'}</span></span>
                     <Icon name="caret-right" />
                   </button>
                 </div>

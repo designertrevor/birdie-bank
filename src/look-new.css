@@ -62,6 +62,9 @@
 /* Section labels: sentence case, like the study's "Last time out", not tracked capitals */
 :root[data-look="new"] .sec-label { text-transform: none; font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--body); padding-top: 24px; }
 :root[data-look="new"] .eyebrow { font-weight: 600; letter-spacing: .1em; }
+/* Labels over the round menu's groups are section labels like the Handicaps and Money sheets' ones:
+   sentence case outside cards, eyebrows only inside them (play-28) */
+:root[data-look="new"] .menu-sec { text-transform: none; font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--body); padding: 20px 20px 8px; }
 :root[data-look="new"] .li-sub, :root[data-look="new"] .set-sub { color: var(--mute); }
 
 /* Thin icons: Phosphor regular uses the same glyph codes as bold (main.jsx loads it for this look
@@ -103,9 +106,12 @@
 :root[data-look="new"] .holes-toggle,
 :root[data-look="new"] .press-mode-row,
 :root[data-look="new"] .as-seg { border-radius: 12px; background: var(--card); box-shadow: var(--hair); }
+/* One type on every one, picked or not: the body face at 600, so 9 holes / 18 holes and From hole 3 on
+   read the same as Per skin / Pot (play-27) */
 :root[data-look="new"] .holes-btn,
 :root[data-look="new"] .pm-btn,
-:root[data-look="new"] .as-seg button { border-radius: 9px; font-weight: 500; }
+:root[data-look="new"] .as-seg button { border-radius: 9px; font-family: var(--body-font); font-weight: 600; }
+:root[data-look="new"] .holes-btn { font-size: 16px; }
 :root[data-look="new"] .holes-btn.active,
 :root[data-look="new"] .pm-btn.active,
 :root[data-look="new"] .as-seg button.on { font-weight: 600; box-shadow: none; }
@@ -146,6 +152,18 @@
 /* Tabs you're not on draw in outline, the one you're on filled */
 :root[data-look="new"] .nav-btn:not(.active):not(.center) .ph-fill { font-family: "Phosphor" !important; }
 
+/* A sheet's cards keep the hairline in the new look (the classic sheet drops its cards' lift), so Fix
+   hole and Course and tee draw cards the same way as Bets and Handicaps (play-55) */
+:root[data-look="new"] .sheet,
+:root[data-look="new"] .sc-sheet,
+:root[data-look="new"] .rules-sheet { --card-shadow: var(--hair); }
+/* One gap above a section label inside a sheet: the card above brings its own margin (play-52) */
+:root[data-look="new"] .sheet .sec-label,
+:root[data-look="new"] .sc-sheet .sec-label { padding-top: 14px; }
+
+/* An ask over scoring (End this round?) titles like the round's sheets: the heavy body face (play-29) */
+:root[data-look="new"] .sheet-overlay.on-play .sheet-title { font-family: var(--body-font); font-weight: 800; letter-spacing: -.01em; }
+
 /* Play in the sun: the scorer's buttons keep their weight, cards get the hairline, the money bar's
    leader an ochre edge instead of a slab */
 :root[data-look="new"] .screen.play .pcard { box-shadow: var(--hair); }
@@ -158,6 +176,8 @@
 :root[data-look="new"] .resume-card .resume-go { background: var(--pink-fill); color: #fff; }
 :root[data-look="new"] .resume-card .resume-pulse { background: var(--pink); }
 :root[data-look="new"] .resume-card .resume-eyebrow { color: var(--eyebrow-ink); font-weight: 600; }
+/* The same tracked caps eyebrow as every other card on Up next, with its live dot (home-6) */
+:root[data-look="new"] .resume-card .resume-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 :root[data-look="new"] .resume-card .resume-sub { color: var(--mute); }
 :root[data-look="new"] .winner-hero { background: var(--card); color: var(--ink); box-shadow: var(--hair); }
 :root[data-look="new"] .winner-hero .wa { color: var(--pink-text); }
@@ -172,13 +192,36 @@
 
 /* One of a list in a sheet or a setting (Where, who sees your profile, the banker): an ink ring and
    an ink check with no tint, like the When sheet's picked chip and the segmented controls (plan-12,
-   more-9). Picking people and onboarding's answers keep the pink pick */
+   more-9). Onboarding's answers and the paywall's plans too, so a question screen's only pink is its
+   button (onboarding-15). Picking people keeps the pink pick */
 :root[data-look="new"] .sheet .list-item.pick[role="radio"].on,
+:root[data-look="new"] .ob-choices .list-item.pick[role="radio"].on,
+:root[data-look="new"] .list-item.pick.pw-plan.on,
 :root[data-look="new"] .pp-choices .list-item.pick[role="radio"].on { background: var(--card); box-shadow: inset 0 0 0 2px var(--ink); }
 :root[data-look="new"] .sheet .list-item.pick[role="radio"].on .li-check.on,
+:root[data-look="new"] .ob-choices .list-item.pick[role="radio"].on .li-check.on,
+:root[data-look="new"] .list-item.pick.pw-plan.on .li-check.on,
 :root[data-look="new"] .pp-choices .list-item.pick[role="radio"].on .li-check.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+/* ...and the ones not picked are the plain card with a hollow ring, so they never look "on" next to the
+   picked one (more-1), the same radio as the Home course sheet's (more-19) */
+:root[data-look="new"] .pp-choices .list-item.pick[role="radio"]:not(.on) { background: var(--card); box-shadow: var(--hair); }
+:root[data-look="new"] .pp-choices .list-item.pick[role="radio"]:not(.on) .li-check,
+:root[data-look="new"] .sheet .list-item.pick[role="radio"]:not(.on) .li-check,
+:root[data-look="new"] .ob-choices .list-item.pick[role="radio"]:not(.on) .li-check { background: transparent; border: 1.5px solid var(--mute); }
 
 /* First tee's labels (Strokes, Bets, Gimmes) are the same tracked eyebrow as every in-card label,
    not a heavier untracked cap of their own (setup-16) */
 :root[data-look="new"] .ft-h,
 :root[data-look="new"] .screen.play .ft-h { font-weight: 600; letter-spacing: .1em; }
+
+/* Check marks in the new look: the eyebrow teal, a calm brand colour, not a kelly green louder than the
+   button (onboarding-3: the paywall's lists, What's new's Shipped) */
+:root[data-look="new"] { --check: var(--eyebrow-ink); }
+
+/* A secondary button in a sheet sits on the sheet's own white with the hairline, as it does on a page,
+   not cream-filled (the confirms' Cancel, more-2) */
+:root[data-look="new"] .sheet .full-btn.outline:not(:disabled) { background: var(--canvas); }
+
+/* Add rows (Add a course, Add tee, Edit plan's Add a course): an ink plus in a quiet circle like Add a
+   player, not a gold disc (more-12, plan-11) */
+:root[data-look="new"] .add-ci { background: var(--surface); color: var(--ink); }

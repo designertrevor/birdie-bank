@@ -89,7 +89,7 @@ function FriendsList({ state, rounds }) {
             aria-label={[f.name, togetherLine(f), record, f.crews.length ? `In ${f.crews.join(', ')}` : null].filter(Boolean).join('. ')}>
             <Avatar id={f.id} name={f.name} />
             <div className="row-main">
-              <div className="set-name">{f.name}</div>
+              <div className="set-name fr-person">{f.name}</div>
               <div className="set-sub">{togetherLine(f)}</div>
               {(record || f.crews.length > 0) && <div className="set-sub">{[record, f.crews.join(', ')].filter(Boolean).join(' · ')}</div>}
             </div>
@@ -105,7 +105,7 @@ function FriendsList({ state, rounds }) {
             <button key={s.key} className="set-row person-row fr-friend" onClick={() => nav.push(...s.target)} aria-label={`${s.name.replace(/\.$/, '')}, ${s.viaText}. ${s.sub}`}>
               <Avatar id={s.seat} name={s.name} />
               <div className="row-main">
-                <div className="set-name">{s.name}</div>
+                <div className="set-name fr-person">{s.name}</div>
                 <div className="set-sub fr-via">{s.viaText}</div>
                 <div className="set-sub">{s.sub}</div>
               </div>

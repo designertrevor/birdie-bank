@@ -2,6 +2,7 @@ import { Component } from 'react';
 import { NavCtx } from '../lib/nav.js';
 import { forgetPlace } from '../lib/kept.js';
 import { reportError } from '../lib/crash.js';
+import { Spot } from './Spot.jsx';
 
 /**
  * Last line of defence: if a screen throws, show a way back instead of a blank page.
@@ -35,15 +36,19 @@ export default class ErrorBoundary extends Component {
     if (!this.state.error) return this.props.children;
     return (
       <div className="screen active">
-        <div className="scroll" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+        {/* One centred column like the gone states, with their lone ball over it (more-8) */}
+        <div className="scroll" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 24, textAlign: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Spot kind="loneball" size={150} className="eb-art" />
           <div className="et" style={{ fontFamily: 'var(--display)', fontSize: 26, fontWeight: 800, marginBottom: 8 }}>Something went wrong</div>
           <div className="es" style={{ color: 'var(--mute)', marginBottom: 20 }}>Your scores and rounds are safe. Head back and carry on.</div>
-          <details style={{ fontSize: 13, color: 'var(--mute)', textAlign: 'left', marginBottom: 20 }}>
+          <details style={{ alignSelf: 'stretch', fontSize: 13, color: 'var(--mute)', textAlign: 'left', marginBottom: 20 }}>
             <summary style={{ cursor: 'pointer', textAlign: 'center' }}>Show details</summary>
             <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap', marginTop: 8 }}>{String(this.state.error?.message || this.state.error)}</pre>
           </details>
           <button className="full-btn" onClick={this.reset}>Back to Up next</button>
           {this.context && <button className="full-btn outline" style={{ marginTop: 8 }} onClick={this.report}>Tell us what happened</button>}
+          </div>
         </div>
       </div>
     );

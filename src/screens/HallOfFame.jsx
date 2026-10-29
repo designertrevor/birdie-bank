@@ -166,8 +166,8 @@ export default function HallOfFame({ crew: crewId }) {
         <div className="sec-label">Records</div>
         {/* The records as badges: what it is, who holds it, and the number */}
         <div className="badge-grid">
-          <Badge art="hotstreak" k="Longest win streak" who={records.streak ? first(records.streak.id) : null} v={records.streak ? `${records.streak.n} in a row` : null} />
-          <Badge art="skinsking" k="Most skins in a round" who={records.skins ? first(records.skins.id) : null} v={records.skins ? `${records.skins.skins} skins` : null} sub={records.skins ? `${records.skins.course || 'A round'}, ${day(records.skins.at)}` : null} />
+          <Badge art="hotstreak" k="Win streak" who={records.streak ? first(records.streak.id) : null} v={records.streak ? `${records.streak.n} in a row` : null} />
+          <Badge art="skinsking" k="Most skins" who={records.skins ? first(records.skins.id) : null} v={records.skins ? `${records.skins.skins} skins` : null} sub={records.skins ? `${records.skins.course || 'A round'}, ${day(records.skins.at)}` : null} />
           <Badge art="lowround" k={records.low ? `Low ${records.low.holes}` : 'Low round'} who={records.low ? first(records.low.id) : null} v={records.low ? String(records.low.strokes) : null} sub={records.low ? `${records.low.course || 'A round'}, ${day(records.low.at)}` : null} />
           <Badge art="mostrounds" k="Most rounds" who={records.regular ? regularNames(records.regular.ids || [records.regular.id]) : null} v={records.regular ? String(records.regular.n) : null} />
         </div>
@@ -192,7 +192,7 @@ export default function HallOfFame({ crew: crewId }) {
 /** One record as a score tile: what it is and its drawing, who holds it in the accent, the number big. Nobody holding it yet shows the dash and a dimmed drawing. */
 const Badge = ({ art, k, who, v, sub }) => (
   <div className={`badge-tile ${who ? '' : 'empty'}`}>
-    <span className="bt-top"><span className="bt-k">{k}</span><Spot kind={art} size={48} className="bt-art" /></span>
+    <span className="bt-top"><span className="bt-k">{k}</span><Spot kind={art} size={40} className="bt-art" /></span>
     <span className="bt-who">{who || 'Nobody yet'}</span>
     <span className="bt-v d">{v || DASH}</span>
     {sub && <span className="bt-sub">{sub}</span>}

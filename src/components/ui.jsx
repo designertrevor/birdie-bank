@@ -429,8 +429,11 @@ export function UIProvider({ children }) {
 function Confirm({ confirm, close }) {
   const ref = useDialog(true, () => close(null));
   useExitGhost(ref);
+  // The ask opens over the whole app, not inside a screen: over scoring it takes Play's heavy title
+  // like the round's own sheets (play-29), worked out once as it opens
+  const [onPlay] = useState(() => !!([...document.querySelectorAll('.device .screen.active')].pop()?.classList.contains('play')));
   return (
-    <div ref={ref} tabIndex={-1} className="sheet-overlay open" onClick={e => e.target === e.currentTarget && close(null)} role="alertdialog" aria-modal="true" aria-labelledby="bb-confirm-title" aria-describedby={confirm.text ? 'bb-confirm-text' : undefined}>
+    <div ref={ref} tabIndex={-1} className={`sheet-overlay open ${onPlay ? 'on-play' : ''}`} onClick={e => e.target === e.currentTarget && close(null)} role="alertdialog" aria-modal="true" aria-labelledby="bb-confirm-title" aria-describedby={confirm.text ? 'bb-confirm-text' : undefined}>
       <div className="sheet">
         <div className="sheet-handle" />
         {/* `cancelX`: closing without an answer is the sheet's accent X in the title row (as Sheet has), so the buttons are the answers */}

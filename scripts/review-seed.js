@@ -137,7 +137,8 @@ export async function newOnlyPlans(state, NOW) {
   says(open, 'p_riley', { status: 'in', days: [pick[0], pick[1]] }, 4);
   says(open, 'p_tyler', { status: 'in', days: [pick[1]] }, 3);
   says(open, 'p_ben', { status: 'maybe', days: [pick[2]] }, 1);
-  // The same plan as Riley sees it from Trevor's link
-  const friend = { ...structuredClone(open), id: 'pl_open_friend', host: false, localMe: 'p_riley', hostName: 'Trevor' };
+  // The same plan as Riley sees it from Trevor's link, carrying the faces Trevor's phone stamps on it (plan-faces.js)
+  const FACES = await import('/src/lib/plan-faces.js');
+  const friend = { ...FACES.stampPlanFaces(state, structuredClone(open)), id: 'pl_open_friend', host: false, localMe: 'p_riley', hostName: 'Trevor' };
   return { open, friend };
 }

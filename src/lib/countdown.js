@@ -57,8 +57,13 @@ export function toGoLabel(plan, now = new Date()) {
   return cd.days > 1 ? `${cd.days} days to go` : cd.label;
 }
 
-/** The Up next card's line: the countdown and the tee time, "Saturday, 2 days · 8:10 AM". */
-export function countdownLine(plan, now = new Date()) {
+/**
+ * The Up next card's line: the countdown and the tee time, "Saturday, 2 days · 8:10 AM". `counted`:
+ * the countdown strip above already counts down to this round, so the card names the day and leaves
+ * the count to the strip ("Saturday · 8:10 AM"), never two counts for one tee time (trips-34).
+ */
+export function countdownLine(plan, now = new Date(), { counted = false } = {}) {
   const cd = countdown(plan, now);
-  return [cd?.label, timeLabel(plan?.teeTime)].filter(Boolean).join(' · ');
+  const label = counted && cd?.days > 1 ? dayLabel(plan.date, now) : counted && cd?.days === 0 ? 'Today' : cd?.label;
+  return [label, timeLabel(plan?.teeTime)].filter(Boolean).join(' · ');
 }
