@@ -22,7 +22,7 @@ function useFilterId() {
  * The colours are set again in styles.css (.stk-edge, .stk-hair) so they follow the theme; the
  * attributes are what a share card's picture gets.
  */
-function StickerFilter({ id, r, x, y, w, h }) {
+function StickerFilter({ id, r, x, y, w, h, edgeOnly = false }) {
   const s = r / 1.28;
   const pad = r * 3;
   return (
@@ -36,7 +36,7 @@ function StickerFilter({ id, r, x, y, w, h }) {
       <feComposite in2="ring" operator="in" result="hair" />
       <feFlood className="stk-edge" floodColor="#ffffff" />
       <feComposite in2="cut" operator="in" result="edge" />
-      <feMerge><feMergeNode in="hair" /><feMergeNode in="edge" /><feMergeNode in="SourceGraphic" /></feMerge>
+      <feMerge><feMergeNode in="hair" /><feMergeNode in="edge" />{!edgeOnly && <feMergeNode in="SourceGraphic" />}</feMerge>
     </filter>
   );
 }
@@ -62,17 +62,44 @@ export function Sticker({ r, box, children }) {
  * `file` from artFile(); `x`, `y`, `w`, `h` in the parent SVG's units. `slice` fills the box and crops, like the scenes.
  * `sticker` is the white border's width in the parent's units: by default 2.2% of the box's short side,
  * `false` (or `outline={false}`, the older name) for a drawing that sits inside another sticker or on its own backdrop.
+ *
+ * A drawing with a holes file (file.holes: the pockets between legs, inside handles) keeps the border out
+ * of them, so the background shows there however narrow the gap (a plain die-cut fills anything under
+ * twice the border): the border is drawn on its own under a mask with the holes cut out, then the
+ * drawing on top. A holes file that can't load leaves the border whole, as before.
  */
 export function ArtImage({ file, x = 0, y = 0, w, h, slice = false, sticker = null, outline = true }) {
   const id = useFilterId();
   const par = slice ? 'xMidYMax slice' : 'xMidYMid meet';
   const r = sticker === false || outline === false ? 0 : sticker ?? Math.min(w, h) * 0.022;
+  const images = (filter) => (
+    <>
+      <image href={file.light} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className={file.dark ? 'art-light' : undefined} filter={filter} />
+      {file.dark && <image href={file.dark} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className="art-dark" filter={filter} />}
+    </>
+  );
+  if (r && file.holes) {
+    const pad = r * 3;
+    const region = { x: x - pad, y: y - pad, width: w + pad * 2, height: h + pad * 2 };
+    return (
+      <>
+        <defs>
+          <StickerFilter id={id} r={r} x={x} y={y} w={w} h={h} edgeOnly />
+          <mask id={`${id}h`} maskUnits="userSpaceOnUse" {...region}>
+            <rect {...region} fill="#fff" />
+            <image href={file.holes} x={x} y={y} width={w} height={h} preserveAspectRatio={par} />
+          </mask>
+        </defs>
+        <g mask={`url(#${id}h)`}>{images(`url(#${id})`)}</g>
+        {images(undefined)}
+      </>
+    );
+  }
   const filter = r ? `url(#${id})` : undefined;
   return (
     <>
       {r ? <defs><StickerFilter id={id} r={r} x={x} y={y} w={w} h={h} /></defs> : null}
-      <image href={file.light} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className={file.dark ? 'art-light' : undefined} filter={filter} />
-      {file.dark && <image href={file.dark} x={x} y={y} width={w} height={h} preserveAspectRatio={par} className="art-dark" filter={filter} />}
+      {images(filter)}
     </>
   );
 }
