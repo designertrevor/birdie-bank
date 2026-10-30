@@ -367,3 +367,10 @@
   .settle-row, .settle-card { border-radius: var(--r-card); }
 }
 :root[data-look][data-skin="gooddog"] .rv-gd-art { margin: 8px auto 0; }
+
+/* In dark the overhaul marks these cards with an ochre stripe on top; as bands they don't need it */
+:root[data-look][data-skin="gooddog"] .results-a::before,
+:root[data-look][data-skin="gooddog"] .ov-again::before,
+:root[data-look][data-skin="gooddog"] .ready-card.themed::before { display: none; }
+:root[data-look][data-skin="gooddog"] .results-a,
+:root[data-look][data-skin="gooddog"] .ready-card.themed { box-shadow: none; }
